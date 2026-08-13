@@ -168,6 +168,14 @@ describe('ConfigGenerator', () => {
       'PORT=3000',
     );
 
+    expect(envExample).toContain(
+      'DATABASE_URL=',
+    );
+
+    expect(envExample).toContain(
+      'JWT_SECRET=',
+    );
+
     const configuration = await fs.readFile(
       path.join(
         temporaryDirectory,
@@ -190,6 +198,10 @@ describe('ConfigGenerator', () => {
       'process.env.PORT',
     );
 
+    expect(configuration).toContain(
+      'process.env.JWT_SECRET',
+    );
+
     const environment = await fs.readFile(
       path.join(
         temporaryDirectory,
@@ -210,6 +222,14 @@ describe('ConfigGenerator', () => {
 
     expect(environment).toContain(
       'PORT',
+    );
+
+    expect(environment).toContain(
+      'DATABASE_URL',
+    );
+
+    expect(environment).toContain(
+      'JWT_SECRET',
     );
 
     expect(environment).toContain(

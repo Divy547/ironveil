@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 import { CommonModule } from './common/common.module';
 import { InfrastructureModule } from './infrastructure/infrastructure.module';
+{{authModuleImport}}
 
 @Module({
   imports: [
     CommonModule,
     InfrastructureModule,
+    {{authModule}}
   ],
 })
 export class AppModule {}

@@ -37,6 +37,55 @@ describe('TemplateRenderer', () => {
     );
   });
 
+  it('renders auth module placeholders when JWT is enabled', () => {
+    const config = resolveConfig({
+      projectName: 'test-api',
+      auth: 'jwt',
+    });
+
+    const renderer = createTemplateRenderer();
+
+    const result = renderer.render(
+      [
+        '{{authModuleImport}}',
+        '@Module({',
+        '  imports: [{{authModule}}]',
+        '})',
+      ].join('\n'),
+      config,
+    );
+
+    expect(result).toContain(
+      "import { AuthModule } from './modules/auth/auth.module';",
+    );
+
+    expect(result).toContain(
+      'imports: [AuthModule,]',
+    );
+  });
+
+  it('removes auth module placeholders when JWT is disabled', () => {
+    const config = resolveConfig({
+      projectName: 'test-api',
+    });
+
+    const renderer = createTemplateRenderer();
+
+    const result = renderer.render(
+      [
+        '{{authModuleImport}}',
+        '@Module({',
+        '  imports: [{{authModule}}]',
+        '})',
+      ].join('\n'),
+      config,
+    );
+
+    expect(result).not.toContain(
+      'AuthModule',
+    );
+  });
+
   it('leaves unknown placeholders unchanged', () => {
     const config = resolveConfig({
       projectName: 'test-api',

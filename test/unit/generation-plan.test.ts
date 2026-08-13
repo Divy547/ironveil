@@ -5,7 +5,7 @@ import {
 } from '../../src/generators/core/generation-plan.js';
 
 describe('GenerationPlan', () => {
-  it('includes the registered generators', () => {
+  it('includes the generators selected by the default configuration', () => {
     const config = resolveConfig({
       projectName: 'test-api',
     });
@@ -23,9 +23,30 @@ describe('GenerationPlan', () => {
     ]);
   });
 
+  it('includes auth when JWT authentication is enabled', () => {
+    const config = resolveConfig({
+      projectName: 'test-api',
+      auth: 'jwt',
+    });
+
+    const plan = createGenerationPlan(config);
+
+    expect(
+      plan.generators.map(
+        (generator) => generator.name,
+      ),
+    ).toEqual([
+      'base',
+      'config',
+      'prisma',
+      'auth',
+    ]);
+  });
+
   it('only includes generators that should run', () => {
     const config = resolveConfig({
       projectName: 'test-api',
+      auth: 'jwt',
     });
 
     const plan = createGenerationPlan(config);
