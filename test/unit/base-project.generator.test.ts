@@ -47,6 +47,17 @@ describe('BaseProjectGenerator', () => {
     }
   });
 
+  it('has the base generator contract', () => {
+    const generator = new BaseProjectGenerator();
+
+    const config = resolveConfig({
+      projectName: 'test-api',
+    });
+
+    expect(generator.name).toBe('base');
+    expect(generator.shouldRun(config)).toBe(true);
+  });
+
   it('generates the base project from templates', async () => {
     temporaryDirectory = await mkdtemp(
       path.join(
@@ -129,6 +140,39 @@ describe('BaseProjectGenerator', () => {
       '// {{projectName}}\n',
     );
 
+    await fs.writeFile(
+      path.join(
+        templateDirectory,
+        'base',
+        'src',
+        'common',
+        'common.module.ts.template',
+      ),
+      '// common {{projectName}}\n',
+    );
+
+    await fs.writeFile(
+      path.join(
+        templateDirectory,
+        'base',
+        'src',
+        'infrastructure',
+        'infrastructure.module.ts.template',
+      ),
+      '// infrastructure {{projectName}}\n',
+    );
+
+    await fs.writeFile(
+      path.join(
+        templateDirectory,
+        'base',
+        'src',
+        'modules',
+        '.gitkeep',
+      ),
+      '',
+    );
+
     const config = resolveConfig({
       projectName: 'test-api',
     });
@@ -148,7 +192,8 @@ describe('BaseProjectGenerator', () => {
       renderer,
     );
 
-    const generator = new BaseProjectGenerator();
+    const generator =
+      new BaseProjectGenerator();
 
     await generator.generate(context);
 
@@ -179,6 +224,39 @@ describe('BaseProjectGenerator', () => {
         ),
       ),
     ).toBe('// test-api\n');
+
+    expect(
+      await fs.readFile(
+        path.join(
+          temporaryDirectory,
+          'src',
+          'common',
+          'common.module.ts',
+        ),
+      ),
+    ).toBe('// common test-api\n');
+
+    expect(
+      await fs.readFile(
+        path.join(
+          temporaryDirectory,
+          'src',
+          'infrastructure',
+          'infrastructure.module.ts',
+        ),
+      ),
+    ).toBe('// infrastructure test-api\n');
+
+    expect(
+      await fs.exists(
+        path.join(
+          temporaryDirectory,
+          'src',
+          'modules',
+          '.gitkeep',
+        ),
+      ),
+    ).toBe(true);
 
     expect(
       await fs.exists(

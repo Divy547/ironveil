@@ -4,8 +4,11 @@ import {
   createGenerationContext,
 } from './core/generation-context.js';
 import {
-  BaseProjectGenerator,
-} from './project/base-project.generator.js';
+  createGenerationPlan,
+} from './core/generation-plan.js';
+import {
+  createGenerationOrchestrator,
+} from './core/generation-orchestrator.js';
 import {
   createTemplateLoader,
 } from '../rendering/template-loader.js';
@@ -52,9 +55,15 @@ export async function generateProject(
     renderer,
   );
 
-  const generator = new BaseProjectGenerator();
+  const plan = createGenerationPlan(config);
 
-  await generator.generate(context);
+  const orchestrator =
+    createGenerationOrchestrator();
+
+  await orchestrator.generate(
+    plan,
+    context,
+  );
 
   return destination;
 }
