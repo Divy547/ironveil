@@ -10,7 +10,10 @@ import {
   createGeneratedProject,
 } from './helpers/generated-project.js';
 
-describe('ForgeKit project generation E2E', () => {
+const DATABASE_URL =
+  'postgresql://postgres:postgres@localhost:5432/forgekit-auth-e2e?schema=public';
+
+describe('ForgeKit Prisma E2E', () => {
   let project:
     | Awaited<
         ReturnType<
@@ -25,54 +28,54 @@ describe('ForgeKit project generation E2E', () => {
   });
 
   it(
-    'generates a buildable NestJS project',
+    'generates and builds Prisma infrastructure',
     async () => {
       project =
         await createGeneratedProject(
           resolveConfig({
             projectName:
-              'generated-api',
+              'generated-prisma-api',
           }),
-          'forgekit-generation-e2e',
+          'forgekit-prisma-e2e',
         );
 
       expect(
         await project.fs.exists(
-          `${project.root}/package.json`,
+          `${project.root}/prisma/schema.prisma`,
         ),
       ).toBe(true);
 
       expect(
         await project.fs.exists(
-          `${project.root}/tsconfig.json`,
+          `${project.root}/src/infrastructure/prisma/prisma.module.ts`,
         ),
       ).toBe(true);
 
       expect(
         await project.fs.exists(
-          `${project.root}/nest-cli.json`,
+          `${project.root}/src/infrastructure/prisma/prisma.service.ts`,
         ),
       ).toBe(true);
 
-      expect(
-        await project.fs.exists(
-          `${project.root}/src/main.ts`,
-        ),
-      ).toBe(true);
-
-      expect(
-        await project.fs.exists(
-          `${project.root}/src/app.module.ts`,
-        ),
-      ).toBe(true);
+      await project.writeEnv({
+        databaseUrl:
+          DATABASE_URL,
+      });
 
       await project.install();
       await project.prismaGenerate();
+      await project.prismaMigrateDeploy();
       await project.build();
 
       expect(
         await project.fs.exists(
-          `${project.root}/dist/main.js`,
+          `${project.root}/src/generated/prisma/client.ts`,
+        ),
+      ).toBe(true);
+
+      expect(
+        await project.fs.exists(
+          `${project.root}/dist/infrastructure/prisma/prisma.service.js`,
         ),
       ).toBe(true);
     },
