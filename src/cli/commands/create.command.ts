@@ -3,6 +3,7 @@ import { resolveConfig } from '../../config/index.js';
 import { promptCreateOptions } from '../prompts/create.prompts.js';
 import type { CreateCommandOptions } from '../options/create.options.js';
 import { hasExplicitCreateOptions } from '../options/create.mode.js';
+import { generateProject } from '../../generators/generate-project.js';
 
 export function registerCreateCommand(program: Command): void {
   program
@@ -38,7 +39,13 @@ export function registerCreateCommand(program: Command): void {
           ...resolvedOptions,
         });
 
-        console.log(config);
+        const destination = await generateProject(
+          config,
+        );
+
+        console.log(
+          `Created ${config.projectName} at ${destination}`,
+        );
       },
     );
 }
