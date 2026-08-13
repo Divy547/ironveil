@@ -1,0 +1,43 @@
+{
+  "name": "forgekit",
+  "version": "0.1.0",
+  "description": "An opinionated developer productivity CLI for bootstrapping production-ready NestJS backends.",
+  "type": "module",
+  "bin": {
+    "forgekit": "./bin/forgekit.js"
+  },
+  "files": [
+    "bin",
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "nestjs",
+    "node",
+    "typescript",
+    "cli",
+    "backend",
+    "code-generation",
+    "developer-tools"
+  ],
+  "license": "MIT",
+  "packageManager": "pnpm@11.21.0",
+  "dependencies": {
+    "@clack/prompts": "latest",
+    "commander": "latest",
+    "forgekit": "link:",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "tsx": "latest",
+    "typescript": "latest",
+    "vitest": "latest"
+  }
+}
