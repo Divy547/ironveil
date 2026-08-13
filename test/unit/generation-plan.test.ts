@@ -19,6 +19,7 @@ describe('GenerationPlan', () => {
     ).toEqual([
       'base',
       'config',
+      'prisma',
     ]);
   });
 

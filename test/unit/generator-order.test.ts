@@ -17,6 +17,7 @@ describe('generator ordering', () => {
     expect(names).toEqual([
       'base',
       'config',
+      'prisma',
     ]);
   });
 

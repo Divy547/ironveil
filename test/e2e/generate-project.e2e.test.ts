@@ -36,7 +36,7 @@ describe('ForgeKit project generation E2E', () => {
   });
 
   it(
-    'generates a buildable NestJS project',
+    'generates a buildable NestJS project with Prisma',
     async () => {
       temporaryDirectory = await mkdtemp(
         path.join(
@@ -75,6 +75,28 @@ describe('ForgeKit project generation E2E', () => {
         ),
       ).toBe(true);
 
+      expect(
+        await fs.exists(
+          path.join(
+            destination,
+            'prisma',
+            'schema.prisma',
+          ),
+        ),
+      ).toBe(true);
+
+      expect(
+        await fs.exists(
+          path.join(
+            destination,
+            'src',
+            'infrastructure',
+            'prisma',
+            'prisma.service.ts',
+          ),
+        ),
+      ).toBe(true);
+
       await execFileAsync(
         'npm',
         ['install'],
@@ -82,6 +104,26 @@ describe('ForgeKit project generation E2E', () => {
           cwd: destination,
         },
       );
+
+      await execFileAsync(
+        'npx',
+        ['prisma', 'generate'],
+        {
+          cwd: destination,
+        },
+      );
+
+      expect(
+        await fs.exists(
+          path.join(
+            destination,
+            'src',
+            'generated',
+            'prisma',
+            'client.ts',
+          ),
+        ),
+      ).toBe(true);
 
       await execFileAsync(
         'npm',
@@ -96,6 +138,18 @@ describe('ForgeKit project generation E2E', () => {
           path.join(
             destination,
             'dist',
+          ),
+        ),
+      ).toBe(true);
+
+      expect(
+        await fs.exists(
+          path.join(
+            destination,
+            'dist',
+            'infrastructure',
+            'prisma',
+            'prisma.service.js',
           ),
         ),
       ).toBe(true);
