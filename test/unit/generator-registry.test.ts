@@ -7,7 +7,7 @@ describe('GeneratorRegistry', () => {
   it('registers the base, config, prisma, and auth generators', () => {
     const generators = createGenerators();
 
-    expect(generators).toHaveLength(4);
+    expect(generators).toHaveLength(5);
 
     expect(
       generators.map(
@@ -18,6 +18,7 @@ describe('GeneratorRegistry', () => {
       'config',
       'prisma',
       'auth',
+      'swagger',
     ]);
   });
 

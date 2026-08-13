@@ -1,0 +1,59 @@
+import { z } from 'zod';
+
+const EnvironmentSchema = z.object({
+  NODE_ENV: z
+    .enum([
+      'development',
+      'test',
+      'production',
+    ])
+    .default('development'),
+
+  PORT: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(65535)
+    .default(3000),
+
+  DATABASE_URL: z
+    .string()
+    .min(1, 'DATABASE_URL is required'),
+
+  JWT_SECRET: z
+    .string()
+    .min(
+      32,
+      'JWT_SECRET must be at least 32 characters',
+    )
+    .optional(),
+});
+
+export type Environment = z.infer<
+  typeof EnvironmentSchema
+>;
+
+export function validateEnvironment(
+  config: Record<string, unknown>,
+): Environment {
+  const result =
+    EnvironmentSchema.safeParse(config);
+
+  if (!result.success) {
+    const message = result.error.issues
+      .map((issue) => {
+        const path =
+          issue.path.join('.') ||
+          'configuration';
+
+        return `${path}: ${issue.message}`;
+      })
+      .join('\n');
+
+    throw new Error(
+      `Environment validation failed:\n${message}`,
+    );
+  }
+
+  return result.data;
+}

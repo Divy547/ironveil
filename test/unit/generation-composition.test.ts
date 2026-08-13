@@ -62,6 +62,7 @@ describe('Generator composition', () => {
       'base',
       'config',
       'prisma',
+      'swagger',
     ]);
   });
 
@@ -75,6 +76,7 @@ describe('Generator composition', () => {
       'config',
       'prisma',
       'auth',
+      'swagger',
     ]);
   });
 
@@ -87,6 +89,7 @@ describe('Generator composition', () => {
       'base',
       'config',
       'prisma',
+      'swagger',
     ]);
   });
 
@@ -100,6 +103,7 @@ describe('Generator composition', () => {
       'config',
       'prisma',
       'auth',
+      'swagger',
     ]);
   });
 

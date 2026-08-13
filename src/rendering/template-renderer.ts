@@ -20,6 +20,16 @@ export function createTemplateRenderer(): TemplateRenderer {
           ? 'AuthModule,'
           : '';
 
+      const swaggerImport =
+        config.swagger
+          ? "import { setupSwagger } from './infrastructure/swagger/swagger.setup';"
+          : '';
+
+      const swaggerSetup =
+        config.swagger
+          ? 'setupSwagger(app);'
+          : '';
+
       return template
         .replace(
           /\{\{\s*projectName\s*\}\}/g,
@@ -32,6 +42,14 @@ export function createTemplateRenderer(): TemplateRenderer {
         .replace(
           /\{\{\s*authModule\s*\}\}/g,
           authModule,
+        )
+        .replace(
+          /\{\{\s*swaggerImport\s*\}\}/g,
+          swaggerImport,
+        )
+        .replace(
+          /\{\{\s*swaggerSetup\s*\}\}/g,
+          swaggerSetup,
         );
     },
   };

@@ -19,6 +19,7 @@ describe('generator ordering', () => {
       'config',
       'prisma',
       'auth',
+      'swagger',
     ]);
   });
 

@@ -20,6 +20,7 @@ describe('GenerationPlan', () => {
       'base',
       'config',
       'prisma',
+      'swagger',
     ]);
   });
 
@@ -40,6 +41,7 @@ describe('GenerationPlan', () => {
       'config',
       'prisma',
       'auth',
+      'swagger',
     ]);
   });
 

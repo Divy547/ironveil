@@ -86,6 +86,56 @@ describe('TemplateRenderer', () => {
     );
   });
 
+  it('renders swagger placeholders when swagger is enabled', () => {
+    const config = resolveConfig({
+      projectName: 'test-api',
+      swagger: true,
+    });
+
+    const renderer = createTemplateRenderer();
+
+    const result = renderer.render(
+      [
+        '{{swaggerImport}}',
+        'async function bootstrap() {',
+        '  {{swaggerSetup}}',
+        '}',
+      ].join('\n'),
+      config,
+    );
+
+    expect(result).toContain(
+      "import { setupSwagger } from './infrastructure/swagger/swagger.setup';",
+    );
+
+    expect(result).toContain(
+      'setupSwagger(app);',
+    );
+  });
+
+  it('removes swagger placeholders when swagger is disabled', () => {
+    const config = resolveConfig({
+      projectName: 'test-api',
+      swagger: false,
+    });
+
+    const renderer = createTemplateRenderer();
+
+    const result = renderer.render(
+      [
+        '{{swaggerImport}}',
+        'async function bootstrap() {',
+        '  {{swaggerSetup}}',
+        '}',
+      ].join('\n'),
+      config,
+    );
+
+    expect(result).not.toContain(
+      'setupSwagger',
+    );
+  });
+
   it('leaves unknown placeholders unchanged', () => {
     const config = resolveConfig({
       projectName: 'test-api',
