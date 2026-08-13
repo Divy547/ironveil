@@ -18,4 +18,25 @@ describe('ForgeKit CLI', () => {
 
     expect(command).toBeDefined();
   });
+
+  it('registers create command options', () => {
+    const cli = createCli();
+
+    const command = cli.commands.find(
+      (registeredCommand) => registeredCommand.name() === 'create',
+    );
+
+    expect(command).toBeDefined();
+
+    const optionNames = command?.options.map(
+      (option) => option.long,
+    );
+
+    expect(optionNames).toContain('--redis');
+    expect(optionNames).toContain('--auth');
+    expect(optionNames).toContain('--no-swagger');
+    expect(optionNames).toContain('--no-docker');
+    expect(optionNames).toContain('--no-ci');
+    expect(optionNames).toContain('--no-testing');
+  });
 });
