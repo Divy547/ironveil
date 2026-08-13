@@ -23,6 +23,12 @@ const PRISMA_TEMPLATES = [
     destination:
       'src/infrastructure/prisma/prisma.service.ts',
   },
+  {
+    source:
+      'prisma/prisma/migrations/0001_init/migration.sql',
+    destination:
+      'prisma/migrations/0001_init/migration.sql',
+  },
 ] as const;
 
 export class PrismaGenerator implements Generator {

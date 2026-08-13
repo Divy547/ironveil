@@ -21,6 +21,18 @@ const AUTH_TEMPLATES = [
   },
   {
     source:
+      'auth/src/modules/auth/dto/register.dto.ts.template',
+    destination:
+      'src/modules/auth/dto/register.dto.ts',
+  },
+  {
+    source:
+      'auth/src/modules/auth/dto/login.dto.ts.template',
+    destination:
+      'src/modules/auth/dto/login.dto.ts',
+  },
+  {
+    source:
       'auth/src/modules/auth/strategies/jwt.strategy.ts.template',
     destination:
       'src/modules/auth/strategies/jwt.strategy.ts',
@@ -36,6 +48,12 @@ const AUTH_TEMPLATES = [
       'auth/src/modules/auth/types/jwt-payload.type.ts.template',
     destination:
       'src/modules/auth/types/jwt-payload.type.ts',
+  },
+  {
+    source:
+      'auth/src/modules/auth/auth.controller.ts.template',
+    destination:
+      'src/modules/auth/auth.controller.ts',
   },
 ] as const;
 
@@ -60,6 +78,11 @@ export class AuthGenerator implements Generator {
       bcrypt: '6.0.0',
       passport: '0.7.0',
       'passport-jwt': '4.0.1',
+    });
+
+    await manifest.addDevDependencies({
+      '@types/bcrypt': '6.0.0',
+      '@types/passport-jwt': '4.0.1',
     });
 
     for (const template of AUTH_TEMPLATES) {

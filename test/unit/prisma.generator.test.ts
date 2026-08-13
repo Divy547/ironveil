@@ -42,18 +42,12 @@ describe('PrismaGenerator', () => {
     }
   });
 
-  it('has the prisma generator contract', () => {
-    const generator = new PrismaGenerator();
-
-    const config = resolveConfig({
-      projectName: 'test-api',
-    });
-
-    expect(generator.name).toBe('prisma');
-    expect(generator.shouldRun(config)).toBe(true);
-  });
-
-  it('generates Prisma infrastructure', async () => {
+  async function createContext(): Promise<{
+    fs: ReturnType<typeof createFileSystem>;
+    context: Awaited<
+      ReturnType<typeof createGenerationContext>
+    >;
+  }> {
     temporaryDirectory = await mkdtemp(
       path.join(
         os.tmpdir(),
@@ -95,6 +89,29 @@ describe('PrismaGenerator', () => {
       renderer,
     );
 
+    return {
+      fs,
+      context,
+    };
+  }
+
+  it('has the prisma generator contract', () => {
+    const generator = new PrismaGenerator();
+
+    const config = resolveConfig({
+      projectName: 'test-api',
+    });
+
+    expect(generator.name).toBe('prisma');
+    expect(generator.shouldRun(config)).toBe(true);
+  });
+
+  it('generates Prisma infrastructure and migration', async () => {
+    const {
+      fs,
+      context,
+    } = await createContext();
+
     const generator = new PrismaGenerator();
 
     await generator.generate(context);
@@ -105,6 +122,18 @@ describe('PrismaGenerator', () => {
           temporaryDirectory,
           'prisma',
           'schema.prisma',
+        ),
+      ),
+    ).toBe(true);
+
+    expect(
+      await fs.exists(
+        path.join(
+          temporaryDirectory,
+          'prisma',
+          'migrations',
+          '0001_init',
+          'migration.sql',
         ),
       ),
     ).toBe(true);
@@ -135,46 +164,10 @@ describe('PrismaGenerator', () => {
   });
 
   it('generates the expected Prisma schema', async () => {
-    temporaryDirectory = await mkdtemp(
-      path.join(
-        os.tmpdir(),
-        'forgekit-prisma-',
-      ),
-    );
-
-    const fs = createFileSystem();
-
-    const config = resolveConfig({
-      projectName: 'test-api',
-    });
-
-    await fs.writeFile(
-      path.join(
-        temporaryDirectory,
-        'package.json',
-      ),
-      JSON.stringify({
-        name: 'test-api',
-        scripts: {},
-        dependencies: {},
-        devDependencies: {},
-      }),
-    );
-
-    const loader = createTemplateLoader(
-      getTemplatesDirectory(),
+    const {
       fs,
-    );
-
-    const renderer = createTemplateRenderer();
-
-    const context = createGenerationContext(
-      config,
-      temporaryDirectory,
-      fs,
-      loader,
-      renderer,
-    );
+      context,
+    } = await createContext();
 
     const generator = new PrismaGenerator();
 
@@ -207,53 +200,74 @@ describe('PrismaGenerator', () => {
     expect(schema).toContain(
       'url      = env("DATABASE_URL")',
     );
+
+    expect(schema).toContain(
+      'model User',
+    );
+
+    expect(schema).toContain(
+      'email        String   @unique',
+    );
+
+    expect(schema).toContain(
+      'passwordHash String',
+    );
+  });
+
+  it('generates the expected initial migration', async () => {
+    const {
+      fs,
+      context,
+    } = await createContext();
+
+    const generator = new PrismaGenerator();
+
+    await generator.generate(context);
+
+    const migration = await fs.readFile(
+      path.join(
+        temporaryDirectory,
+        'prisma',
+        'migrations',
+        '0001_init',
+        'migration.sql',
+      ),
+    );
+
+    expect(migration).toContain(
+      'CREATE SCHEMA IF NOT EXISTS "public";',
+    );
+
+    expect(migration).toContain(
+      'CREATE TABLE "User"',
+    );
+
+    expect(migration).toContain(
+      '"id" TEXT NOT NULL',
+    );
+
+    expect(migration).toContain(
+      '"email" TEXT NOT NULL',
+    );
+
+    expect(migration).toContain(
+      '"passwordHash" TEXT NOT NULL',
+    );
+
+    expect(migration).toContain(
+      'CONSTRAINT "User_pkey" PRIMARY KEY ("id")',
+    );
+
+    expect(migration).toContain(
+      'CREATE UNIQUE INDEX "User_email_key" ON "User"("email");',
+    );
   });
 
   it('adds Prisma dependencies and scripts', async () => {
-    temporaryDirectory = await mkdtemp(
-      path.join(
-        os.tmpdir(),
-        'forgekit-prisma-',
-      ),
-    );
-
-    const fs = createFileSystem();
-
-    const config = resolveConfig({
-      projectName: 'test-api',
-    });
-
-    await fs.writeFile(
-      path.join(
-        temporaryDirectory,
-        'package.json',
-      ),
-      JSON.stringify({
-        name: 'test-api',
-        scripts: {
-          build: 'nest build',
-        },
-        dependencies: {
-          '@nestjs/common': '^11.0.0',
-        },
-        devDependencies: {},
-      }),
-    );
-
-    const loader = createTemplateLoader(
-      getTemplatesDirectory(),
+    const {
       fs,
-    );
-
-    const renderer = createTemplateRenderer();
-
-    const context = createGenerationContext(
-      config,
-      temporaryDirectory,
-      fs,
-      loader,
-      renderer,
-    );
+      context,
+    } = await createContext();
 
     const generator = new PrismaGenerator();
 
