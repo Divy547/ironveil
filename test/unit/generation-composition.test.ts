@@ -63,6 +63,7 @@ describe('Generator composition', () => {
       'config',
       'prisma',
       'swagger',
+      'testing',
       'docker',
       'ci',
     ]);
@@ -79,6 +80,7 @@ describe('Generator composition', () => {
       'prisma',
       'auth',
       'swagger',
+      'testing',
       'docker',
       'ci',
     ]);
@@ -94,6 +96,7 @@ describe('Generator composition', () => {
       'config',
       'prisma',
       'swagger',
+      'testing',
       'docker',
       'ci',
     ]);
@@ -110,6 +113,7 @@ describe('Generator composition', () => {
       'prisma',
       'auth',
       'swagger',
+      'testing',
       'docker',
       'ci',
     ]);
@@ -733,6 +737,10 @@ describe('Generator composition', () => {
       'docker-compose.yml',
       '.dockerignore',
       '.github/workflows/ci.yml',
+      'jest.config.ts',
+      'test/jest-e2e.json',
+      'src/app.module.spec.ts',
+      'test/app.e2e-spec.ts',
     ];
 
     for (const file of expectedFiles) {
@@ -750,6 +758,7 @@ describe('Generator composition', () => {
       ),
     ) as {
       dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
       scripts?: Record<string, string>;
     };
 
@@ -757,7 +766,14 @@ describe('Generator composition', () => {
     expect(packageJson.dependencies?.['@prisma/client']).toBe('6.19.3');
     expect(packageJson.dependencies?.['@nestjs/jwt']).toBe('11.0.2');
     expect(packageJson.dependencies?.['@nestjs/swagger']).toBe('11.0.6');
+    expect(packageJson.devDependencies?.['@nestjs/testing']).toBe('^11.0.0');
+    expect(packageJson.devDependencies?.jest).toBe('^30.0.0');
+    expect(packageJson.devDependencies?.supertest).toBe('^7.0.0');
     expect(packageJson.scripts?.['typecheck']).toBe('tsc --noEmit');
+    expect(packageJson.scripts?.['test']).toBe('jest');
+    expect(packageJson.scripts?.['test:e2e']).toBe(
+      'jest --config ./test/jest-e2e.json',
+    );
     expect(packageJson.scripts?.['docker:up']).toBe('docker compose up --build');
     expect(packageJson.scripts?.['docker:down']).toBe('docker compose down');
 
@@ -807,5 +823,56 @@ describe('Generator composition', () => {
 
     // typecheck script should still exist in base package.json even when ci is false
     expect(packageJson.scripts?.['typecheck']).toBe('tsc --noEmit');
+  });
+
+  it('does not generate testing artifacts when testing is disabled', async () => {
+    temporaryDirectory = await mkdtemp(
+      path.join(
+        os.tmpdir(),
+        'forgekit-composition-',
+      ),
+    );
+
+    const config = resolveConfig({
+      projectName: 'test-api',
+      testing: false,
+    });
+
+    const destination = await generateProject(
+      config,
+      temporaryDirectory,
+    );
+
+    const fs = createFileSystem();
+
+    expect(
+      await fs.exists(
+        path.join(destination, 'jest.config.ts'),
+      ),
+    ).toBe(false);
+    expect(
+      await fs.exists(
+        path.join(destination, 'test'),
+      ),
+    ).toBe(false);
+    expect(
+      await fs.exists(
+        path.join(destination, 'src', 'app.module.spec.ts'),
+      ),
+    ).toBe(false);
+
+    const packageJson = JSON.parse(
+      await fs.readFile(
+        path.join(destination, 'package.json'),
+      ),
+    ) as {
+      scripts?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+
+    expect(packageJson.scripts?.['test']).toBeUndefined();
+    expect(packageJson.scripts?.['test:e2e']).toBeUndefined();
+    expect(packageJson.devDependencies?.['@nestjs/testing']).toBeUndefined();
+    expect(packageJson.devDependencies?.['jest']).toBeUndefined();
   });
 });

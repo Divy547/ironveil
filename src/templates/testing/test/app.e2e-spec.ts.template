@@ -1,0 +1,40 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { INestApplication } from '@nestjs/common';
+import request from 'supertest';
+import { AppModule } from '../src/app.module';
+{{testingE2eImports}}
+
+process.env.DATABASE_URL =
+  process.env.DATABASE_URL ??
+  'postgresql://postgres:postgres@localhost:5432/test_db?schema=public';
+process.env.REDIS_URL =
+  process.env.REDIS_URL ?? 'redis://localhost:6379';
+process.env.JWT_SECRET =
+  process.env.JWT_SECRET ?? 'test-secret-key-minimum-32-chars-long';
+
+describe('App (e2e)', () => {
+  let app: INestApplication;
+
+  beforeEach(async () => {
+    const moduleBuilder = Test.createTestingModule({
+      imports: [AppModule],
+    });
+
+{{testingE2eOverrides}}
+
+    const moduleFixture: TestingModule = await moduleBuilder.compile();
+
+    app = moduleFixture.createNestApplication();
+    await app.init();
+  });
+
+  afterEach(async () => {
+    if (app) {
+      await app.close();
+    }
+  });
+
+  it('is defined', () => {
+    expect(app).toBeDefined();
+  });
+});

@@ -21,6 +21,7 @@ describe('GenerationPlan', () => {
       'config',
       'prisma',
       'swagger',
+      'testing',
       'docker',
       'ci',
     ]);
@@ -44,6 +45,7 @@ describe('GenerationPlan', () => {
       'prisma',
       'auth',
       'swagger',
+      'testing',
       'docker',
       'ci',
     ]);
@@ -67,9 +69,40 @@ describe('GenerationPlan', () => {
       'prisma',
       'redis',
       'swagger',
+      'testing',
       'docker',
       'ci',
     ]);
+  });
+
+  it('includes testing when testing is enabled', () => {
+    const config = resolveConfig({
+      projectName: 'test-api',
+      testing: true,
+    });
+
+    const plan = createGenerationPlan(config);
+
+    const names = plan.generators.map(
+      (generator) => generator.name,
+    );
+
+    expect(names).toContain('testing');
+  });
+
+  it('excludes testing when testing is disabled', () => {
+    const config = resolveConfig({
+      projectName: 'test-api',
+      testing: false,
+    });
+
+    const plan = createGenerationPlan(config);
+
+    expect(
+      plan.generators.map(
+        (generator) => generator.name,
+      ),
+    ).not.toContain('testing');
   });
 
   it('includes docker when docker is enabled', () => {

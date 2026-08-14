@@ -22,6 +22,7 @@ export interface GeneratedProject {
 
   writeEnv(values: {
     databaseUrl: string;
+    redisUrl?: string;
     jwtSecret?: string;
   }): Promise<void>;
 
@@ -74,6 +75,9 @@ export async function createGeneratedProject(
           'NODE_ENV=development',
           `PORT=${port}`,
           `DATABASE_URL="${values.databaseUrl}"`,
+          values.redisUrl
+            ? `REDIS_URL="${values.redisUrl}"`
+            : undefined,
           values.jwtSecret
             ? `JWT_SECRET="${values.jwtSecret}"`
             : undefined,

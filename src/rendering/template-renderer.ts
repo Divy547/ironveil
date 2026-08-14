@@ -176,6 +176,41 @@ export function createTemplateRenderer(): TemplateRenderer {
         ? '\n      - name: Run unit tests\n        run: npm test'
         : '';
 
+      // ── Testing: E2E imports and provider overrides ──────────────
+      const testingE2eImportLines: string[] = [];
+      const testingE2eOverrideLines: string[] = [];
+
+      if (hasPrisma) {
+        testingE2eImportLines.push(
+          "import { PrismaService } from '../src/infrastructure/prisma/prisma.service';",
+        );
+        testingE2eOverrideLines.push(
+          '    moduleBuilder.overrideProvider(PrismaService).useValue({\n' +
+          '      onModuleInit: jest.fn(),\n' +
+          '      onModuleDestroy: jest.fn(),\n' +
+          '      $connect: jest.fn(),\n' +
+          '      $disconnect: jest.fn(),\n' +
+          '    });',
+        );
+      }
+
+      if (config.redis) {
+        testingE2eImportLines.push(
+          "import { RedisService } from '../src/infrastructure/redis/redis.service';",
+        );
+        testingE2eOverrideLines.push(
+          '    moduleBuilder.overrideProvider(RedisService).useValue({\n' +
+          '      onModuleInit: jest.fn(),\n' +
+          '      onModuleDestroy: jest.fn(),\n' +
+          '      connect: jest.fn(),\n' +
+          '      quit: jest.fn(),\n' +
+          '    });',
+        );
+      }
+
+      const testingE2eImports = testingE2eImportLines.join('\n');
+      const testingE2eOverrides = testingE2eOverrideLines.join('\n');
+
       return template
         .replace(
           /\{\{\s*projectName\s*\}\}/g,
@@ -252,6 +287,14 @@ export function createTemplateRenderer(): TemplateRenderer {
         .replace(
           /\{\{\s*ciTestStep\s*\}\}/g,
           ciTestStep,
+        )
+        .replace(
+          /\{\{\s*testingE2eImports\s*\}\}/g,
+          testingE2eImports,
+        )
+        .replace(
+          /\{\{\s*testingE2eOverrides\s*\}\}/g,
+          testingE2eOverrides,
         );
     },
   };
