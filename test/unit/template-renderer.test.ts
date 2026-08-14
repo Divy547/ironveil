@@ -136,6 +136,60 @@ describe('TemplateRenderer', () => {
     );
   });
 
+  it('renders redis placeholders when redis is enabled', () => {
+    const config = resolveConfig({
+      projectName: 'test-api',
+      redis: true,
+    });
+
+    const renderer = createTemplateRenderer();
+
+    const result = renderer.render(
+      [
+        '{{redisModuleImport}}',
+        'imports: [{{redisModule}}]',
+        '{{redisEnvExample}}',
+        '{{redisConfigType}}',
+        '{{redisConfig}}',
+        '{{redisEnvSchema}}',
+      ].join('\n'),
+      config,
+    );
+
+    expect(result).toContain(
+      "import { RedisModule } from './redis/redis.module';",
+    );
+    expect(result).toContain('imports: [RedisModule,]');
+    expect(result).toContain('REDIS_URL="redis://localhost:6379"');
+    expect(result).toContain('readonly redis: {');
+    expect(result).toContain('process.env.REDIS_URL');
+    expect(result).toContain('REDIS_URL is required');
+  });
+
+  it('removes redis placeholders when redis is disabled', () => {
+    const config = resolveConfig({
+      projectName: 'test-api',
+      redis: false,
+    });
+
+    const renderer = createTemplateRenderer();
+
+    const result = renderer.render(
+      [
+        '{{redisModuleImport}}',
+        'imports: [{{redisModule}}]',
+        '{{redisEnvExample}}',
+        '{{redisConfigType}}',
+        '{{redisConfig}}',
+        '{{redisEnvSchema}}',
+      ].join('\n'),
+      config,
+    );
+
+    expect(result).not.toContain('RedisModule');
+    expect(result).not.toContain('REDIS_URL');
+  });
+
   it('leaves unknown placeholders unchanged', () => {
     const config = resolveConfig({
       projectName: 'test-api',

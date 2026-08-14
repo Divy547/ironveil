@@ -18,6 +18,7 @@ describe('generator ordering', () => {
       'base',
       'config',
       'prisma',
+      'redis',
       'auth',
       'swagger',
     ]);

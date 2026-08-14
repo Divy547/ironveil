@@ -20,6 +20,8 @@ const EnvironmentSchema = z.object({
     .string()
     .min(1, 'DATABASE_URL is required'),
 
+  {{redisEnvSchema}}
+
   JWT_SECRET: z
     .string()
     .min(

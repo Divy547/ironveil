@@ -45,6 +45,27 @@ describe('GenerationPlan', () => {
     ]);
   });
 
+  it('includes redis when redis is enabled', () => {
+    const config = resolveConfig({
+      projectName: 'test-api',
+      redis: true,
+    });
+
+    const plan = createGenerationPlan(config);
+
+    expect(
+      plan.generators.map(
+        (generator) => generator.name,
+      ),
+    ).toEqual([
+      'base',
+      'config',
+      'prisma',
+      'redis',
+      'swagger',
+    ]);
+  });
+
   it('only includes generators that should run', () => {
     const config = resolveConfig({
       projectName: 'test-api',

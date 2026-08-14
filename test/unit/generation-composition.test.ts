@@ -307,4 +307,239 @@ describe('Generator composition', () => {
       ),
     ).toBe(true);
   });
+
+  it('does not generate Redis output when redis is disabled', async () => {
+    temporaryDirectory = await mkdtemp(
+      path.join(
+        os.tmpdir(),
+        'forgekit-composition-',
+      ),
+    );
+
+    const config = resolveConfig({
+      projectName: 'test-api',
+      redis: false,
+    });
+
+    const destination = await generateProject(
+      config,
+      temporaryDirectory,
+    );
+
+    const fs = createFileSystem();
+
+    expect(
+      await fs.exists(
+        path.join(
+          destination,
+          'src',
+          'infrastructure',
+          'redis',
+        ),
+      ),
+    ).toBe(false);
+
+    const infraModule = await fs.readFile(
+      path.join(
+        destination,
+        'src',
+        'infrastructure',
+        'infrastructure.module.ts',
+      ),
+    );
+
+    expect(infraModule).not.toContain('RedisModule');
+
+    const envExample = await fs.readFile(
+      path.join(destination, '.env.example'),
+    );
+
+    expect(envExample).not.toContain('REDIS_URL');
+
+    const environmentTs = await fs.readFile(
+      path.join(
+        destination,
+        'src',
+        'infrastructure',
+        'config',
+        'environment.ts',
+      ),
+    );
+
+    expect(environmentTs).not.toContain('REDIS_URL');
+
+    const configurationTs = await fs.readFile(
+      path.join(
+        destination,
+        'src',
+        'infrastructure',
+        'config',
+        'configuration.ts',
+      ),
+    );
+
+    expect(configurationTs).not.toContain('redis');
+
+    const packageJson = JSON.parse(
+      await fs.readFile(
+        path.join(destination, 'package.json'),
+      ),
+    ) as { dependencies?: Record<string, string> };
+
+    expect(packageJson.dependencies?.ioredis).toBeUndefined();
+  });
+
+  it('generates Redis output when redis is enabled', async () => {
+    temporaryDirectory = await mkdtemp(
+      path.join(
+        os.tmpdir(),
+        'forgekit-composition-',
+      ),
+    );
+
+    const config = resolveConfig({
+      projectName: 'test-api',
+      redis: true,
+    });
+
+    const destination = await generateProject(
+      config,
+      temporaryDirectory,
+    );
+
+    const fs = createFileSystem();
+
+    expect(
+      await fs.exists(
+        path.join(
+          destination,
+          'src',
+          'infrastructure',
+          'redis',
+          'redis.module.ts',
+        ),
+      ),
+    ).toBe(true);
+
+    expect(
+      await fs.exists(
+        path.join(
+          destination,
+          'src',
+          'infrastructure',
+          'redis',
+          'redis.service.ts',
+        ),
+      ),
+    ).toBe(true);
+
+    const infraModule = await fs.readFile(
+      path.join(
+        destination,
+        'src',
+        'infrastructure',
+        'infrastructure.module.ts',
+      ),
+    );
+
+    expect(infraModule).toContain("import { RedisModule } from './redis/redis.module';");
+    expect(infraModule).toContain('RedisModule');
+
+    const envExample = await fs.readFile(
+      path.join(destination, '.env.example'),
+    );
+
+    expect(envExample).toContain('REDIS_URL="redis://localhost:6379"');
+
+    const environmentTs = await fs.readFile(
+      path.join(
+        destination,
+        'src',
+        'infrastructure',
+        'config',
+        'environment.ts',
+      ),
+    );
+
+    expect(environmentTs).toContain('REDIS_URL: z');
+
+    const configurationTs = await fs.readFile(
+      path.join(
+        destination,
+        'src',
+        'infrastructure',
+        'config',
+        'configuration.ts',
+      ),
+    );
+
+    expect(configurationTs).toContain('readonly redis:');
+    expect(configurationTs).toContain('redis: {');
+
+    const packageJson = JSON.parse(
+      await fs.readFile(
+        path.join(destination, 'package.json'),
+      ),
+    ) as { dependencies?: Record<string, string> };
+
+    expect(packageJson.dependencies?.ioredis).toBe('5.6.0');
+  });
+
+  it('runs Redis, Prisma, JWT, and Swagger together without collisions', async () => {
+    temporaryDirectory = await mkdtemp(
+      path.join(
+        os.tmpdir(),
+        'forgekit-composition-',
+      ),
+    );
+
+    const config = resolveConfig({
+      projectName: 'full-stack-api',
+      redis: true,
+      auth: 'jwt',
+      swagger: true,
+    });
+
+    const destination = await generateProject(
+      config,
+      temporaryDirectory,
+    );
+
+    const fs = createFileSystem();
+
+    const expectedFiles = [
+      'src/app.module.ts',
+      'src/main.ts',
+      'src/infrastructure/infrastructure.module.ts',
+      'src/infrastructure/config/configuration.ts',
+      'src/infrastructure/config/environment.ts',
+      'src/infrastructure/prisma/prisma.module.ts',
+      'src/infrastructure/prisma/prisma.service.ts',
+      'src/infrastructure/redis/redis.module.ts',
+      'src/infrastructure/redis/redis.service.ts',
+      'src/infrastructure/swagger/swagger.setup.ts',
+      'src/modules/auth/auth.module.ts',
+      'src/modules/auth/auth.service.ts',
+    ];
+
+    for (const file of expectedFiles) {
+      expect(
+        await fs.exists(
+          path.join(destination, file),
+        ),
+        `Expected file: ${file}`,
+      ).toBe(true);
+    }
+
+    const packageJson = JSON.parse(
+      await fs.readFile(
+        path.join(destination, 'package.json'),
+      ),
+    ) as { dependencies?: Record<string, string> };
+
+    expect(packageJson.dependencies?.ioredis).toBe('5.6.0');
+    expect(packageJson.dependencies?.['@prisma/client']).toBe('6.19.3');
+    expect(packageJson.dependencies?.['@nestjs/jwt']).toBe('11.0.2');
+    expect(packageJson.dependencies?.['@nestjs/swagger']).toBe('11.0.6');
+  });
 });

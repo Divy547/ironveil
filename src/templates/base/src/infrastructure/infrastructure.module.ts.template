@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
+{{redisModuleImport}}
 import { loadConfiguration } from './config/configuration';
 import { validateEnvironment } from './config/environment';
 
@@ -12,6 +13,7 @@ import { validateEnvironment } from './config/environment';
       load: [loadConfiguration],
     }),
     PrismaModule,
+    {{redisModule}}
   ],
 })
 export class InfrastructureModule {}
