@@ -115,7 +115,7 @@ describe('BaseProjectGenerator', () => {
       path.join(
         templateDirectory,
         'base',
-        'README.md',
+        'README.md.template',
       ),
       '# {{projectName}}\n',
     );

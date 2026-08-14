@@ -228,6 +228,7 @@ describe('generateProject', () => {
     } = await createProject();
 
     const templateFiles = [
+      'README.md.template',
       'src/main.ts.template',
       'src/app.module.ts.template',
       'src/common/common.module.ts.template',

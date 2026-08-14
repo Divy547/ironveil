@@ -1,0 +1,33 @@
+# {{projectName}}
+
+A production-ready NestJS backend application.
+
+## Features
+
+{{readmeFeatures}}
+
+## Prerequisites
+
+{{readmePrerequisites}}
+
+## Installation & Setup
+
+{{readmeInstallation}}
+
+## Environment Variables
+
+{{readmeEnvironment}}
+
+## Development
+
+{{readmeDevelopment}}
+{{readmeDatabase}}
+{{readmeAuth}}
+{{readmeSwagger}}
+{{readmeRedis}}
+{{readmeDocker}}
+{{readmeTesting}}
+{{readmeCi}}
+## Production
+
+{{readmeProduction}}

@@ -211,6 +211,293 @@ export function createTemplateRenderer(): TemplateRenderer {
       const testingE2eImports = testingE2eImportLines.join('\n');
       const testingE2eOverrides = testingE2eOverrideLines.join('\n');
 
+      // ── README: Features ─────────────────────────────────────────
+      const featureList: string[] = [
+        '- **NestJS 11**: Modular architecture with TypeScript and strict type checking',
+        '- **Configuration**: Centralized configuration and environment validation using Zod',
+      ];
+
+      if (hasPrisma) {
+        featureList.push(
+          '- **Database & ORM**: PostgreSQL integration with Prisma ORM and automated migrations',
+        );
+      }
+
+      if (config.auth === 'jwt') {
+        featureList.push(
+          '- **Authentication**: JWT authentication with Passport strategies and route guards',
+        );
+      }
+
+      if (config.swagger) {
+        featureList.push(
+          '- **API Documentation**: Interactive OpenAPI / Swagger documentation UI',
+        );
+      }
+
+      if (config.redis) {
+        featureList.push(
+          '- **Redis Infrastructure**: Redis client connectivity via `ioredis`',
+        );
+      }
+
+      if (config.docker) {
+        featureList.push(
+          '- **Docker**: Multi-stage Dockerfile and Docker Compose service orchestration',
+        );
+      }
+
+      if (config.testing) {
+        featureList.push(
+          '- **Testing**: Unit and deterministic E2E test suites with Jest and Supertest',
+        );
+      }
+
+      if (config.ci) {
+        featureList.push(
+          '- **CI/CD**: Automated GitHub Actions workflow for typecheck, testing, and builds',
+        );
+      }
+
+      const readmeFeatures = featureList.join('\n');
+
+      // ── README: Prerequisites ────────────────────────────────────
+      const prereqList: string[] = [
+        '- [Node.js](https://nodejs.org/) (version 22 or later)',
+        '- [npm](https://www.npmjs.com/) package manager',
+      ];
+
+      if (config.docker) {
+        prereqList.push(
+          '- [Docker](https://www.docker.com/) and Docker Compose (recommended for containerized services)',
+        );
+      } else {
+        if (hasPrisma) {
+          prereqList.push(
+            '- [PostgreSQL](https://www.postgresql.org/) (version 16 or later)',
+          );
+        }
+        if (config.redis) {
+          prereqList.push(
+            '- [Redis](https://redis.io/) (version 7 or later)',
+          );
+        }
+      }
+
+      const readmePrerequisites = prereqList.join('\n');
+
+      // ── README: Installation ────────────────────────────────────
+      const installSteps: string[] = [
+        '1. **Clone the repository and install dependencies**:\n   ```bash\n   npm install\n   ```',
+        '2. **Set up environment variables**:\n   ```bash\n   cp .env.example .env\n   ```',
+      ];
+
+      if (hasPrisma) {
+        installSteps.push(
+          '3. **Generate Prisma Client**:\n   ```bash\n   npx prisma generate\n   ```',
+        );
+      }
+
+      const readmeInstallation = installSteps.join('\n\n');
+
+      // ── README: Environment ─────────────────────────────────────
+      const envRows: string[] = [
+        '| `PORT` | Application HTTP port | `3000` |',
+        '| `NODE_ENV` | Runtime environment mode | `development` |',
+      ];
+
+      if (hasPrisma) {
+        envRows.push(
+          `| \`DATABASE_URL\` | PostgreSQL connection URL | \`postgresql://postgres:postgres@localhost:5432/${config.projectName}?schema=public\` |`,
+        );
+      }
+
+      if (config.redis) {
+        envRows.push(
+          '| `REDIS_URL` | Redis connection URL | `redis://localhost:6379` |',
+        );
+      }
+
+      if (config.auth === 'jwt') {
+        envRows.push(
+          '| `JWT_SECRET` | Secret key used for signing JWT tokens | `your-secret-key-at-least-32-characters` |',
+        );
+      }
+
+      const readmeEnvironment = [
+        'Configure the following environment variables in `.env`:\n',
+        '| Variable | Description | Example |',
+        '|---|---|---|',
+        ...envRows,
+      ].join('\n');
+
+      // ── README: Development ─────────────────────────────────────
+      const readmeDevelopment = [
+        '```bash',
+        '# Start the application in development mode with hot reload',
+        'npm run start:dev',
+        '',
+        '# Run TypeScript type checking',
+        'npm run typecheck',
+        '',
+        '# Build the project for production',
+        'npm run build',
+        '```',
+      ].join('\n');
+
+      // ── README: Database & Prisma ───────────────────────────────
+      const readmeDatabase = hasPrisma
+        ? [
+            '## Database & Prisma\n',
+            'This project uses Prisma ORM with PostgreSQL.\n',
+            '- **Schema**: `prisma/schema.prisma`',
+            '- **Generate Prisma Client**: `npx prisma generate`',
+            '- **Apply Migrations (Development)**: `npx prisma migrate dev`',
+            '- **Apply Migrations (Production/CI)**: `npx prisma migrate deploy`',
+            '- **Prisma Studio**: `npx prisma studio`\n',
+          ].join('\n')
+        : '';
+
+      // ── README: Authentication ──────────────────────────────────
+      const readmeAuth =
+        config.auth === 'jwt'
+          ? [
+              '## Authentication\n',
+              'JWT-based authentication is provided using `@nestjs/jwt` and Passport.\n',
+              'Available endpoints:',
+              '- `POST /auth/register`: Register a new user (`{ email, password }`)',
+              '- `POST /auth/login`: Authenticate and receive a JWT access token (`{ accessToken }`)',
+              '- `GET /auth/me`: Protected route returning the current user payload (requires `Authorization: Bearer <token>` header)\n',
+            ].join('\n')
+          : '';
+
+      // ── README: Swagger ─────────────────────────────────────────
+      const readmeSwagger = config.swagger
+        ? [
+            '## API Documentation (Swagger)\n',
+            'Interactive OpenAPI documentation is available when running locally:\n',
+            '- **Swagger UI**: [http://localhost:3000/api/docs](http://localhost:3000/api/docs)',
+            '- **OpenAPI JSON**: [http://localhost:3000/api/docs-json](http://localhost:3000/api/docs-json)\n',
+          ].join('\n')
+        : '';
+
+      // ── README: Redis ───────────────────────────────────────────
+      const readmeRedis = config.redis
+        ? [
+            '## Redis Infrastructure\n',
+            'Redis client connectivity is provided by `RedisModule` and `RedisService` using `ioredis`.\n',
+            '- Configured via the `REDIS_URL` environment variable.',
+            '- The injectable `RedisService` manages client connectivity and commands.\n',
+          ].join('\n')
+        : '';
+
+      // ── README: Docker ──────────────────────────────────────────
+      const dockerServicesList: string[] = [
+        '- `api`: NestJS application container',
+      ];
+      if (hasPrisma) {
+        dockerServicesList.push(
+          '- `postgres`: PostgreSQL 16 Alpine database container with persistent data volume',
+        );
+      }
+      if (config.redis) {
+        dockerServicesList.push(
+          '- `redis`: Redis 7 Alpine container with persistent data volume',
+        );
+      }
+
+      const readmeDocker = config.docker
+        ? [
+            '## Docker\n',
+            'Run the entire application stack using Docker Compose:\n',
+            '```bash',
+            '# Build and start all services',
+            'npm run docker:up',
+            '',
+            '# Stop all running services',
+            'npm run docker:down',
+            '```\n',
+            'Services defined in `docker-compose.yml`:\n' +
+              dockerServicesList.join('\n') +
+              '\n',
+          ].join('\n')
+        : '';
+
+      // ── README: Testing ─────────────────────────────────────────
+      const readmeTesting = config.testing
+        ? [
+            '## Testing\n',
+            '```bash',
+            '# Run unit tests',
+            'npm test',
+            '',
+            '# Run unit tests in watch mode',
+            'npm run test:watch',
+            '',
+            '# Generate test coverage report',
+            'npm run test:cov',
+            '',
+            '# Run end-to-end (E2E) tests',
+            'npm run test:e2e',
+            '```\n',
+            'Test directories:',
+            '- Unit tests: `src/**/*.spec.ts`',
+            '- E2E tests: `test/**/*.e2e-spec.ts`\n',
+          ].join('\n')
+        : '';
+
+      // ── README: Continuous Integration ──────────────────────────
+      const ciStepsList: string[] = [
+        '1. Checkout code & set up Node.js 22',
+        '2. Install dependencies (`npm install`)',
+      ];
+      if (hasPrisma) {
+        ciStepsList.push('3. Generate Prisma Client (`npx prisma generate`)');
+      }
+      ciStepsList.push(
+        `${ciStepsList.length + 1}. Typecheck validation (\`npm run typecheck\`)`,
+      );
+      if (config.testing) {
+        ciStepsList.push(
+          `${ciStepsList.length + 1}. Run unit tests (\`npm test\`)`,
+        );
+      }
+      ciStepsList.push(
+        `${ciStepsList.length + 1}. Build production bundle (\`npm run build\`)`,
+      );
+
+      const readmeCi = config.ci
+        ? [
+            '## Continuous Integration\n',
+            'Automated CI pipeline configured with GitHub Actions (`.github/workflows/ci.yml`).\n',
+            'Pipeline steps on pushes to `main` and `master`:\n' +
+              ciStepsList.join('\n') +
+              '\n',
+          ].join('\n')
+        : '';
+
+      // ── README: Production ──────────────────────────────────────
+      const prodStepsList: string[] = [
+        '```bash',
+        '# 1. Compile the TypeScript application',
+        'npm run build',
+      ];
+      if (hasPrisma) {
+        prodStepsList.push(
+          '',
+          '# 2. Deploy database migrations',
+          'npx prisma migrate deploy',
+        );
+      }
+      prodStepsList.push(
+        '',
+        '# 3. Start production server',
+        'npm run start:prod',
+        '```',
+      );
+
+      const readmeProduction = prodStepsList.join('\n');
+
       return template
         .replace(
           /\{\{\s*projectName\s*\}\}/g,
@@ -295,6 +582,58 @@ export function createTemplateRenderer(): TemplateRenderer {
         .replace(
           /\{\{\s*testingE2eOverrides\s*\}\}/g,
           testingE2eOverrides,
+        )
+        .replace(
+          /\{\{\s*readmeFeatures\s*\}\}/g,
+          readmeFeatures,
+        )
+        .replace(
+          /\{\{\s*readmePrerequisites\s*\}\}/g,
+          readmePrerequisites,
+        )
+        .replace(
+          /\{\{\s*readmeInstallation\s*\}\}/g,
+          readmeInstallation,
+        )
+        .replace(
+          /\{\{\s*readmeEnvironment\s*\}\}/g,
+          readmeEnvironment,
+        )
+        .replace(
+          /\{\{\s*readmeDevelopment\s*\}\}/g,
+          readmeDevelopment,
+        )
+        .replace(
+          /\{\{\s*readmeDatabase\s*\}\}/g,
+          readmeDatabase,
+        )
+        .replace(
+          /\{\{\s*readmeAuth\s*\}\}/g,
+          readmeAuth,
+        )
+        .replace(
+          /\{\{\s*readmeSwagger\s*\}\}/g,
+          readmeSwagger,
+        )
+        .replace(
+          /\{\{\s*readmeRedis\s*\}\}/g,
+          readmeRedis,
+        )
+        .replace(
+          /\{\{\s*readmeDocker\s*\}\}/g,
+          readmeDocker,
+        )
+        .replace(
+          /\{\{\s*readmeTesting\s*\}\}/g,
+          readmeTesting,
+        )
+        .replace(
+          /\{\{\s*readmeCi\s*\}\}/g,
+          readmeCi,
+        )
+        .replace(
+          /\{\{\s*readmeProduction\s*\}\}/g,
+          readmeProduction,
         );
     },
   };

@@ -338,4 +338,162 @@ describe('TemplateRenderer', () => {
     expect(result).not.toContain('Run unit tests');
     expect(result).not.toContain('npm test');
   });
+
+  describe('README rendering', () => {
+    const readmeTemplate = [
+      '# {{projectName}}',
+      '## Features',
+      '{{readmeFeatures}}',
+      '## Prerequisites',
+      '{{readmePrerequisites}}',
+      '## Installation & Setup',
+      '{{readmeInstallation}}',
+      '## Environment Variables',
+      '{{readmeEnvironment}}',
+      '## Development',
+      '{{readmeDevelopment}}',
+      '{{readmeDatabase}}',
+      '{{readmeAuth}}',
+      '{{readmeSwagger}}',
+      '{{readmeRedis}}',
+      '{{readmeDocker}}',
+      '{{readmeTesting}}',
+      '{{readmeCi}}',
+      '## Production',
+      '{{readmeProduction}}',
+    ].join('\n');
+
+    it('renders default project README with default features and omits non-default features', () => {
+      const config = resolveConfig({
+        projectName: 'default-app',
+      });
+
+      const renderer = createTemplateRenderer();
+      const result = renderer.render(readmeTemplate, config);
+
+      expect(result).toContain('# default-app');
+      expect(result).toContain('PostgreSQL integration with Prisma ORM');
+      expect(result).toContain('Interactive OpenAPI / Swagger documentation');
+      expect(result).toContain('Multi-stage Dockerfile and Docker Compose');
+      expect(result).toContain('Unit and deterministic E2E test suites');
+      expect(result).toContain('Automated GitHub Actions workflow');
+
+      // Check sections
+      expect(result).toContain('## Database & Prisma');
+      expect(result).toContain('npx prisma migrate dev');
+      expect(result).toContain('## API Documentation (Swagger)');
+      expect(result).toContain('http://localhost:3000/api/docs');
+      expect(result).toContain('## Docker');
+      expect(result).toContain('npm run docker:up');
+      expect(result).toContain('## Testing');
+      expect(result).toContain('npm test');
+      expect(result).toContain('## Continuous Integration');
+
+      // Verify disabled features are omitted
+      expect(result).not.toContain('## Redis Infrastructure');
+      expect(result).not.toContain('## Authentication');
+      expect(result).not.toContain('REDIS_URL');
+      expect(result).not.toContain('JWT_SECRET');
+    });
+
+    it('renders Redis section when Redis is enabled', () => {
+      const config = resolveConfig({
+        projectName: 'redis-app',
+        redis: true,
+      });
+
+      const renderer = createTemplateRenderer();
+      const result = renderer.render(readmeTemplate, config);
+
+      expect(result).toContain('## Redis Infrastructure');
+      expect(result).toContain('REDIS_URL');
+      expect(result).toContain('RedisService');
+      expect(result).not.toContain('caching system');
+    });
+
+    it('renders Auth section when JWT is enabled', () => {
+      const config = resolveConfig({
+        projectName: 'auth-app',
+        auth: 'jwt',
+      });
+
+      const renderer = createTemplateRenderer();
+      const result = renderer.render(readmeTemplate, config);
+
+      expect(result).toContain('## Authentication');
+      expect(result).toContain('POST /auth/register');
+      expect(result).toContain('POST /auth/login');
+      expect(result).toContain('GET /auth/me');
+      expect(result).toContain('JWT_SECRET');
+    });
+
+    it('omits Docker section when Docker is disabled', () => {
+      const config = resolveConfig({
+        projectName: 'no-docker-app',
+        docker: false,
+      });
+
+      const renderer = createTemplateRenderer();
+      const result = renderer.render(readmeTemplate, config);
+
+      expect(result).not.toContain('## Docker');
+      expect(result).not.toContain('docker:up');
+    });
+
+    it('omits Testing section when testing is disabled', () => {
+      const config = resolveConfig({
+        projectName: 'no-test-app',
+        testing: false,
+      });
+
+      const renderer = createTemplateRenderer();
+      const result = renderer.render(readmeTemplate, config);
+
+      expect(result).not.toContain('## Testing');
+      expect(result).not.toContain('npm test');
+    });
+
+    it('omits CI section when CI is disabled', () => {
+      const config = resolveConfig({
+        projectName: 'no-ci-app',
+        ci: false,
+      });
+
+      const renderer = createTemplateRenderer();
+      const result = renderer.render(readmeTemplate, config);
+
+      expect(result).not.toContain('## Continuous Integration');
+      expect(result).not.toContain('.github/workflows/ci.yml');
+    });
+
+    it('renders full-feature README containing all feature sections', () => {
+      const config = resolveConfig({
+        projectName: 'full-app',
+        database: 'postgres',
+        orm: 'prisma',
+        redis: true,
+        auth: 'jwt',
+        swagger: true,
+        docker: true,
+        ci: true,
+        testing: true,
+      });
+
+      const renderer = createTemplateRenderer();
+      const result = renderer.render(readmeTemplate, config);
+
+      expect(result).toContain('## Database & Prisma');
+      expect(result).toContain('## Authentication');
+      expect(result).toContain('## API Documentation (Swagger)');
+      expect(result).toContain('## Redis Infrastructure');
+      expect(result).toContain('## Docker');
+      expect(result).toContain('## Testing');
+      expect(result).toContain('## Continuous Integration');
+      expect(result).toContain('## Production');
+
+      expect(result).toContain('DATABASE_URL');
+      expect(result).toContain('REDIS_URL');
+      expect(result).toContain('JWT_SECRET');
+    });
+  });
 });

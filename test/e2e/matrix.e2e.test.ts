@@ -104,6 +104,19 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
         ),
       ).toBe(false);
 
+      // Verify README is feature-aware
+      const readmeContent = await project.fs.readFile(
+        `${project.root}/README.md`,
+      );
+      expect(readmeContent).toContain('# matrix-default-api');
+      expect(readmeContent).toContain('## Database & Prisma');
+      expect(readmeContent).toContain('## API Documentation (Swagger)');
+      expect(readmeContent).toContain('## Docker');
+      expect(readmeContent).toContain('## Testing');
+      expect(readmeContent).toContain('## Continuous Integration');
+      expect(readmeContent).not.toContain('## Redis Infrastructure');
+      expect(readmeContent).not.toContain('## Authentication');
+
       await project.writeEnv({
         databaseUrl: DATABASE_URL,
       });
@@ -620,6 +633,20 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
           `${project.root}/test/jest-e2e.json`,
         ),
       ).toBe(true);
+
+      // Verify full-feature README contains all sections
+      const fullReadme = await project.fs.readFile(
+        `${project.root}/README.md`,
+      );
+      expect(fullReadme).toContain('# matrix-full-feature-api');
+      expect(fullReadme).toContain('## Database & Prisma');
+      expect(fullReadme).toContain('## Authentication');
+      expect(fullReadme).toContain('## API Documentation (Swagger)');
+      expect(fullReadme).toContain('## Redis Infrastructure');
+      expect(fullReadme).toContain('## Docker');
+      expect(fullReadme).toContain('## Testing');
+      expect(fullReadme).toContain('## Continuous Integration');
+      expect(fullReadme).toContain('## Production');
 
       // Execute full lifecycle
       await project.writeEnv({

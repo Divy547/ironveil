@@ -21,7 +21,7 @@ const BASE_TEMPLATES = [
     destination: 'nest-cli.json',
   },
   {
-    source: 'base/README.md',
+    source: 'base/README.md.template',
     destination: 'README.md',
   },
   {
