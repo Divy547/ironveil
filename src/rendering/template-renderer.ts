@@ -60,6 +60,112 @@ export function createTemplateRenderer(): TemplateRenderer {
           ? "REDIS_URL: z\n    .string()\n    .min(1, 'REDIS_URL is required'),"
           : '';
 
+      const hasPrisma =
+        config.database === 'postgres' &&
+        config.orm === 'prisma';
+
+      // ── Docker: API environment variables ──────────────────────
+      const dockerApiEnvLines: string[] = [];
+
+      if (hasPrisma) {
+        dockerApiEnvLines.push(
+          `      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/${config.projectName}?schema=public"`,
+        );
+      }
+
+      if (config.redis) {
+        dockerApiEnvLines.push(
+          '      REDIS_URL: "redis://redis:6379"',
+        );
+      }
+
+      if (config.auth === 'jwt') {
+        dockerApiEnvLines.push(
+          '      JWT_SECRET: "${JWT_SECRET}"',
+        );
+      }
+
+      const dockerComposeApiEnvironment =
+        dockerApiEnvLines.join('\n');
+
+      // ── Docker: API depends_on ──────────────────────────────────
+      const dockerDependsOnEntries: string[] = [];
+
+      if (hasPrisma) {
+        dockerDependsOnEntries.push(
+          '      postgres:\n' +
+          '        condition: service_healthy',
+        );
+      }
+
+      if (config.redis) {
+        dockerDependsOnEntries.push(
+          '      redis:\n' +
+          '        condition: service_healthy',
+        );
+      }
+
+      const dockerComposeApiDependsOn =
+        dockerDependsOnEntries.length > 0
+          ? '    depends_on:\n' +
+            dockerDependsOnEntries.join('\n')
+          : '';
+
+      // ── Docker: API command ─────────────────────────────────────
+      const dockerComposeApiCommand = hasPrisma
+        ? 'sh -c "npx prisma migrate deploy && node dist/main.js"'
+        : 'node dist/main.js';
+
+      // ── Docker: postgres service ────────────────────────────────
+      const dockerComposePostgresService = hasPrisma
+        ? [
+            `  postgres:`,
+            `    image: postgres:16-alpine`,
+            `    environment:`,
+            `      POSTGRES_USER: postgres`,
+            `      POSTGRES_PASSWORD: postgres`,
+            `      POSTGRES_DB: ${config.projectName}`,
+            `    volumes:`,
+            `      - postgres_data:/var/lib/postgresql/data`,
+            `    healthcheck:`,
+            `      test: ["CMD-SHELL", "pg_isready -U postgres"]`,
+            `      interval: 5s`,
+            `      timeout: 5s`,
+            `      retries: 5`,
+          ].join('\n')
+        : '';
+
+      // ── Docker: redis service ───────────────────────────────────
+      const dockerComposeRedisService = config.redis
+        ? [
+            `  redis:`,
+            `    image: redis:7-alpine`,
+            `    volumes:`,
+            `      - redis_data:/data`,
+            `    healthcheck:`,
+            `      test: ["CMD", "redis-cli", "ping"]`,
+            `      interval: 5s`,
+            `      timeout: 3s`,
+            `      retries: 5`,
+          ].join('\n')
+        : '';
+
+      // ── Docker: top-level volumes ───────────────────────────────
+      const volumeEntries: string[] = [];
+
+      if (hasPrisma) {
+        volumeEntries.push('  postgres_data:');
+      }
+
+      if (config.redis) {
+        volumeEntries.push('  redis_data:');
+      }
+
+      const dockerComposeVolumes =
+        volumeEntries.length > 0
+          ? 'volumes:\n' + volumeEntries.join('\n')
+          : '';
+
       return template
         .replace(
           /\{\{\s*projectName\s*\}\}/g,
@@ -104,6 +210,30 @@ export function createTemplateRenderer(): TemplateRenderer {
         .replace(
           /\{\{\s*redisEnvSchema\s*\}\}/g,
           redisEnvSchema,
+        )
+        .replace(
+          /\{\{\s*dockerComposeApiEnvironment\s*\}\}/g,
+          dockerComposeApiEnvironment,
+        )
+        .replace(
+          /\{\{\s*dockerComposeApiDependsOn\s*\}\}/g,
+          dockerComposeApiDependsOn,
+        )
+        .replace(
+          /\{\{\s*dockerComposeApiCommand\s*\}\}/g,
+          dockerComposeApiCommand,
+        )
+        .replace(
+          /\{\{\s*dockerComposePostgresService\s*\}\}/g,
+          dockerComposePostgresService,
+        )
+        .replace(
+          /\{\{\s*dockerComposeRedisService\s*\}\}/g,
+          dockerComposeRedisService,
+        )
+        .replace(
+          /\{\{\s*dockerComposeVolumes\s*\}\}/g,
+          dockerComposeVolumes,
         );
     },
   };

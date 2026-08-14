@@ -5,6 +5,7 @@ import { PrismaGenerator } from '../features/prisma/prisma.generator.js';
 import { RedisGenerator } from '../features/redis/redis.generator.js';
 import { AuthGenerator } from '../features/auth/auth.generator.js';
 import { SwaggerGenerator } from '../features/swagger/swagger.generator.js';
+import { DockerGenerator } from '../features/docker/docker.generator.js';
 
 export function createGenerators(): readonly Generator[] {
   return Object.freeze([
@@ -14,5 +15,6 @@ export function createGenerators(): readonly Generator[] {
     new RedisGenerator(),
     new AuthGenerator(),
     new SwaggerGenerator(),
+    new DockerGenerator(),
   ]);
 }

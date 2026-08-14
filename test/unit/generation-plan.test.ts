@@ -21,6 +21,7 @@ describe('GenerationPlan', () => {
       'config',
       'prisma',
       'swagger',
+      'docker',
     ]);
   });
 
@@ -42,6 +43,7 @@ describe('GenerationPlan', () => {
       'prisma',
       'auth',
       'swagger',
+      'docker',
     ]);
   });
 
@@ -63,7 +65,39 @@ describe('GenerationPlan', () => {
       'prisma',
       'redis',
       'swagger',
+      'docker',
     ]);
+  });
+
+  it('includes docker when docker is enabled', () => {
+    const config = resolveConfig({
+      projectName: 'test-api',
+      docker: true,
+    });
+
+    const plan = createGenerationPlan(config);
+
+    const names = plan.generators.map(
+      (generator) => generator.name,
+    );
+
+    expect(names).toContain('docker');
+    expect(names[names.length - 1]).toBe('docker');
+  });
+
+  it('excludes docker when docker is disabled', () => {
+    const config = resolveConfig({
+      projectName: 'test-api',
+      docker: false,
+    });
+
+    const plan = createGenerationPlan(config);
+
+    expect(
+      plan.generators.map(
+        (generator) => generator.name,
+      ),
+    ).not.toContain('docker');
   });
 
   it('only includes generators that should run', () => {

@@ -204,4 +204,79 @@ describe('TemplateRenderer', () => {
 
     expect(result).toBe('{{unknown}}');
   });
+
+  it('renders Docker compose tokens when postgres, redis, and jwt are enabled', () => {
+    const config = resolveConfig({
+      projectName: 'my-api',
+      redis: true,
+      auth: 'jwt',
+      docker: true,
+    });
+
+    const renderer = createTemplateRenderer();
+
+    const template = [
+      '{{dockerComposeApiEnvironment}}',
+      '{{dockerComposeApiDependsOn}}',
+      '{{dockerComposeApiCommand}}',
+      '{{dockerComposePostgresService}}',
+      '{{dockerComposeRedisService}}',
+      '{{dockerComposeVolumes}}',
+    ].join('\n');
+
+    const result = renderer.render(template, config);
+
+    expect(result).toContain('DATABASE_URL');
+    expect(result).toContain('@postgres:5432/my-api');
+    expect(result).toContain('REDIS_URL');
+    expect(result).toContain('redis://redis:6379');
+    expect(result).toContain('JWT_SECRET');
+    expect(result).toContain('depends_on:');
+    expect(result).toContain('postgres:\n        condition: service_healthy');
+    expect(result).toContain('redis:\n        condition: service_healthy');
+    expect(result).toContain('npx prisma migrate deploy');
+    expect(result).toContain('postgres:16-alpine');
+    expect(result).toContain('POSTGRES_DB: my-api');
+    expect(result).toContain('pg_isready');
+    expect(result).toContain('redis:7-alpine');
+    expect(result).toContain('redis-cli');
+    expect(result).toContain('ping');
+    expect(result).toContain('volumes:');
+    expect(result).toContain('postgres_data:');
+    expect(result).toContain('redis_data:');
+  });
+
+  it('renders Docker compose tokens correctly when redis is disabled', () => {
+    const config = resolveConfig({
+      projectName: 'my-api',
+      redis: false,
+      auth: 'none',
+      docker: true,
+    });
+
+    const renderer = createTemplateRenderer();
+
+    const template = [
+      '{{dockerComposeApiEnvironment}}',
+      '{{dockerComposeApiDependsOn}}',
+      '{{dockerComposeApiCommand}}',
+      '{{dockerComposePostgresService}}',
+      '{{dockerComposeRedisService}}',
+      '{{dockerComposeVolumes}}',
+    ].join('\n');
+
+    const result = renderer.render(template, config);
+
+    expect(result).toContain('DATABASE_URL');
+    expect(result).not.toContain('REDIS_URL');
+    expect(result).not.toContain('JWT_SECRET');
+    expect(result).toContain('depends_on:');
+    expect(result).toContain('postgres:\n        condition: service_healthy');
+    expect(result).not.toContain('redis:\n        condition: service_healthy');
+    expect(result).toContain('npx prisma migrate deploy');
+    expect(result).toContain('postgres:16-alpine');
+    expect(result).not.toContain('redis:7-alpine');
+    expect(result).toContain('postgres_data:');
+    expect(result).not.toContain('redis_data:');
+  });
 });

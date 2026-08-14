@@ -78,6 +78,25 @@ describe('ForgeKit Prisma E2E', () => {
           `${project.root}/dist/infrastructure/prisma/prisma.service.js`,
         ),
       ).toBe(true);
+
+      // Verify Prisma Query Engine native binary is bundled into dist
+      const { readdir, rm } = await import('node:fs/promises');
+      const distPrismaFiles = await readdir(
+        `${project.root}/dist/generated/prisma`,
+      );
+      const hasEngineBinary = distPrismaFiles.some((file) =>
+        file.endsWith('.node'),
+      );
+      expect(hasEngineBinary).toBe(true);
+
+      // Verify PrismaClient initializes in isolated runtime without src directory
+      await rm(`${project.root}/src`, { recursive: true, force: true });
+      const { PrismaClient } = await import(
+        `${project.root}/dist/generated/prisma/client.js`
+      );
+      const client = new PrismaClient();
+      expect(client).toBeDefined();
+      await client.$disconnect();
     },
     120_000,
   );

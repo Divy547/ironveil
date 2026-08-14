@@ -63,6 +63,7 @@ describe('Generator composition', () => {
       'config',
       'prisma',
       'swagger',
+      'docker',
     ]);
   });
 
@@ -77,6 +78,7 @@ describe('Generator composition', () => {
       'prisma',
       'auth',
       'swagger',
+      'docker',
     ]);
   });
 
@@ -90,6 +92,7 @@ describe('Generator composition', () => {
       'config',
       'prisma',
       'swagger',
+      'docker',
     ]);
   });
 
@@ -104,6 +107,7 @@ describe('Generator composition', () => {
       'prisma',
       'auth',
       'swagger',
+      'docker',
     ]);
   });
 
@@ -541,5 +545,225 @@ describe('Generator composition', () => {
     expect(packageJson.dependencies?.['@prisma/client']).toBe('6.19.3');
     expect(packageJson.dependencies?.['@nestjs/jwt']).toBe('11.0.2');
     expect(packageJson.dependencies?.['@nestjs/swagger']).toBe('11.0.6');
+  });
+
+  it('does not generate Docker files when docker is disabled', async () => {
+    temporaryDirectory = await mkdtemp(
+      path.join(
+        os.tmpdir(),
+        'forgekit-composition-',
+      ),
+    );
+
+    const config = resolveConfig({
+      projectName: 'test-api',
+      docker: false,
+    });
+
+    const destination = await generateProject(
+      config,
+      temporaryDirectory,
+    );
+
+    const fs = createFileSystem();
+
+    expect(
+      await fs.exists(
+        path.join(destination, 'Dockerfile'),
+      ),
+    ).toBe(false);
+
+    expect(
+      await fs.exists(
+        path.join(destination, 'docker-compose.yml'),
+      ),
+    ).toBe(false);
+
+    expect(
+      await fs.exists(
+        path.join(destination, '.dockerignore'),
+      ),
+    ).toBe(false);
+
+    const packageJson = JSON.parse(
+      await fs.readFile(
+        path.join(destination, 'package.json'),
+      ),
+    ) as { scripts?: Record<string, string> };
+
+    expect(packageJson.scripts?.['docker:up']).toBeUndefined();
+    expect(packageJson.scripts?.['docker:down']).toBeUndefined();
+  });
+
+  it('generates Docker files when docker is enabled (postgres, no redis)', async () => {
+    temporaryDirectory = await mkdtemp(
+      path.join(
+        os.tmpdir(),
+        'forgekit-composition-',
+      ),
+    );
+
+    const config = resolveConfig({
+      projectName: 'test-api',
+      docker: true,
+      redis: false,
+    });
+
+    const destination = await generateProject(
+      config,
+      temporaryDirectory,
+    );
+
+    const fs = createFileSystem();
+
+    expect(
+      await fs.exists(path.join(destination, 'Dockerfile')),
+    ).toBe(true);
+
+    expect(
+      await fs.exists(path.join(destination, 'docker-compose.yml')),
+    ).toBe(true);
+
+    expect(
+      await fs.exists(path.join(destination, '.dockerignore')),
+    ).toBe(true);
+
+    const compose = await fs.readFile(
+      path.join(destination, 'docker-compose.yml'),
+    );
+
+    expect(compose).toContain('postgres:');
+    expect(compose).not.toContain('redis:');
+    expect(compose).toContain('DATABASE_URL');
+    expect(compose).toContain('@postgres:5432/');
+    expect(compose).not.toContain('REDIS_URL');
+    expect(compose).toContain('npx prisma migrate deploy');
+    expect(compose).toContain('pg_isready');
+    expect(compose).not.toContain('redis-cli');
+    expect(compose).toContain('postgres_data:');
+    expect(compose).not.toContain('redis_data:');
+
+    const packageJson = JSON.parse(
+      await fs.readFile(
+        path.join(destination, 'package.json'),
+      ),
+    ) as { scripts?: Record<string, string> };
+
+    expect(packageJson.scripts?.['docker:up']).toBe('docker compose up --build');
+    expect(packageJson.scripts?.['docker:down']).toBe('docker compose down');
+  });
+
+  it('generates Redis service in docker-compose when docker=true and redis=true', async () => {
+    temporaryDirectory = await mkdtemp(
+      path.join(
+        os.tmpdir(),
+        'forgekit-composition-',
+      ),
+    );
+
+    const config = resolveConfig({
+      projectName: 'test-api',
+      docker: true,
+      redis: true,
+    });
+
+    const destination = await generateProject(
+      config,
+      temporaryDirectory,
+    );
+
+    const fs = createFileSystem();
+
+    const compose = await fs.readFile(
+      path.join(destination, 'docker-compose.yml'),
+    );
+
+    expect(compose).toContain('postgres:');
+    expect(compose).toContain('redis:');
+    expect(compose).toContain('REDIS_URL');
+    expect(compose).toContain('redis://redis:6379');
+    expect(compose).toContain('redis-cli');
+    expect(compose).toContain('ping');
+    expect(compose).toContain('redis_data:');
+    expect(compose).toContain('postgres_data:');
+    expect(compose).toContain('condition: service_healthy');
+  });
+
+  it('runs Redis, Prisma, JWT, Swagger, and Docker together without collisions', async () => {
+    temporaryDirectory = await mkdtemp(
+      path.join(
+        os.tmpdir(),
+        'forgekit-composition-',
+      ),
+    );
+
+    const config = resolveConfig({
+      projectName: 'full-stack-api',
+      redis: true,
+      auth: 'jwt',
+      swagger: true,
+      docker: true,
+    });
+
+    const destination = await generateProject(
+      config,
+      temporaryDirectory,
+    );
+
+    const fs = createFileSystem();
+
+    const expectedFiles = [
+      'src/app.module.ts',
+      'src/main.ts',
+      'src/infrastructure/infrastructure.module.ts',
+      'src/infrastructure/config/configuration.ts',
+      'src/infrastructure/config/environment.ts',
+      'src/infrastructure/prisma/prisma.module.ts',
+      'src/infrastructure/prisma/prisma.service.ts',
+      'src/infrastructure/redis/redis.module.ts',
+      'src/infrastructure/redis/redis.service.ts',
+      'src/infrastructure/swagger/swagger.setup.ts',
+      'src/modules/auth/auth.module.ts',
+      'src/modules/auth/auth.service.ts',
+      'Dockerfile',
+      'docker-compose.yml',
+      '.dockerignore',
+    ];
+
+    for (const file of expectedFiles) {
+      expect(
+        await fs.exists(
+          path.join(destination, file),
+        ),
+        `Expected file: ${file}`,
+      ).toBe(true);
+    }
+
+    const packageJson = JSON.parse(
+      await fs.readFile(
+        path.join(destination, 'package.json'),
+      ),
+    ) as {
+      dependencies?: Record<string, string>;
+      scripts?: Record<string, string>;
+    };
+
+    expect(packageJson.dependencies?.ioredis).toBe('5.6.0');
+    expect(packageJson.dependencies?.['@prisma/client']).toBe('6.19.3');
+    expect(packageJson.dependencies?.['@nestjs/jwt']).toBe('11.0.2');
+    expect(packageJson.dependencies?.['@nestjs/swagger']).toBe('11.0.6');
+    expect(packageJson.scripts?.['docker:up']).toBe('docker compose up --build');
+    expect(packageJson.scripts?.['docker:down']).toBe('docker compose down');
+
+    const compose = await fs.readFile(
+      path.join(destination, 'docker-compose.yml'),
+    );
+
+    expect(compose).toContain('postgres:');
+    expect(compose).toContain('redis:');
+    expect(compose).toContain('JWT_SECRET');
+    expect(compose).toContain('REDIS_URL');
+    expect(compose).toContain('DATABASE_URL');
+    expect(compose).toContain('npx prisma migrate deploy');
   });
 });
