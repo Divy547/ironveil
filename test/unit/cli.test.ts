@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createCli } from '../../src/cli/index.js';
 
 describe('ForgeKit CLI', () => {
@@ -38,5 +38,29 @@ describe('ForgeKit CLI', () => {
     expect(optionNames).toContain('--no-docker');
     expect(optionNames).toContain('--no-ci');
     expect(optionNames).toContain('--no-testing');
+  });
+
+  it('handles generation error and sets process.exitCode = 1', async () => {
+    const cli = createCli();
+    const originalExitCode = process.exitCode;
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      await cli.parseAsync([
+        'node',
+        'forgekit',
+        'create',
+        'invalid-!name',
+        '--no-swagger',
+        '--no-docker',
+        '--no-ci',
+        '--no-testing',
+      ]);
+      expect(process.exitCode).toBe(1);
+      expect(errorSpy).toHaveBeenCalled();
+    } finally {
+      process.exitCode = originalExitCode;
+      errorSpy.mockRestore();
+    }
   });
 });

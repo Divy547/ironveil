@@ -4,6 +4,7 @@ import { promptCreateOptions } from '../prompts/create.prompts.js';
 import type { CreateCommandOptions } from '../options/create.options.js';
 import { hasExplicitCreateOptions } from '../options/create.mode.js';
 import { generateProject } from '../../generators/generate-project.js';
+import { GenerationError } from '../../generators/core/generation-error.js';
 
 export function registerCreateCommand(program: Command): void {
   program
@@ -34,18 +35,45 @@ export function registerCreateCommand(program: Command): void {
           ? featureOptions
           : await promptCreateOptions();
 
-        const config = resolveConfig({
-          projectName,
-          ...resolvedOptions,
-        });
+        try {
+          const config = resolveConfig({
+            projectName,
+            ...resolvedOptions,
+          });
 
-        const destination = await generateProject(
-          config,
-        );
+          const destination = await generateProject(
+            config,
+          );
 
-        console.log(
-          `Created ${config.projectName} at ${destination}`,
-        );
+          console.log(
+            `Created ${config.projectName} at ${destination}`,
+          );
+        } catch (error) {
+          process.exitCode = 1;
+
+          if (error instanceof GenerationError) {
+            console.error('\nGeneration failed\n');
+            if (error.projectName) {
+              console.error(`Project: ${error.projectName}`);
+            }
+            if (error.generatorName) {
+              console.error(`Generator: ${error.generatorName}`);
+            }
+            console.error(`Reason: ${error.message}`);
+            if (
+              error.cause &&
+              error.cause instanceof Error &&
+              error.cause.message !== error.message
+            ) {
+              console.error(`Original error: ${error.cause.message}`);
+            }
+          } else {
+            console.error('\nGeneration failed\n');
+            console.error(
+              `Reason: ${error instanceof Error ? error.message : String(error)}`,
+            );
+          }
+        }
       },
     );
 }
