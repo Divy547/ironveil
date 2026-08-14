@@ -166,6 +166,16 @@ export function createTemplateRenderer(): TemplateRenderer {
           ? 'volumes:\n' + volumeEntries.join('\n')
           : '';
 
+      // ── CI: Prisma generate step ────────────────────────────────
+      const ciPrismaStep = hasPrisma
+        ? '\n      - name: Generate Prisma Client\n        run: npx prisma generate\n        env:\n          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/db?schema=public"'
+        : '';
+
+      // ── CI: Unit test step ──────────────────────────────────────
+      const ciTestStep = config.testing
+        ? '\n      - name: Run unit tests\n        run: npm test'
+        : '';
+
       return template
         .replace(
           /\{\{\s*projectName\s*\}\}/g,
@@ -234,6 +244,14 @@ export function createTemplateRenderer(): TemplateRenderer {
         .replace(
           /\{\{\s*dockerComposeVolumes\s*\}\}/g,
           dockerComposeVolumes,
+        )
+        .replace(
+          /\{\{\s*ciPrismaStep\s*\}\}/g,
+          ciPrismaStep,
+        )
+        .replace(
+          /\{\{\s*ciTestStep\s*\}\}/g,
+          ciTestStep,
         );
     },
   };

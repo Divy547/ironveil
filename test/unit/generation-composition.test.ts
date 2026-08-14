@@ -64,6 +64,7 @@ describe('Generator composition', () => {
       'prisma',
       'swagger',
       'docker',
+      'ci',
     ]);
   });
 
@@ -79,6 +80,7 @@ describe('Generator composition', () => {
       'auth',
       'swagger',
       'docker',
+      'ci',
     ]);
   });
 
@@ -93,6 +95,7 @@ describe('Generator composition', () => {
       'prisma',
       'swagger',
       'docker',
+      'ci',
     ]);
   });
 
@@ -108,6 +111,7 @@ describe('Generator composition', () => {
       'auth',
       'swagger',
       'docker',
+      'ci',
     ]);
   });
 
@@ -728,6 +732,7 @@ describe('Generator composition', () => {
       'Dockerfile',
       'docker-compose.yml',
       '.dockerignore',
+      '.github/workflows/ci.yml',
     ];
 
     for (const file of expectedFiles) {
@@ -752,6 +757,7 @@ describe('Generator composition', () => {
     expect(packageJson.dependencies?.['@prisma/client']).toBe('6.19.3');
     expect(packageJson.dependencies?.['@nestjs/jwt']).toBe('11.0.2');
     expect(packageJson.dependencies?.['@nestjs/swagger']).toBe('11.0.6');
+    expect(packageJson.scripts?.['typecheck']).toBe('tsc --noEmit');
     expect(packageJson.scripts?.['docker:up']).toBe('docker compose up --build');
     expect(packageJson.scripts?.['docker:down']).toBe('docker compose down');
 
@@ -765,5 +771,41 @@ describe('Generator composition', () => {
     expect(compose).toContain('REDIS_URL');
     expect(compose).toContain('DATABASE_URL');
     expect(compose).toContain('npx prisma migrate deploy');
+  });
+
+  it('does not generate CI workflow when ci is disabled', async () => {
+    temporaryDirectory = await mkdtemp(
+      path.join(
+        os.tmpdir(),
+        'forgekit-composition-',
+      ),
+    );
+
+    const config = resolveConfig({
+      projectName: 'test-api',
+      ci: false,
+    });
+
+    const destination = await generateProject(
+      config,
+      temporaryDirectory,
+    );
+
+    const fs = createFileSystem();
+
+    expect(
+      await fs.exists(
+        path.join(destination, '.github'),
+      ),
+    ).toBe(false);
+
+    const packageJson = JSON.parse(
+      await fs.readFile(
+        path.join(destination, 'package.json'),
+      ),
+    ) as { scripts?: Record<string, string> };
+
+    // typecheck script should still exist in base package.json even when ci is false
+    expect(packageJson.scripts?.['typecheck']).toBe('tsc --noEmit');
   });
 });

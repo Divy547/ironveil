@@ -6,6 +6,7 @@ import { RedisGenerator } from '../features/redis/redis.generator.js';
 import { AuthGenerator } from '../features/auth/auth.generator.js';
 import { SwaggerGenerator } from '../features/swagger/swagger.generator.js';
 import { DockerGenerator } from '../features/docker/docker.generator.js';
+import { CiGenerator } from '../features/ci/ci.generator.js';
 
 export function createGenerators(): readonly Generator[] {
   return Object.freeze([
@@ -16,5 +17,6 @@ export function createGenerators(): readonly Generator[] {
     new AuthGenerator(),
     new SwaggerGenerator(),
     new DockerGenerator(),
+    new CiGenerator(),
   ]);
 }

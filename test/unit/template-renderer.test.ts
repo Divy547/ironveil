@@ -279,4 +279,63 @@ describe('TemplateRenderer', () => {
     expect(result).toContain('postgres_data:');
     expect(result).not.toContain('redis_data:');
   });
+
+  it('renders CI workflow tokens when Prisma and testing are enabled', () => {
+    const config = resolveConfig({
+      projectName: 'my-api',
+      ci: true,
+      testing: true,
+      database: 'postgres',
+      orm: 'prisma',
+    });
+
+    const renderer = createTemplateRenderer();
+
+    const template = [
+      'steps:',
+      '  - name: Install dependencies',
+      '    run: npm install',
+      '{{ciPrismaStep}}',
+      '  - name: Run typecheck',
+      '    run: npm run typecheck',
+      '{{ciTestStep}}',
+      '  - name: Run build',
+      '    run: npm run build',
+    ].join('\n');
+
+    const result = renderer.render(template, config);
+
+    expect(result).toContain('Generate Prisma Client');
+    expect(result).toContain('npx prisma generate');
+    expect(result).toContain('DATABASE_URL');
+    expect(result).toContain('Run unit tests');
+    expect(result).toContain('npm test');
+  });
+
+  it('omits CI workflow steps when Prisma or testing is disabled', () => {
+    const config = resolveConfig({
+      projectName: 'my-api',
+      ci: true,
+      testing: false,
+    });
+
+    const renderer = createTemplateRenderer();
+
+    const template = [
+      'steps:',
+      '  - name: Install dependencies',
+      '    run: npm install',
+      '{{ciPrismaStep}}',
+      '  - name: Run typecheck',
+      '    run: npm run typecheck',
+      '{{ciTestStep}}',
+      '  - name: Run build',
+      '    run: npm run build',
+    ].join('\n');
+
+    const result = renderer.render(template, config);
+
+    expect(result).not.toContain('Run unit tests');
+    expect(result).not.toContain('npm test');
+  });
 });

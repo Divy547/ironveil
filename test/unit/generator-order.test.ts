@@ -7,7 +7,7 @@ import {
 import { createGenerators } from '../../src/generators/core/generator-registry.js';
 
 describe('generator ordering', () => {
-  it('registers foundational generators before feature generators, docker last', () => {
+  it('registers foundational generators before feature generators, ci last', () => {
     const generators = createGenerators();
 
     const names = generators.map(
@@ -22,6 +22,7 @@ describe('generator ordering', () => {
       'auth',
       'swagger',
       'docker',
+      'ci',
     ]);
   });
 

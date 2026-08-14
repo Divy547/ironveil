@@ -22,6 +22,7 @@ describe('GenerationPlan', () => {
       'prisma',
       'swagger',
       'docker',
+      'ci',
     ]);
   });
 
@@ -44,6 +45,7 @@ describe('GenerationPlan', () => {
       'auth',
       'swagger',
       'docker',
+      'ci',
     ]);
   });
 
@@ -66,6 +68,7 @@ describe('GenerationPlan', () => {
       'redis',
       'swagger',
       'docker',
+      'ci',
     ]);
   });
 
@@ -82,7 +85,6 @@ describe('GenerationPlan', () => {
     );
 
     expect(names).toContain('docker');
-    expect(names[names.length - 1]).toBe('docker');
   });
 
   it('excludes docker when docker is disabled', () => {
@@ -98,6 +100,37 @@ describe('GenerationPlan', () => {
         (generator) => generator.name,
       ),
     ).not.toContain('docker');
+  });
+
+  it('includes ci when ci is enabled', () => {
+    const config = resolveConfig({
+      projectName: 'test-api',
+      ci: true,
+    });
+
+    const plan = createGenerationPlan(config);
+
+    const names = plan.generators.map(
+      (generator) => generator.name,
+    );
+
+    expect(names).toContain('ci');
+    expect(names[names.length - 1]).toBe('ci');
+  });
+
+  it('excludes ci when ci is disabled', () => {
+    const config = resolveConfig({
+      projectName: 'test-api',
+      ci: false,
+    });
+
+    const plan = createGenerationPlan(config);
+
+    expect(
+      plan.generators.map(
+        (generator) => generator.name,
+      ),
+    ).not.toContain('ci');
   });
 
   it('only includes generators that should run', () => {
