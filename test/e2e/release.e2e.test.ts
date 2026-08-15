@@ -120,7 +120,7 @@ describe('F15 — Release & Packaged Artifact Verification', () => {
     expect(helpResult.stdout).toContain('create');
 
     const versionResult = await installedKit.runCli(['--version']);
-    expect(versionResult.stdout.trim()).toBe('0.1.0');
+    expect(versionResult.stdout.trim()).toBe('0.2.0');
   });
 
   // =========================================================================

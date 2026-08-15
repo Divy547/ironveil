@@ -145,7 +145,7 @@ export function createTemplateRenderer(): TemplateRenderer {
 
       // ── Docker: API command ─────────────────────────────────────
       const dockerComposeApiCommand = hasPrisma
-        ? `sh -c "${pmSpec.prisma('migrate deploy')} && node dist/main.js"`
+        ? 'sh -c "./node_modules/.bin/prisma migrate deploy && node dist/main.js"'
         : 'node dist/main.js';
 
       // ── Docker: postgres service ────────────────────────────────
@@ -157,6 +157,8 @@ export function createTemplateRenderer(): TemplateRenderer {
             `      POSTGRES_USER: postgres`,
             `      POSTGRES_PASSWORD: postgres`,
             `      POSTGRES_DB: ${config.projectName}`,
+            `    ports:`,
+            `      - "5432:5432"`,
             `    volumes:`,
             `      - postgres_data:/var/lib/postgresql/data`,
             `    healthcheck:`,
@@ -172,6 +174,8 @@ export function createTemplateRenderer(): TemplateRenderer {
         ? [
             `  redis:`,
             `    image: redis:7-alpine`,
+            `    ports:`,
+            `      - "6379:6379"`,
             `    volumes:`,
             `      - redis_data:/data`,
             `    healthcheck:`,
@@ -393,14 +397,30 @@ export function createTemplateRenderer(): TemplateRenderer {
       const readmePrerequisites = prereqList.join('\n');
 
       // ── README: Installation ────────────────────────────────────
+      const infraServices: string[] = [];
+      if (hasPrisma) {
+        infraServices.push('postgres');
+      }
+      if (config.redis) {
+        infraServices.push('redis');
+      }
+      const infraServicesCmd = infraServices.join(' ');
+
       const installSteps: string[] = [
         `1. **Clone the repository and install dependencies**:\n   \`\`\`bash\n   ${pmSpec.install}\n   \`\`\``,
         '2. **Set up environment variables**:\n   ```bash\n   cp .env.example .env\n   ```',
       ];
 
-      if (hasPrisma) {
+      if (config.docker && infraServices.length > 0) {
         installSteps.push(
-          `3. **Generate Prisma Client**:\n   \`\`\`bash\n   ${pmSpec.prisma('generate')}\n   \`\`\``,
+          `3. **Start local infrastructure services (PostgreSQL${config.redis ? ' & Redis' : ''}) in Docker**:\n   \`\`\`bash\n   docker compose up -d ${infraServicesCmd}\n   \`\`\``,
+        );
+      }
+
+      if (hasPrisma) {
+        const stepNum = installSteps.length + 1;
+        installSteps.push(
+          `${stepNum}. **Generate Prisma Client and apply database migrations**:\n   \`\`\`bash\n   ${pmSpec.prisma('generate')}\n   ${pmSpec.prisma('migrate dev')}\n   \`\`\``,
         );
       }
 
@@ -438,18 +458,58 @@ export function createTemplateRenderer(): TemplateRenderer {
       ].join('\n');
 
       // ── README: Development ─────────────────────────────────────
-      const readmeDevelopment = [
-        '```bash',
-        '# Start the application in development mode with hot reload',
-        pmSpec.run('start:dev'),
-        '',
-        '# Run TypeScript type checking',
-        pmSpec.run('typecheck'),
-        '',
-        '# Build the project for production',
-        pmSpec.run('build'),
-        '```',
-      ].join('\n');
+      let readmeDevelopment = '';
+      if (config.docker && infraServices.length > 0) {
+        readmeDevelopment = [
+          '### Host-Based Development (Recommended)\n',
+          'Run background database and cache infrastructure in Docker while developing the NestJS application directly on your host with hot reload:\n',
+          '```bash',
+          '# 1. Start background infrastructure services',
+          `docker compose up -d ${infraServicesCmd}`,
+          '',
+          ...(hasPrisma
+            ? [
+                '# 2. Apply database migrations',
+                pmSpec.prisma('migrate dev'),
+                '',
+              ]
+            : []),
+          '# 3. Start the application in development mode with hot reload',
+          pmSpec.run('start:dev'),
+          '',
+          '# Run TypeScript type checking',
+          pmSpec.run('typecheck'),
+          '',
+          '# Build the project for production',
+          pmSpec.run('build'),
+          '```\n',
+          '### Fully Containerized Workflow\n',
+          'Alternatively, build and run the entire application stack including the NestJS API container inside Docker:\n',
+          '```bash',
+          '# Build and start all services in containers',
+          pmSpec.run('docker:up'),
+          '',
+          '# View application logs',
+          'docker compose logs -f api',
+          '',
+          '# Stop all containerized services',
+          pmSpec.run('docker:down'),
+          '```',
+        ].join('\n');
+      } else {
+        readmeDevelopment = [
+          '```bash',
+          '# Start the application in development mode with hot reload',
+          pmSpec.run('start:dev'),
+          '',
+          '# Run TypeScript type checking',
+          pmSpec.run('typecheck'),
+          '',
+          '# Build the project for production',
+          pmSpec.run('build'),
+          '```',
+        ].join('\n');
+      }
 
       // ── README: Database & Prisma ───────────────────────────────
       const readmeDatabase = hasPrisma
@@ -499,26 +559,32 @@ export function createTemplateRenderer(): TemplateRenderer {
 
       // ── README: Docker ──────────────────────────────────────────
       const dockerServicesList: string[] = [
-        '- `api`: NestJS application container',
+        '- `api`: NestJS application container (exposed on port `3000`)',
       ];
       if (hasPrisma) {
         dockerServicesList.push(
-          '- `postgres`: PostgreSQL 16 Alpine database container with persistent data volume',
+          '- `postgres`: PostgreSQL 16 Alpine database container (published on host port `5432` with volume `postgres_data`)',
         );
       }
       if (config.redis) {
         dockerServicesList.push(
-          '- `redis`: Redis 7 Alpine container with persistent data volume',
+          '- `redis`: Redis 7 Alpine container (published on host port `6379` with volume `redis_data`)',
         );
       }
 
       const readmeDocker = config.docker
         ? [
             '## Docker\n',
-            'Run the entire application stack using Docker Compose:\n',
+            'Docker Compose supports both host-based development (infrastructure containers only) and fully containerized execution:\n',
             '```bash',
-            '# Build and start all services',
+            '# Start background infrastructure only (for host-based development)',
+            `docker compose up -d ${infraServicesCmd}`,
+            '',
+            '# Build and start all services (including NestJS API)',
             pmSpec.run('docker:up'),
+            '',
+            '# View application logs',
+            'docker compose logs -f api',
             '',
             '# Stop all running services',
             pmSpec.run('docker:down'),

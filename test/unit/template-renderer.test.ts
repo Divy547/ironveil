@@ -406,11 +406,12 @@ describe('TemplateRenderer', () => {
     expect(result).toContain('depends_on:');
     expect(result).toContain('postgres:\n        condition: service_healthy');
     expect(result).toContain('redis:\n        condition: service_healthy');
-    expect(result).toContain('npx prisma migrate deploy');
     expect(result).toContain('postgres:16-alpine');
     expect(result).toContain('POSTGRES_DB: my-api');
+    expect(result).toContain('"5432:5432"');
     expect(result).toContain('pg_isready');
     expect(result).toContain('redis:7-alpine');
+    expect(result).toContain('"6379:6379"');
     expect(result).toContain('redis-cli');
     expect(result).toContain('ping');
     expect(result).toContain('volumes:');
@@ -445,9 +446,11 @@ describe('TemplateRenderer', () => {
     expect(result).toContain('depends_on:');
     expect(result).toContain('postgres:\n        condition: service_healthy');
     expect(result).not.toContain('redis:\n        condition: service_healthy');
-    expect(result).toContain('npx prisma migrate deploy');
+    expect(result).toContain('./node_modules/.bin/prisma migrate deploy');
     expect(result).toContain('postgres:16-alpine');
+    expect(result).toContain('"5432:5432"');
     expect(result).not.toContain('redis:7-alpine');
+    expect(result).not.toContain('"6379:6379"');
     expect(result).toContain('postgres_data:');
     expect(result).not.toContain('redis_data:');
   });

@@ -193,7 +193,7 @@ describe('DockerGenerator', () => {
 
   // ── 9. Postgres service ───────────────────────────────────────────────────
 
-  it('includes postgres service in docker-compose.yml', async () => {
+  it('includes postgres service in docker-compose.yml and publishes port 5432 to host', async () => {
     const { fs, context } = await createContext();
     const generator = new DockerGenerator();
 
@@ -205,13 +205,14 @@ describe('DockerGenerator', () => {
 
     expect(compose).toContain('postgres:');
     expect(compose).toContain('postgres:16-alpine');
+    expect(compose).toContain('"5432:5432"');
     expect(compose).toContain('pg_isready');
     expect(compose).toContain('postgres_data:');
   });
 
   // ── 10. Redis service: conditional ───────────────────────────────────────
 
-  it('includes redis service when redis is enabled', async () => {
+  it('includes redis service when redis is enabled and publishes port 6379 to host', async () => {
     const { fs, context } = await createContext({ redis: true });
     const generator = new DockerGenerator();
 
@@ -223,6 +224,7 @@ describe('DockerGenerator', () => {
 
     expect(compose).toContain('redis:');
     expect(compose).toContain('redis:7-alpine');
+    expect(compose).toContain('"6379:6379"');
     expect(compose).toContain('redis-cli');
     expect(compose).toContain('ping');
     expect(compose).toContain('redis_data:');
@@ -239,6 +241,7 @@ describe('DockerGenerator', () => {
     );
 
     expect(compose).not.toContain('redis:7-alpine');
+    expect(compose).not.toContain('"6379:6379"');
     expect(compose).not.toContain('redis-cli');
     expect(compose).not.toContain('redis_data:');
   });
@@ -275,9 +278,7 @@ describe('DockerGenerator', () => {
     expect(compose).not.toContain('redis://localhost:6379');
   });
 
-  // ── 13. Prisma migration command ─────────────────────────────────────────
-
-  it('includes npx prisma migrate deploy in api command', async () => {
+  it('includes local ./node_modules/.bin/prisma migrate deploy in api command', async () => {
     const { fs, context } = await createContext();
     const generator = new DockerGenerator();
 
@@ -287,8 +288,33 @@ describe('DockerGenerator', () => {
       path.join(temporaryDirectory, 'docker-compose.yml'),
     );
 
-    expect(compose).toContain('npx prisma migrate deploy');
+    expect(compose).toContain('./node_modules/.bin/prisma migrate deploy');
     expect(compose).toContain('node dist/main.js');
+  });
+
+  it('uses local prisma binary for pnpm and yarn projects in docker-compose.yml', async () => {
+    const { fs: fsPnpm, context: contextPnpm } = await createContext({
+      packageManager: 'pnpm',
+    });
+    const generator = new DockerGenerator();
+    await generator.generate(contextPnpm);
+
+    const composePnpm = await fsPnpm.readFile(
+      path.join(temporaryDirectory, 'docker-compose.yml'),
+    );
+    expect(composePnpm).toContain('./node_modules/.bin/prisma migrate deploy');
+    expect(composePnpm).not.toContain('pnpm exec prisma');
+
+    const { fs: fsYarn, context: contextYarn } = await createContext({
+      packageManager: 'yarn',
+    });
+    await generator.generate(contextYarn);
+
+    const composeYarn = await fsYarn.readFile(
+      path.join(temporaryDirectory, 'docker-compose.yml'),
+    );
+    expect(composeYarn).toContain('./node_modules/.bin/prisma migrate deploy');
+    expect(composeYarn).not.toContain('yarn prisma');
   });
 
   // ── 14. depends_on postgres ────────────────────────────────────────────────

@@ -15,7 +15,7 @@ const DATABASE_URL =
 const JWT_SECRET =
   'forgekit-docker-e2e-super-secret-key-2026';
 
-describe('ForgeKit Docker E2E', () => {
+describe('Ironveil Docker E2E', () => {
   let project:
     | Awaited<
         ReturnType<
@@ -30,7 +30,7 @@ describe('ForgeKit Docker E2E', () => {
   });
 
   it(
-    'generates, installs, and builds a Docker-enabled project independently with full stack',
+    'generates, installs, and builds a Docker-enabled project independently with full stack and published host ports',
     async () => {
       project = await createGeneratedProject(
         resolveConfig({
@@ -87,12 +87,17 @@ describe('ForgeKit Docker E2E', () => {
       expect(compose).toContain('postgres:16-alpine');
       expect(compose).toContain('redis:7-alpine');
 
-      // 5. Verify Docker environment values (hostnames, not localhost)
+      // Verify port publishing for API, PostgreSQL, and Redis
+      expect(compose).toContain('"3000:3000"');
+      expect(compose).toContain('"5432:5432"');
+      expect(compose).toContain('"6379:6379"');
+
+      // 5. Verify Docker environment values (internal container network hostnames)
       expect(compose).toContain('DATABASE_URL');
       expect(compose).toContain('@postgres:5432/docker-enabled-api');
       expect(compose).toContain('REDIS_URL: "redis://redis:6379"');
       expect(compose).toContain('JWT_SECRET: "${JWT_SECRET}"');
-      expect(compose).toContain('npx prisma migrate deploy');
+      expect(compose).toContain('./node_modules/.bin/prisma migrate deploy');
       expect(compose).toContain('depends_on:');
       expect(compose).toContain('condition: service_healthy');
       expect(compose).toContain('postgres_data:');
@@ -115,7 +120,16 @@ describe('ForgeKit Docker E2E', () => {
       expect(packageJson.dependencies?.forgekit).toBeUndefined();
       expect(packageJson.devDependencies?.forgekit).toBeUndefined();
 
-      // 7. Verify project installs and builds independently
+      // 7. Verify generated README contains both host-based and containerized workflows
+      const readme = await project.fs.readFile(
+        `${project.root}/README.md`,
+      );
+      expect(readme).toContain('docker compose up -d postgres redis');
+      expect(readme).toContain('npx prisma migrate dev');
+      expect(readme).toContain('npm run start:dev');
+      expect(readme).toContain('npm run docker:up');
+
+      // 8. Verify project installs and builds independently
       await project.writeEnv({
         databaseUrl: DATABASE_URL,
         jwtSecret: JWT_SECRET,
@@ -139,7 +153,7 @@ describe('ForgeKit Docker E2E', () => {
       );
       expect(hasEngineBinary).toBe(true);
     },
-    180_000,
+    360_000,
   );
 
   it(

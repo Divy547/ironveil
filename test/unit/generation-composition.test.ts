@@ -678,7 +678,7 @@ describe('Generator composition', () => {
     expect(compose).toContain('DATABASE_URL');
     expect(compose).toContain('@postgres:5432/');
     expect(compose).not.toContain('REDIS_URL');
-    expect(compose).toContain('npx prisma migrate deploy');
+    expect(compose).toContain('./node_modules/.bin/prisma migrate deploy');
     expect(compose).toContain('pg_isready');
     expect(compose).not.toContain('redis-cli');
     expect(compose).toContain('postgres_data:');
@@ -819,7 +819,7 @@ describe('Generator composition', () => {
     expect(compose).toContain('JWT_SECRET');
     expect(compose).toContain('REDIS_URL');
     expect(compose).toContain('DATABASE_URL');
-    expect(compose).toContain('npx prisma migrate deploy');
+    expect(compose).toContain('./node_modules/.bin/prisma migrate deploy');
   });
 
   it('does not generate CI workflow when ci is disabled', async () => {

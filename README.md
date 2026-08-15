@@ -104,7 +104,7 @@ Create a new NestJS backend application in a directory matching `<project-name>`
 
 ```bash
 ironveil --help       # Display CLI usage and command list
-ironveil --version    # Output installed version (0.1.0)
+ironveil --version    # Output installed version (0.2.0)
 ```
 
 ---
@@ -258,7 +258,7 @@ Contributions are welcome! Please review [CONTRIBUTING.md](CONTRIBUTING.md) for 
 
 ## Project Status
 
-Ironveil is currently at version **`0.1.0`**. All features documented in this README are implemented, tested, and verified against real project lifecycles.
+Ironveil is currently at version **`0.2.0`**. All features documented in this README are implemented, tested, and verified against real project lifecycles.
 
 ---
 

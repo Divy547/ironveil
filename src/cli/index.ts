@@ -9,7 +9,7 @@ export function createCli(): Command {
   program
     .name('ironveil')
     .description('Production-ready NestJS backend generator')
-    .version('0.1.0');
+    .version('0.2.0');
 
   registerCreateCommand(program);
 
