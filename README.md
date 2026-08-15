@@ -215,7 +215,7 @@ To contribute to Ironveil or run it from source:
 
 ```bash
 # Clone repository
-git clone <repository-url>
+git clone https://github.com/Divy547/ironveil.git
 cd ironveil
 
 # Install dependencies
