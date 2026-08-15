@@ -10,6 +10,9 @@
     "bin",
     "dist"
   ],
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "node scripts/build.mjs",
     "dev": "tsx src/index.ts",
@@ -31,14 +34,14 @@
   "license": "MIT",
   "packageManager": "pnpm@11.21.0",
   "dependencies": {
-    "@clack/prompts": "latest",
-    "commander": "latest",
-    "zod": "latest"
+    "@clack/prompts": "1.7.0",
+    "commander": "15.0.0",
+    "zod": "4.4.3"
   },
   "devDependencies": {
-    "@types/node": "latest",
-    "tsx": "latest",
-    "typescript": "latest",
-    "vitest": "latest"
+    "@types/node": "26.2.0",
+    "tsx": "4.23.12",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
   }
 }
