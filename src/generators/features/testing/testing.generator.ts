@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { ForgeKitConfig } from '../../../config/index.js';
 import type { Generator } from '../../core/generator.js';
 import type { GenerationContext } from '../../core/generation-context.js';
+import { FORGEKIT_VERSIONS } from '../../../config/versions.js';
 import {
   createPackageManifest,
 } from '../../../utils/package-manifest.js';
@@ -40,14 +41,9 @@ export class TestingGenerator implements Generator {
       context.fs,
     );
 
-    await manifest.addDevDependencies({
-      '@nestjs/testing': '^11.0.0',
-      '@types/jest': '^30.0.0',
-      '@types/supertest': '^6.0.2',
-      jest: '^30.0.0',
-      supertest: '^7.0.0',
-      'ts-jest': '^29.2.5',
-    });
+    await manifest.addDevDependencies(
+      FORGEKIT_VERSIONS.devDependencies.testing,
+    );
 
     await manifest.addScripts({
       test: 'jest',

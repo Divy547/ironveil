@@ -16,3 +16,8 @@ export type {
   Orm,
   PackageManager,
 } from './types.js';
+
+export {
+  FORGEKIT_VERSIONS,
+  type ForgeKitVersions,
+} from './versions.js';

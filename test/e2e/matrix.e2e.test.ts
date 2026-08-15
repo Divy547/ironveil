@@ -72,6 +72,8 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
         'forgekit-matrix-default',
       );
 
+      await project.assertManifestMatchesVersions();
+
       // Verify default artifacts
       expect(
         await project.fs.exists(`${project.root}/prisma/schema.prisma`),
@@ -153,6 +155,8 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
         'forgekit-matrix-prisma',
       );
 
+      await project.assertManifestMatchesVersions();
+
       expect(
         await project.fs.exists(`${project.root}/prisma/schema.prisma`),
       ).toBe(true);
@@ -215,6 +219,8 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
         }),
         'forgekit-matrix-jwt',
       );
+
+      await project.assertManifestMatchesVersions();
 
       expect(
         await project.fs.exists(
@@ -285,6 +291,8 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
         }),
         'forgekit-matrix-prisma-jwt',
       );
+
+      await project.assertManifestMatchesVersions();
 
       await project.writeEnv({
         databaseUrl: DATABASE_URL,
@@ -374,6 +382,8 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
         'forgekit-matrix-redis',
       );
 
+      await project.assertManifestMatchesVersions();
+
       expect(
         await project.fs.exists(
           `${project.root}/src/infrastructure/redis/redis.module.ts`,
@@ -429,6 +439,8 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
         }),
         'forgekit-matrix-docker',
       );
+
+      await project.assertManifestMatchesVersions();
 
       expect(
         await project.fs.exists(`${project.root}/Dockerfile`),
@@ -493,6 +505,8 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
         'forgekit-matrix-ci',
       );
 
+      await project.assertManifestMatchesVersions();
+
       const workflowPath = `${project.root}/.github/workflows/ci.yml`;
       expect(
         await project.fs.exists(workflowPath),
@@ -533,6 +547,8 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
         }),
         'forgekit-matrix-testing',
       );
+
+      await project.assertManifestMatchesVersions();
 
       expect(
         await project.fs.exists(`${project.root}/jest.config.ts`),
@@ -598,6 +614,8 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
         fullConfig,
         'forgekit-matrix-full',
       );
+
+      await project.assertManifestMatchesVersions();
 
       // Verify presence of all feature artifacts
       expect(
@@ -718,6 +736,8 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
         'forgekit-matrix-pnpm',
       );
 
+      await project.assertManifestMatchesVersions();
+
       // 1. Verify package.json contains packageManager: "pnpm@10.5.2"
       const packageJson = JSON.parse(
         await project.fs.readFile(`${project.root}/package.json`),
@@ -814,6 +834,8 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
         config,
         'forgekit-matrix-yarn',
       );
+
+      await project.assertManifestMatchesVersions();
 
       // 1. Verify package.json contains packageManager: "yarn@1.22.22"
       const packageJson = JSON.parse(

@@ -1,3 +1,5 @@
+import { FORGEKIT_VERSIONS } from '../config/versions.js';
+
 export type PackageManager = 'npm' | 'pnpm' | 'yarn';
 
 export interface PackageManagerSpec {
@@ -28,7 +30,7 @@ const PACKAGE_MANAGER_SPECS: Record<PackageManager, PackageManagerSpec> = {
     name: 'pnpm',
     displayName: 'pnpm',
     documentationUrl: 'https://pnpm.io/',
-    packageManagerField: 'pnpm@10.5.2',
+    packageManagerField: `pnpm@${FORGEKIT_VERSIONS.tools.pnpm}`,
     install: 'pnpm install',
     run: (script: string) =>
       script === 'test' ? 'pnpm test' : `pnpm run ${script}`,
@@ -40,7 +42,7 @@ const PACKAGE_MANAGER_SPECS: Record<PackageManager, PackageManagerSpec> = {
     name: 'yarn',
     displayName: 'yarn',
     documentationUrl: 'https://yarnpkg.com/',
-    packageManagerField: 'yarn@1.22.22',
+    packageManagerField: `yarn@${FORGEKIT_VERSIONS.tools.yarn}`,
     install: 'yarn install',
     run: (script: string) => `yarn ${script}`,
     exec: (binary: string, args?: string) =>

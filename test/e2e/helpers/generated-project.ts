@@ -9,6 +9,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
 import type { ForgeKitConfig, PackageManager } from '../../../src/config/index.js';
+import { FORGEKIT_VERSIONS } from '../../../src/config/versions.js';
 import { generateProject } from '../../../src/generators/generate-project.js';
 import { createFileSystem } from '../../../src/utils/filesystem.js';
 import { getPackageManagerSpec } from '../../../src/utils/package-manager.js';
@@ -35,7 +36,82 @@ export interface GeneratedProject {
   typecheck(): Promise<void>;
   test(): Promise<void>;
   testE2e(): Promise<void>;
+  assertManifestMatchesVersions(): Promise<void>;
   cleanup(): Promise<void>;
+}
+
+export async function assertProjectManifestMatchesVersions(
+  projectRoot: string,
+  config: ForgeKitConfig,
+  fs: ReturnType<typeof createFileSystem>,
+): Promise<void> {
+  const packageJsonContent = await fs.readFile(path.join(projectRoot, 'package.json'));
+  const pkg = JSON.parse(packageJsonContent) as {
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+  };
+
+  const expectedDependencies: Record<string, string> = {
+    ...FORGEKIT_VERSIONS.dependencies.base,
+  };
+
+  const expectedDevDependencies: Record<string, string> = {
+    ...FORGEKIT_VERSIONS.devDependencies.base,
+  };
+
+  if (config.auth === 'jwt') {
+    Object.assign(expectedDependencies, FORGEKIT_VERSIONS.dependencies.auth);
+    Object.assign(expectedDevDependencies, FORGEKIT_VERSIONS.devDependencies.auth);
+  }
+
+  if (config.database === 'postgres' && config.orm === 'prisma') {
+    Object.assign(expectedDependencies, FORGEKIT_VERSIONS.dependencies.prisma);
+    Object.assign(expectedDevDependencies, FORGEKIT_VERSIONS.devDependencies.prisma);
+  }
+
+  if (config.redis) {
+    Object.assign(expectedDependencies, FORGEKIT_VERSIONS.dependencies.redis);
+  }
+
+  if (config.swagger) {
+    Object.assign(expectedDependencies, FORGEKIT_VERSIONS.dependencies.swagger);
+  }
+
+  if (config.testing) {
+    Object.assign(expectedDevDependencies, FORGEKIT_VERSIONS.devDependencies.testing);
+  }
+
+  for (const [dep, version] of Object.entries(expectedDependencies)) {
+    if (pkg.dependencies?.[dep] !== version) {
+      throw new Error(
+        `Manifest drift in dependencies for "${dep}": expected "${version}", got "${pkg.dependencies?.[dep]}"`,
+      );
+    }
+  }
+
+  for (const dep of Object.keys(pkg.dependencies ?? {})) {
+    if (!expectedDependencies[dep]) {
+      throw new Error(
+        `Unexpected dependency in manifest: "${dep}" was not expected for this configuration`,
+      );
+    }
+  }
+
+  for (const [devDep, version] of Object.entries(expectedDevDependencies)) {
+    if (pkg.devDependencies?.[devDep] !== version) {
+      throw new Error(
+        `Manifest drift in devDependencies for "${devDep}": expected "${version}", got "${pkg.devDependencies?.[devDep]}"`,
+      );
+    }
+  }
+
+  for (const devDep of Object.keys(pkg.devDependencies ?? {})) {
+    if (!expectedDevDependencies[devDep]) {
+      throw new Error(
+        `Unexpected devDependency in manifest: "${devDep}" was not expected for this configuration`,
+      );
+    }
+  }
 }
 
 export async function ensurePackageManagerAvailable(
@@ -185,6 +261,10 @@ export async function createGeneratedProject(
         cwd: destination,
         env: execEnv,
       });
+    },
+
+    async assertManifestMatchesVersions(): Promise<void> {
+      await assertProjectManifestMatchesVersions(destination, config, fs);
     },
 
     async cleanup(): Promise<void> {

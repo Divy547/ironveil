@@ -10,7 +10,7 @@ import {
   expect,
   it,
 } from 'vitest';
-import { resolveConfig } from '../../src/config/index.js';
+import { resolveConfig, FORGEKIT_VERSIONS } from '../../src/config/index.js';
 import {
   createGenerationContext,
 } from '../../src/generators/core/generation-context.js';
@@ -197,14 +197,26 @@ describe('BaseProjectGenerator', () => {
 
     await generator.generate(context);
 
-    expect(
+    const packageJson = JSON.parse(
       await fs.readFile(
         path.join(
           temporaryDirectory,
           'package.json',
         ),
       ),
-    ).toBe('{"name":"test-api"}');
+    ) as {
+      name: string;
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+
+    expect(packageJson.name).toBe('test-api');
+    expect(packageJson.dependencies).toEqual(
+      FORGEKIT_VERSIONS.dependencies.base,
+    );
+    expect(packageJson.devDependencies).toEqual(
+      FORGEKIT_VERSIONS.devDependencies.base,
+    );
 
     expect(
       await fs.readFile(

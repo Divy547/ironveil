@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { ForgeKitConfig } from '../../../config/index.js';
 import type { Generator } from '../../core/generator.js';
 import type { GenerationContext } from '../../core/generation-context.js';
+import { FORGEKIT_VERSIONS } from '../../../config/versions.js';
 import {
   createPackageManifest,
 } from '../../../utils/package-manifest.js';
@@ -72,18 +73,13 @@ export class AuthGenerator implements Generator {
       context.fs,
     );
 
-    await manifest.addDependencies({
-      '@nestjs/jwt': '11.0.2',
-      '@nestjs/passport': '11.0.5',
-      bcrypt: '6.0.0',
-      passport: '0.7.0',
-      'passport-jwt': '4.0.1',
-    });
+    await manifest.addDependencies(
+      FORGEKIT_VERSIONS.dependencies.auth,
+    );
 
-    await manifest.addDevDependencies({
-      '@types/bcrypt': '6.0.0',
-      '@types/passport-jwt': '4.0.1',
-    });
+    await manifest.addDevDependencies(
+      FORGEKIT_VERSIONS.devDependencies.auth,
+    );
 
     for (const template of AUTH_TEMPLATES) {
       const source = await context.loader.load(

@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { ForgeKitConfig } from '../../../config/index.js';
 import type { Generator } from '../../core/generator.js';
 import type { GenerationContext } from '../../core/generation-context.js';
+import { FORGEKIT_VERSIONS } from '../../../config/versions.js';
 import {
   createPackageManifest,
 } from '../../../utils/package-manifest.js';
@@ -30,9 +31,9 @@ export class SwaggerGenerator implements Generator {
       context.fs,
     );
 
-    await manifest.addDependencies({
-      '@nestjs/swagger': '11.0.6',
-    });
+    await manifest.addDependencies(
+      FORGEKIT_VERSIONS.dependencies.swagger,
+    );
 
     for (const template of SWAGGER_TEMPLATES) {
       const source = await context.loader.load(

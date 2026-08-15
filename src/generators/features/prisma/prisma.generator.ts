@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { ForgeKitConfig } from '../../../config/index.js';
 import type { Generator } from '../../core/generator.js';
 import type { GenerationContext } from '../../core/generation-context.js';
+import { FORGEKIT_VERSIONS } from '../../../config/versions.js';
 import {
   createPackageManifest,
 } from '../../../utils/package-manifest.js';
@@ -49,13 +50,13 @@ export class PrismaGenerator implements Generator {
       context.fs,
     );
 
-    await manifest.addDependencies({
-      '@prisma/client': '6.19.3',
-    });
+    await manifest.addDependencies(
+      FORGEKIT_VERSIONS.dependencies.prisma,
+    );
 
-    await manifest.addDevDependencies({
-      prisma: '6.19.3',
-    });
+    await manifest.addDevDependencies(
+      FORGEKIT_VERSIONS.devDependencies.prisma,
+    );
 
     await manifest.addScripts({
       'db:generate': 'prisma generate',

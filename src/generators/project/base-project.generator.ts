@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { Generator } from '../core/generator.js';
 import type { GenerationContext } from '../core/generation-context.js';
 import type { ForgeKitConfig } from '../../config/index.js';
+import { FORGEKIT_VERSIONS } from '../../config/versions.js';
 import { getPackageManagerSpec } from '../../utils/package-manager.js';
 import { createPackageManifest } from '../../utils/package-manifest.js';
 
@@ -79,12 +80,16 @@ export class BaseProjectGenerator implements Generator {
       );
     }
 
+    const manifest = createPackageManifest(
+      context.destination,
+      context.fs,
+    );
+
+    await manifest.addDependencies(FORGEKIT_VERSIONS.dependencies.base);
+    await manifest.addDevDependencies(FORGEKIT_VERSIONS.devDependencies.base);
+
     const pmSpec = getPackageManagerSpec(context.config.packageManager);
     if (pmSpec.packageManagerField) {
-      const manifest = createPackageManifest(
-        context.destination,
-        context.fs,
-      );
       const pkg = await manifest.read();
       await manifest.write({
         ...pkg,
