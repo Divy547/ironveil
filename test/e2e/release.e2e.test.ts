@@ -60,13 +60,13 @@ describe('F15 — Release & Packaged Artifact Verification', () => {
   // Test 1: Tarball Contents & Exclusion Policy
   // =========================================================================
   it('pack produces a clean tarball with all required runtime files and no source/test leakage', () => {
-    expect(packResult.filename).toMatch(/^forgekit-\d+\.\d+\.\d+\.tgz$/);
+    expect(packResult.filename).toMatch(/^ironveil-\d+\.\d+\.\d+\.tgz$/);
     expect(packResult.size).toBeGreaterThan(0);
 
     const files = packResult.files;
 
     // 1. Essential runtime binaries and manifests
-    expect(files).toContain('bin/forgekit.js');
+    expect(files).toContain('bin/ironveil.js');
     expect(files).toContain('package.json');
 
     // 2. Compiled dist files
@@ -116,7 +116,7 @@ describe('F15 — Release & Packaged Artifact Verification', () => {
   // =========================================================================
   it('executes the installed binary and returns help and version information', async () => {
     const helpResult = await installedKit.runCli(['--help']);
-    expect(helpResult.stdout).toContain('Usage: forgekit');
+    expect(helpResult.stdout).toContain('Usage: ironveil');
     expect(helpResult.stdout).toContain('create');
 
     const versionResult = await installedKit.runCli(['--version']);

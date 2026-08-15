@@ -17,7 +17,7 @@ export function getTemplatesDirectory(): string {
 
   if (!templatesDirectory) {
     throw new Error(
-      `Could not locate ForgeKit templates. Searched:\n${candidates.join('\n')}`,
+      `Could not locate Ironveil templates. Searched:\n${candidates.join('\n')}`,
     );
   }
 

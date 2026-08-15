@@ -204,7 +204,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  forgekit: 'link:'
+  ironveil: 'link:'
 
 importers:
 

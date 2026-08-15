@@ -17,7 +17,7 @@ describe('ForgeKit CLI', () => {
   it('creates the CLI program', () => {
     const cli = createCli();
 
-    expect(cli.name()).toBe('forgekit');
+    expect(cli.name()).toBe('ironveil');
     expect(cli.version()).toBe('0.1.0');
   });
 

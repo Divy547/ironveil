@@ -121,12 +121,12 @@ export async function installPackedForgeKit(
     envDir,
     'node_modules',
     '.bin',
-    process.platform === 'win32' ? 'forgekit.cmd' : 'forgekit',
+    process.platform === 'win32' ? 'ironveil.cmd' : 'ironveil',
   );
 
   if (!(await fs.exists(binPath))) {
     throw new Error(
-      `ForgeKit CLI executable not found at expected path: ${binPath}`,
+      `Ironveil CLI executable not found at expected path: ${binPath}`,
     );
   }
 

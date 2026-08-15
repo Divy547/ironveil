@@ -7,7 +7,7 @@ export function createCli(): Command {
   const program = new Command();
 
   program
-    .name('forgekit')
+    .name('ironveil')
     .description('Production-ready NestJS backend generator')
     .version('0.1.0');
 

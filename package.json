@@ -1,10 +1,10 @@
 {
-  "name": "forgekit",
+  "name": "ironveil",
   "version": "0.1.0",
   "description": "An opinionated developer productivity CLI for bootstrapping production-ready NestJS backends.",
   "type": "module",
   "bin": {
-    "forgekit": "./bin/forgekit.js"
+    "ironveil": "./bin/ironveil.js"
   },
   "files": [
     "bin",

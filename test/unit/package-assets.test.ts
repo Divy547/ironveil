@@ -29,7 +29,7 @@ describe('package assets', () => {
         path.join(
           ROOT,
           'bin',
-          'forgekit.js',
+          'ironveil.js',
         ),
       ),
     ).toBe(true);
@@ -107,12 +107,12 @@ describe('package assets', () => {
       ),
     ) as {
       bin?: {
-        forgekit?: string;
+        ironveil?: string;
       };
     };
 
-    expect(packageJson.bin?.forgekit).toBe(
-      './bin/forgekit.js',
+    expect(packageJson.bin?.ironveil).toBe(
+      './bin/ironveil.js',
     );
   });
 });
