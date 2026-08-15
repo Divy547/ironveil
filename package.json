@@ -13,6 +13,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "dev": "tsx src/index.ts",
+    "prepack": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run test/unit",
     "test:watch": "vitest test/unit",
@@ -32,7 +33,6 @@
   "dependencies": {
     "@clack/prompts": "latest",
     "commander": "latest",
-    "forgekit": "link:",
     "zod": "latest"
   },
   "devDependencies": {

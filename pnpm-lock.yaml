@@ -216,9 +216,6 @@ importers:
       commander:
         specifier: latest
         version: 15.0.0
-      forgekit:
-        specifier: 'link:'
-        version: 'link:'
       zod:
         specifier: latest
         version: 4.4.3
