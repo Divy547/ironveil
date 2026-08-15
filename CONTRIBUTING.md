@@ -42,9 +42,10 @@ pnpm exec tsx src/index.ts create --help
 Before opening a pull request, run the fast validation suite:
 
 ```bash
+pnpm install --frozen-lockfile
 pnpm run typecheck
-pnpm test
 pnpm run build
+pnpm test
 ```
 
 You can also run the full end-to-end suite:
@@ -121,8 +122,8 @@ Before submitting a pull request, ensure that:
 ```bash
 pnpm install --frozen-lockfile
 pnpm run typecheck
-pnpm test
 pnpm run build
+pnpm test
 ```
 
 all pass successfully.
