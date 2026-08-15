@@ -2,9 +2,7 @@ export interface AppConfig {
   readonly nodeEnv: string;
   readonly port: number;
   {{redisConfigType}}
-  readonly auth: {
-    readonly jwtSecret: string | undefined;
-  };
+  {{authConfigType}}
 }
 
 export function loadConfiguration(): AppConfig {
@@ -18,9 +16,6 @@ export function loadConfiguration(): AppConfig {
 
     {{redisConfig}}
 
-    auth: {
-      jwtSecret:
-        process.env.JWT_SECRET,
-    },
+    {{authConfig}}
   };
 }

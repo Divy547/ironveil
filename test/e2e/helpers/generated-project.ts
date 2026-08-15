@@ -8,9 +8,10 @@ import os from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
-import type { ForgeKitConfig } from '../../../src/config/index.js';
+import type { ForgeKitConfig, PackageManager } from '../../../src/config/index.js';
 import { generateProject } from '../../../src/generators/generate-project.js';
 import { createFileSystem } from '../../../src/utils/filesystem.js';
+import { getPackageManagerSpec } from '../../../src/utils/package-manager.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -19,6 +20,7 @@ export interface GeneratedProject {
   readonly fs: ReturnType<typeof createFileSystem>;
   readonly port: number;
   readonly baseUrl: string;
+  readonly packageManager: PackageManager;
 
   writeEnv(values: {
     databaseUrl: string;
@@ -30,7 +32,33 @@ export interface GeneratedProject {
   prismaGenerate(): Promise<void>;
   prismaMigrateDeploy(): Promise<void>;
   build(): Promise<void>;
+  typecheck(): Promise<void>;
+  test(): Promise<void>;
+  testE2e(): Promise<void>;
   cleanup(): Promise<void>;
+}
+
+export async function ensurePackageManagerAvailable(
+  pm: PackageManager,
+): Promise<void> {
+  const env = {
+    ...process.env,
+    COREPACK_ENABLE_DOWNLOAD_PROMPT: '0',
+  };
+
+  try {
+    if (pm === 'npm') {
+      await execFileAsync('npm', ['--version'], { env });
+    } else if (pm === 'pnpm') {
+      await execFileAsync('pnpm', ['--version'], { env });
+    } else if (pm === 'yarn') {
+      await execFileAsync('corepack', ['enable'], { env });
+    }
+  } catch (error) {
+    throw new Error(
+      `Package manager "${pm}" is not available in the test environment: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 }
 
 export async function createGeneratedProject(
@@ -44,10 +72,11 @@ export async function createGeneratedProject(
     ),
   );
 
-  const destination = await generateProject(
+  const result = await generateProject(
     config,
     temporaryDirectory,
   );
+  const destination = result.destination;
 
   const fs = createFileSystem();
 
@@ -59,11 +88,20 @@ export async function createGeneratedProject(
 
   let cleaned = false;
 
+  const pm = config.packageManager ?? 'npm';
+  const pmSpec = getPackageManagerSpec(pm);
+
+  const execEnv = {
+    ...process.env,
+    COREPACK_ENABLE_DOWNLOAD_PROMPT: '0',
+  };
+
   return {
     root: destination,
     fs,
     port,
     baseUrl,
+    packageManager: pm,
 
     async writeEnv(values): Promise<void> {
       await writeFile(
@@ -94,47 +132,59 @@ export async function createGeneratedProject(
     },
 
     async install(): Promise<void> {
-      await execFileAsync(
-        'npm',
-        ['install'],
-        {
-          cwd: destination,
-        },
-      );
+      const [bin, ...args] = pmSpec.install.split(' ');
+      await execFileAsync(bin, args, {
+        cwd: destination,
+        env: execEnv,
+      });
     },
 
     async prismaGenerate(): Promise<void> {
-      await execFileAsync(
-        'npx',
-        ['prisma', 'generate'],
-        {
-          cwd: destination,
-        },
-      );
+      const [bin, ...args] = pmSpec.prisma('generate').split(' ');
+      await execFileAsync(bin, args, {
+        cwd: destination,
+        env: execEnv,
+      });
     },
 
     async prismaMigrateDeploy(): Promise<void> {
-      await execFileAsync(
-        'npx',
-        [
-          'prisma',
-          'migrate',
-          'deploy',
-        ],
-        {
-          cwd: destination,
-        },
-      );
+      const [bin, ...args] = pmSpec.prisma('migrate deploy').split(' ');
+      await execFileAsync(bin, args, {
+        cwd: destination,
+        env: execEnv,
+      });
     },
 
     async build(): Promise<void> {
-      await execFileAsync(
-        'npm',
-        ['run', 'build'],
-        {
-          cwd: destination,
-        },
-      );
+      const [bin, ...args] = pmSpec.run('build').split(' ');
+      await execFileAsync(bin, args, {
+        cwd: destination,
+        env: execEnv,
+      });
+    },
+
+    async typecheck(): Promise<void> {
+      const [bin, ...args] = pmSpec.run('typecheck').split(' ');
+      await execFileAsync(bin, args, {
+        cwd: destination,
+        env: execEnv,
+      });
+    },
+
+    async test(): Promise<void> {
+      const [bin, ...args] = pmSpec.run('test').split(' ');
+      await execFileAsync(bin, args, {
+        cwd: destination,
+        env: execEnv,
+      });
+    },
+
+    async testE2e(): Promise<void> {
+      const [bin, ...args] = pmSpec.run('test:e2e').split(' ');
+      await execFileAsync(bin, args, {
+        cwd: destination,
+        env: execEnv,
+      });
     },
 
     async cleanup(): Promise<void> {

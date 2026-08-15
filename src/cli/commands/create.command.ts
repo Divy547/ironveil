@@ -4,12 +4,23 @@ import { promptCreateOptions } from '../prompts/create.prompts.js';
 import type { CreateCommandOptions } from '../options/create.options.js';
 import { hasExplicitCreateOptions } from '../options/create.mode.js';
 import { generateProject } from '../../generators/generate-project.js';
-import { GenerationError } from '../../generators/core/generation-error.js';
+import {
+  formatSuccessOutput,
+  formatDryRunOutput,
+  formatFailureOutput,
+} from '../output/create-output.js';
 
 export function registerCreateCommand(program: Command): void {
   program
     .command('create <project-name>')
     .description('Create a new NestJS backend project')
+    .option('-y, --yes', 'Skip interactive prompts and use defaults')
+    .option('--non-interactive', 'Run in non-interactive mode')
+    .option('--dry-run', 'Simulate generation without writing files to disk')
+    .option(
+      '-p, --package-manager <pm>',
+      'Package manager: npm, pnpm, or yarn',
+    )
     .option('--redis', 'Enable Redis')
     .option('--auth <type>', 'Authentication type: none or jwt')
     .option('--no-swagger', 'Disable Swagger')
@@ -23,6 +34,7 @@ export function registerCreateCommand(program: Command): void {
         command: Command,
       ) => {
         const featureOptions: CreateCommandOptions = {
+          packageManager: options.packageManager,
           redis: options.redis,
           auth: options.auth,
           swagger: options.swagger,
@@ -31,7 +43,13 @@ export function registerCreateCommand(program: Command): void {
           testing: options.testing,
         };
 
-        const resolvedOptions = hasExplicitCreateOptions(command)
+        const isNonInteractive = Boolean(
+          options.yes ||
+          options.nonInteractive ||
+          hasExplicitCreateOptions(command),
+        );
+
+        const resolvedOptions = isNonInteractive
           ? featureOptions
           : await promptCreateOptions();
 
@@ -41,38 +59,21 @@ export function registerCreateCommand(program: Command): void {
             ...resolvedOptions,
           });
 
-          const destination = await generateProject(
+          const result = await generateProject(
             config,
+            process.cwd(),
+            undefined,
+            { dryRun: options.dryRun },
           );
 
-          console.log(
-            `Created ${config.projectName} at ${destination}`,
-          );
+          if (options.dryRun) {
+            console.log(formatDryRunOutput(result));
+          } else {
+            console.log(formatSuccessOutput(result));
+          }
         } catch (error) {
           process.exitCode = 1;
-
-          if (error instanceof GenerationError) {
-            console.error('\nGeneration failed\n');
-            if (error.projectName) {
-              console.error(`Project: ${error.projectName}`);
-            }
-            if (error.generatorName) {
-              console.error(`Generator: ${error.generatorName}`);
-            }
-            console.error(`Reason: ${error.message}`);
-            if (
-              error.cause &&
-              error.cause instanceof Error &&
-              error.cause.message !== error.message
-            ) {
-              console.error(`Original error: ${error.cause.message}`);
-            }
-          } else {
-            console.error('\nGeneration failed\n');
-            console.error(
-              `Reason: ${error instanceof Error ? error.message : String(error)}`,
-            );
-          }
+          console.error(formatFailureOutput(error));
         }
       },
     );

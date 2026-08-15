@@ -404,13 +404,55 @@ describe('DockerGenerator', () => {
 
     expect(dockerfile).toContain('FROM node:22-alpine AS builder');
     expect(dockerfile).toContain('FROM node:22-alpine AS runner');
-    expect(dockerfile).toContain('npm install');
+    expect(dockerfile).toContain('RUN npm install');
     expect(dockerfile).not.toContain('npm ci');
-    expect(dockerfile).toContain('npx prisma generate');
-    expect(dockerfile).toContain('npm run build');
+    expect(dockerfile).toContain('RUN npx prisma generate');
+    expect(dockerfile).toContain('RUN npm run build');
     expect(dockerfile).toContain('CMD ["node", "dist/main.js"]');
     expect(dockerfile).not.toContain('forgekit');
     expect(dockerfile).not.toContain('ForgeKit');
+  });
+
+  it('Dockerfile uses corepack enable for pnpm', async () => {
+    const { fs, context } = await createContext({
+      packageManager: 'pnpm',
+      database: 'postgres',
+      orm: 'prisma',
+    });
+    const generator = new DockerGenerator();
+
+    await generator.generate(context);
+
+    const dockerfile = await fs.readFile(
+      path.join(temporaryDirectory, 'Dockerfile'),
+    );
+
+    expect(dockerfile).toContain('RUN corepack enable && pnpm install');
+    expect(dockerfile).toContain('RUN pnpm exec prisma generate');
+    expect(dockerfile).toContain('RUN pnpm run build');
+    expect(dockerfile).not.toContain('RUN npm install');
+    expect(dockerfile).not.toContain('RUN npx prisma');
+  });
+
+  it('Dockerfile uses corepack enable for yarn', async () => {
+    const { fs, context } = await createContext({
+      packageManager: 'yarn',
+      database: 'postgres',
+      orm: 'prisma',
+    });
+    const generator = new DockerGenerator();
+
+    await generator.generate(context);
+
+    const dockerfile = await fs.readFile(
+      path.join(temporaryDirectory, 'Dockerfile'),
+    );
+
+    expect(dockerfile).toContain('RUN corepack enable && yarn install');
+    expect(dockerfile).toContain('RUN yarn prisma generate');
+    expect(dockerfile).toContain('RUN yarn build');
+    expect(dockerfile).not.toContain('RUN npm install');
+    expect(dockerfile).not.toContain('RUN npx prisma');
   });
 
   // ── .dockerignore content ─────────────────────────────────────────────────

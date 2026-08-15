@@ -1,21 +1,15 @@
+{{testingTestEnv}}
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { AppModule } from '../src/app.module';
 {{testingE2eImports}}
-
-process.env.DATABASE_URL =
-  process.env.DATABASE_URL ??
-  'postgresql://postgres:postgres@localhost:5432/test_db?schema=public';
-process.env.REDIS_URL =
-  process.env.REDIS_URL ?? 'redis://localhost:6379';
-process.env.JWT_SECRET =
-  process.env.JWT_SECRET ?? 'test-secret-key-minimum-32-chars-long';
 
 describe('App (e2e)', () => {
   let app: INestApplication;
 
   beforeEach(async () => {
+    const { AppModule } = await import('../src/app.module');
     const moduleBuilder = Test.createTestingModule({
       imports: [AppModule],
     });

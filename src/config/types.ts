@@ -4,7 +4,7 @@ export type Orm = 'prisma';
 
 export type Auth = 'none' | 'jwt';
 
-export type PackageManager = 'npm';
+export type PackageManager = 'npm' | 'pnpm' | 'yarn';
 
 export interface ForgeKitConfig {
   readonly projectName: string;

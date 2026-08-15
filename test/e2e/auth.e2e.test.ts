@@ -54,6 +54,23 @@ describe('ForgeKit JWT Auth E2E', () => {
           'forgekit-auth-e2e',
         );
 
+      // Verify JWT configuration artifacts
+      const envExample = await project.fs.readFile(
+        `${project.root}/.env.example`,
+      );
+      expect(envExample).toContain('JWT_SECRET=');
+
+      const environmentTs = await project.fs.readFile(
+        `${project.root}/src/infrastructure/config/environment.ts`,
+      );
+      expect(environmentTs).toContain('JWT_SECRET: z');
+
+      const configurationTs = await project.fs.readFile(
+        `${project.root}/src/infrastructure/config/configuration.ts`,
+      );
+      expect(configurationTs).toContain('auth: {');
+      expect(configurationTs).toContain('process.env.JWT_SECRET');
+
       await project.writeEnv({
         databaseUrl:
           DATABASE_URL,

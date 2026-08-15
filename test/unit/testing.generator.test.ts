@@ -138,6 +138,49 @@ describe('TestingGenerator', () => {
         path.join(temporaryDirectory, 'test', 'app.e2e-spec.ts'),
       ),
     ).toBe(true);
+
+    const specContent = await fs.readFile(
+      path.join(temporaryDirectory, 'src', 'app.module.spec.ts'),
+    );
+    expect(specContent).toContain('process.env.DATABASE_URL =');
+    expect(specContent).not.toContain('REDIS_URL');
+    expect(specContent).not.toContain('JWT_SECRET');
+    expect(specContent).toContain("const { AppModule } = await import('./app.module');");
+
+    const e2eContent = await fs.readFile(
+      path.join(temporaryDirectory, 'test', 'app.e2e-spec.ts'),
+    );
+    expect(e2eContent).toContain('process.env.DATABASE_URL =');
+    expect(e2eContent).not.toContain('REDIS_URL');
+    expect(e2eContent).not.toContain('JWT_SECRET');
+    expect(e2eContent).toContain("const { AppModule } = await import('../src/app.module');");
+  });
+
+  it('generates test environment with all variables when database, redis, and auth are enabled', async () => {
+    const { fs, context } = await createContext({
+      testing: true,
+      database: 'postgres',
+      orm: 'prisma',
+      redis: true,
+      auth: 'jwt',
+    });
+    const generator = new TestingGenerator();
+
+    await generator.generate(context);
+
+    const specContent = await fs.readFile(
+      path.join(temporaryDirectory, 'src', 'app.module.spec.ts'),
+    );
+    expect(specContent).toContain('process.env.DATABASE_URL =');
+    expect(specContent).toContain('process.env.REDIS_URL =');
+    expect(specContent).toContain('process.env.JWT_SECRET =');
+
+    const e2eContent = await fs.readFile(
+      path.join(temporaryDirectory, 'test', 'app.e2e-spec.ts'),
+    );
+    expect(e2eContent).toContain('process.env.DATABASE_URL =');
+    expect(e2eContent).toContain('process.env.REDIS_URL =');
+    expect(e2eContent).toContain('process.env.JWT_SECRET =');
   });
 
   it('adds testing scripts and devDependencies to package.json when enabled', async () => {

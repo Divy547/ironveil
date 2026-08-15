@@ -26,7 +26,7 @@ export const ForgeKitConfigSchema = z.object({
 
   testing: z.boolean().default(true),
 
-  packageManager: z.literal('npm').default('npm'),
+  packageManager: z.enum(['npm', 'pnpm', 'yarn']).default('npm'),
 });
 
 export type ForgeKitConfigInput = z.input<typeof ForgeKitConfigSchema>;

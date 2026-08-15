@@ -1,4 +1,5 @@
 import type { ForgeKitConfig } from '../config/index.js';
+import { getPackageManagerSpec } from '../utils/package-manager.js';
 
 export interface TemplateRenderer {
   render(
@@ -10,6 +11,8 @@ export interface TemplateRenderer {
 export function createTemplateRenderer(): TemplateRenderer {
   return {
     render(template, config): string {
+      const pmSpec = getPackageManagerSpec(config.packageManager);
+
       const authModuleImport =
         config.auth === 'jwt'
           ? "import { AuthModule } from './modules/auth/auth.module';"
@@ -64,6 +67,34 @@ export function createTemplateRenderer(): TemplateRenderer {
         config.database === 'postgres' &&
         config.orm === 'prisma';
 
+      const databaseEnvExample = hasPrisma
+        ? `DATABASE_URL="postgresql://postgres:postgres@localhost:5432/${config.projectName}?schema=public"`
+        : '';
+
+      const databaseEnvSchema = hasPrisma
+        ? "DATABASE_URL: z\n    .string()\n    .min(1, 'DATABASE_URL is required'),"
+        : '';
+
+      const authEnvExample =
+        config.auth === 'jwt'
+          ? 'JWT_SECRET="replace-this-with-a-random-secret-at-least-32-characters-long"'
+          : '';
+
+      const authConfigType =
+        config.auth === 'jwt'
+          ? 'readonly auth: {\n    readonly jwtSecret: string | undefined;\n  };'
+          : '';
+
+      const authConfig =
+        config.auth === 'jwt'
+          ? "auth: {\n      jwtSecret:\n        process.env.JWT_SECRET,\n    },"
+          : '';
+
+      const authEnvSchema =
+        config.auth === 'jwt'
+          ? "JWT_SECRET: z\n    .string()\n    .min(\n      32,\n      'JWT_SECRET must be at least 32 characters',\n    )\n    .optional(),"
+          : '';
+
       // ── Docker: API environment variables ──────────────────────
       const dockerApiEnvLines: string[] = [];
 
@@ -113,7 +144,7 @@ export function createTemplateRenderer(): TemplateRenderer {
 
       // ── Docker: API command ─────────────────────────────────────
       const dockerComposeApiCommand = hasPrisma
-        ? 'sh -c "npx prisma migrate deploy && node dist/main.js"'
+        ? `sh -c "${pmSpec.prisma('migrate deploy')} && node dist/main.js"`
         : 'node dist/main.js';
 
       // ── Docker: postgres service ────────────────────────────────
@@ -166,15 +197,66 @@ export function createTemplateRenderer(): TemplateRenderer {
           ? 'volumes:\n' + volumeEntries.join('\n')
           : '';
 
+      // ── Dockerfile Build steps ─────────────────────────────────
+      const dockerInstall =
+        config.packageManager === 'npm'
+          ? 'RUN npm install'
+          : config.packageManager === 'pnpm'
+            ? 'RUN corepack enable && pnpm install'
+            : 'RUN corepack enable && yarn install';
+
+      const dockerPrismaGenerate = hasPrisma
+        ? `RUN ${pmSpec.prisma('generate')}\n`
+        : '';
+
+      const dockerBuild = `RUN ${pmSpec.run('build')}`;
+
+      // ── CI: Setup steps ─────────────────────────────────────────
+      const ciSetupSteps =
+        config.packageManager === 'npm'
+          ? [
+              '      - name: Set up Node.js',
+              '        uses: actions/setup-node@v4',
+              '        with:',
+              "          node-version: '22'",
+            ].join('\n')
+          : config.packageManager === 'pnpm'
+            ? [
+                '      - name: Install pnpm',
+                '        uses: pnpm/action-setup@v4',
+                '        with:',
+                "          version: '10.5.2'",
+                '',
+                '      - name: Set up Node.js',
+                '        uses: actions/setup-node@v4',
+                '        with:',
+                "          node-version: '22'",
+              ].join('\n')
+            : [
+                '      - name: Set up Node.js',
+                '        uses: actions/setup-node@v4',
+                '        with:',
+                "          node-version: '22'",
+                '',
+                '      - name: Enable Corepack',
+                '        run: corepack enable',
+              ].join('\n');
+
+      const ciInstallCommand = pmSpec.install;
+
       // ── CI: Prisma generate step ────────────────────────────────
       const ciPrismaStep = hasPrisma
-        ? '\n      - name: Generate Prisma Client\n        run: npx prisma generate\n        env:\n          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/db?schema=public"'
+        ? `\n      - name: Generate Prisma Client\n        run: ${pmSpec.prisma('generate')}\n        env:\n          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/db?schema=public"`
         : '';
+
+      const ciTypecheckCommand = pmSpec.run('typecheck');
 
       // ── CI: Unit test step ──────────────────────────────────────
       const ciTestStep = config.testing
-        ? '\n      - name: Run unit tests\n        run: npm test'
+        ? `\n      - name: Run unit tests\n        run: ${pmSpec.run('test')}`
         : '';
+
+      const ciBuildCommand = pmSpec.run('build');
 
       // ── Testing: E2E imports and provider overrides ──────────────
       const testingE2eImportLines: string[] = [];
@@ -210,6 +292,29 @@ export function createTemplateRenderer(): TemplateRenderer {
 
       const testingE2eImports = testingE2eImportLines.join('\n');
       const testingE2eOverrides = testingE2eOverrideLines.join('\n');
+
+      // ── Testing: Test environment variables ────────────────────
+      const testingTestEnvLines: string[] = [];
+
+      if (hasPrisma) {
+        testingTestEnvLines.push(
+          "process.env.DATABASE_URL =\n  process.env.DATABASE_URL ??\n  'postgresql://postgres:postgres@localhost:5432/test_db?schema=public';",
+        );
+      }
+
+      if (config.redis) {
+        testingTestEnvLines.push(
+          "process.env.REDIS_URL =\n  process.env.REDIS_URL ?? 'redis://localhost:6379';",
+        );
+      }
+
+      if (config.auth === 'jwt') {
+        testingTestEnvLines.push(
+          "process.env.JWT_SECRET =\n  process.env.JWT_SECRET ?? 'test-secret-key-minimum-32-chars-long';",
+        );
+      }
+
+      const testingTestEnv = testingTestEnvLines.join('\n');
 
       // ── README: Features ─────────────────────────────────────────
       const featureList: string[] = [
@@ -264,7 +369,7 @@ export function createTemplateRenderer(): TemplateRenderer {
       // ── README: Prerequisites ────────────────────────────────────
       const prereqList: string[] = [
         '- [Node.js](https://nodejs.org/) (version 22 or later)',
-        '- [npm](https://www.npmjs.com/) package manager',
+        `- [${pmSpec.displayName}](${pmSpec.documentationUrl}) package manager`,
       ];
 
       if (config.docker) {
@@ -288,13 +393,13 @@ export function createTemplateRenderer(): TemplateRenderer {
 
       // ── README: Installation ────────────────────────────────────
       const installSteps: string[] = [
-        '1. **Clone the repository and install dependencies**:\n   ```bash\n   npm install\n   ```',
+        `1. **Clone the repository and install dependencies**:\n   \`\`\`bash\n   ${pmSpec.install}\n   \`\`\``,
         '2. **Set up environment variables**:\n   ```bash\n   cp .env.example .env\n   ```',
       ];
 
       if (hasPrisma) {
         installSteps.push(
-          '3. **Generate Prisma Client**:\n   ```bash\n   npx prisma generate\n   ```',
+          `3. **Generate Prisma Client**:\n   \`\`\`bash\n   ${pmSpec.prisma('generate')}\n   \`\`\``,
         );
       }
 
@@ -335,13 +440,13 @@ export function createTemplateRenderer(): TemplateRenderer {
       const readmeDevelopment = [
         '```bash',
         '# Start the application in development mode with hot reload',
-        'npm run start:dev',
+        pmSpec.run('start:dev'),
         '',
         '# Run TypeScript type checking',
-        'npm run typecheck',
+        pmSpec.run('typecheck'),
         '',
         '# Build the project for production',
-        'npm run build',
+        pmSpec.run('build'),
         '```',
       ].join('\n');
 
@@ -351,10 +456,10 @@ export function createTemplateRenderer(): TemplateRenderer {
             '## Database & Prisma\n',
             'This project uses Prisma ORM with PostgreSQL.\n',
             '- **Schema**: `prisma/schema.prisma`',
-            '- **Generate Prisma Client**: `npx prisma generate`',
-            '- **Apply Migrations (Development)**: `npx prisma migrate dev`',
-            '- **Apply Migrations (Production/CI)**: `npx prisma migrate deploy`',
-            '- **Prisma Studio**: `npx prisma studio`\n',
+            `- **Generate Prisma Client**: \`${pmSpec.prisma('generate')}\``,
+            `- **Apply Migrations (Development)**: \`${pmSpec.prisma('migrate dev')}\``,
+            `- **Apply Migrations (Production/CI)**: \`${pmSpec.prisma('migrate deploy')}\``,
+            `- **Prisma Studio**: \`${pmSpec.prisma('studio')}\`\n`,
           ].join('\n')
         : '';
 
@@ -412,10 +517,10 @@ export function createTemplateRenderer(): TemplateRenderer {
             'Run the entire application stack using Docker Compose:\n',
             '```bash',
             '# Build and start all services',
-            'npm run docker:up',
+            pmSpec.run('docker:up'),
             '',
             '# Stop all running services',
-            'npm run docker:down',
+            pmSpec.run('docker:down'),
             '```\n',
             'Services defined in `docker-compose.yml`:\n' +
               dockerServicesList.join('\n') +
@@ -429,16 +534,16 @@ export function createTemplateRenderer(): TemplateRenderer {
             '## Testing\n',
             '```bash',
             '# Run unit tests',
-            'npm test',
+            pmSpec.run('test'),
             '',
             '# Run unit tests in watch mode',
-            'npm run test:watch',
+            pmSpec.run('test:watch'),
             '',
             '# Generate test coverage report',
-            'npm run test:cov',
+            pmSpec.run('test:cov'),
             '',
             '# Run end-to-end (E2E) tests',
-            'npm run test:e2e',
+            pmSpec.run('test:e2e'),
             '```\n',
             'Test directories:',
             '- Unit tests: `src/**/*.spec.ts`',
@@ -449,21 +554,21 @@ export function createTemplateRenderer(): TemplateRenderer {
       // ── README: Continuous Integration ──────────────────────────
       const ciStepsList: string[] = [
         '1. Checkout code & set up Node.js 22',
-        '2. Install dependencies (`npm install`)',
+        `2. Install dependencies (\`${pmSpec.install}\`)`,
       ];
       if (hasPrisma) {
-        ciStepsList.push('3. Generate Prisma Client (`npx prisma generate`)');
+        ciStepsList.push(`3. Generate Prisma Client (\`${pmSpec.prisma('generate')}\`)`);
       }
       ciStepsList.push(
-        `${ciStepsList.length + 1}. Typecheck validation (\`npm run typecheck\`)`,
+        `${ciStepsList.length + 1}. Typecheck validation (\`${pmSpec.run('typecheck')}\`)`,
       );
       if (config.testing) {
         ciStepsList.push(
-          `${ciStepsList.length + 1}. Run unit tests (\`npm test\`)`,
+          `${ciStepsList.length + 1}. Run unit tests (\`${pmSpec.run('test')}\`)`,
         );
       }
       ciStepsList.push(
-        `${ciStepsList.length + 1}. Build production bundle (\`npm run build\`)`,
+        `${ciStepsList.length + 1}. Build production bundle (\`${pmSpec.run('build')}\`)`,
       );
 
       const readmeCi = config.ci
@@ -480,19 +585,19 @@ export function createTemplateRenderer(): TemplateRenderer {
       const prodStepsList: string[] = [
         '```bash',
         '# 1. Compile the TypeScript application',
-        'npm run build',
+        pmSpec.run('build'),
       ];
       if (hasPrisma) {
         prodStepsList.push(
           '',
           '# 2. Deploy database migrations',
-          'npx prisma migrate deploy',
+          pmSpec.prisma('migrate deploy'),
         );
       }
       prodStepsList.push(
         '',
-        '# 3. Start production server',
-        'npm run start:prod',
+        `# ${hasPrisma ? '3' : '2'}. Start production server`,
+        pmSpec.run('start:prod'),
         '```',
       );
 
@@ -544,6 +649,30 @@ export function createTemplateRenderer(): TemplateRenderer {
           redisEnvSchema,
         )
         .replace(
+          /\{\{\s*databaseEnvExample\s*\}\}/g,
+          databaseEnvExample,
+        )
+        .replace(
+          /\{\{\s*databaseEnvSchema\s*\}\}/g,
+          databaseEnvSchema,
+        )
+        .replace(
+          /\{\{\s*authEnvExample\s*\}\}/g,
+          authEnvExample,
+        )
+        .replace(
+          /\{\{\s*authConfigType\s*\}\}/g,
+          authConfigType,
+        )
+        .replace(
+          /\{\{\s*authConfig\s*\}\}/g,
+          authConfig,
+        )
+        .replace(
+          /\{\{\s*authEnvSchema\s*\}\}/g,
+          authEnvSchema,
+        )
+        .replace(
           /\{\{\s*dockerComposeApiEnvironment\s*\}\}/g,
           dockerComposeApiEnvironment,
         )
@@ -568,12 +697,40 @@ export function createTemplateRenderer(): TemplateRenderer {
           dockerComposeVolumes,
         )
         .replace(
+          /\{\{\s*dockerInstall\s*\}\}/g,
+          dockerInstall,
+        )
+        .replace(
+          /\{\{\s*dockerPrismaGenerate\s*\}\}/g,
+          dockerPrismaGenerate,
+        )
+        .replace(
+          /\{\{\s*dockerBuild\s*\}\}/g,
+          dockerBuild,
+        )
+        .replace(
+          /\{\{\s*ciSetupSteps\s*\}\}/g,
+          ciSetupSteps,
+        )
+        .replace(
+          /\{\{\s*ciInstallCommand\s*\}\}/g,
+          ciInstallCommand,
+        )
+        .replace(
           /\{\{\s*ciPrismaStep\s*\}\}/g,
           ciPrismaStep,
         )
         .replace(
+          /\{\{\s*ciTypecheckCommand\s*\}\}/g,
+          ciTypecheckCommand,
+        )
+        .replace(
           /\{\{\s*ciTestStep\s*\}\}/g,
           ciTestStep,
+        )
+        .replace(
+          /\{\{\s*ciBuildCommand\s*\}\}/g,
+          ciBuildCommand,
         )
         .replace(
           /\{\{\s*testingE2eImports\s*\}\}/g,
@@ -582,6 +739,10 @@ export function createTemplateRenderer(): TemplateRenderer {
         .replace(
           /\{\{\s*testingE2eOverrides\s*\}\}/g,
           testingE2eOverrides,
+        )
+        .replace(
+          /\{\{\s*testingTestEnv\s*\}\}/g,
+          testingTestEnv,
         )
         .replace(
           /\{\{\s*readmeFeatures\s*\}\}/g,

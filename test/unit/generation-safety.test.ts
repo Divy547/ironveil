@@ -31,7 +31,7 @@ describe('Generation Safety / Staging Lifecycle', () => {
       projectName: 'safe-api',
     });
 
-    const destination = await generateProject(
+    const { destination } = await generateProject(
       config,
       temporaryDirectory,
     );
@@ -154,7 +154,7 @@ describe('Generation Safety / Staging Lifecycle', () => {
     expect(await fs.exists(destination)).toBe(false);
 
     // Second attempt (retry with normal generators) succeeds cleanly
-    const successDestination = await generateProject(
+    const { destination: successDestination } = await generateProject(
       config,
       temporaryDirectory,
     );

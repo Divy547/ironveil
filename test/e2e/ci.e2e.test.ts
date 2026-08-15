@@ -63,7 +63,7 @@ describe('ForgeKit CI E2E', () => {
       expect(workflowContent).toContain('actions/checkout@v4');
       expect(workflowContent).toContain('actions/setup-node@v4');
       expect(workflowContent).toContain("node-version: '22'");
-      expect(workflowContent).toContain("cache: 'npm'");
+      expect(workflowContent).not.toContain('cache:');
       expect(workflowContent).toContain('run: npm install');
       expect(workflowContent).toContain('Generate Prisma Client');
       expect(workflowContent).toContain('run: npx prisma generate');

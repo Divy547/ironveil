@@ -24,14 +24,50 @@ import {
 } from '../rendering/template-path.js';
 import {
   createFileSystem,
+  type FileSystem,
 } from '../utils/filesystem.js';
 import { GenerationError } from './core/generation-error.js';
+
+export interface GenerateProjectOptions {
+  readonly dryRun?: boolean;
+}
+
+export interface GenerationResult {
+  readonly projectName: string;
+  readonly destination: string;
+  readonly config: ForgeKitConfig;
+  readonly generators: readonly string[];
+  readonly files: readonly string[];
+}
+
+function createTrackingFileSystem(
+  innerFs: FileSystem,
+  basePath: string,
+  trackedFiles: Set<string>,
+): FileSystem {
+  return {
+    ensureDirectory: (dir) => innerFs.ensureDirectory(dir),
+    readFile: (file) => innerFs.readFile(file),
+    exists: (file) => innerFs.exists(file),
+    remove: (target) => innerFs.remove(target),
+    move: (src, dest) => innerFs.move(src, dest),
+    async writeFile(filePath: string, content: string): Promise<void> {
+      const relativePath = path
+        .relative(basePath, filePath)
+        .split(path.sep)
+        .join('/');
+      trackedFiles.add(relativePath);
+      return innerFs.writeFile(filePath, content);
+    },
+  };
+}
 
 export async function generateProject(
   config: ForgeKitConfig,
   cwd: string = process.cwd(),
   generators: readonly Generator[] = createGenerators(),
-): Promise<string> {
+  options: GenerateProjectOptions = {},
+): Promise<GenerationResult> {
   const destination = path.resolve(
     cwd,
     config.projectName,
@@ -57,9 +93,16 @@ export async function generateProject(
 
   await fs.ensureDirectory(stagingDestination);
 
+  const trackedFiles = new Set<string>();
+  const trackingFs = createTrackingFileSystem(
+    fs,
+    stagingDestination,
+    trackedFiles,
+  );
+
   const loader = createTemplateLoader(
     getTemplatesDirectory(),
-    fs,
+    trackingFs,
   );
 
   const renderer = createTemplateRenderer();
@@ -67,7 +110,7 @@ export async function generateProject(
   const context = createGenerationContext(
     config,
     stagingDestination,
-    fs,
+    trackingFs,
     loader,
     renderer,
   );
@@ -83,12 +126,25 @@ export async function generateProject(
       context,
     );
 
+    const result: GenerationResult = {
+      projectName: config.projectName,
+      destination,
+      config,
+      generators: plan.generators.map((g) => g.name),
+      files: Array.from(trackedFiles).sort(),
+    };
+
+    if (options.dryRun) {
+      await fs.remove(stagingDestination);
+      return result;
+    }
+
     await fs.move(
       stagingDestination,
       destination,
     );
 
-    return destination;
+    return result;
   } catch (error) {
     try {
       await fs.remove(stagingDestination);

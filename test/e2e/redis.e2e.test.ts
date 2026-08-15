@@ -68,6 +68,24 @@ describe('ForgeKit Redis E2E', () => {
       expect(packageJson.dependencies?.forgekit).toBeUndefined();
       expect(packageJson.devDependencies?.forgekit).toBeUndefined();
 
+      // Verify Redis configuration artifacts
+      const envExample = await project.fs.readFile(
+        `${project.root}/.env.example`,
+      );
+      expect(envExample).toContain('REDIS_URL=');
+
+      const environmentTs = await project.fs.readFile(
+        `${project.root}/src/infrastructure/config/environment.ts`,
+      );
+      expect(environmentTs).toContain('REDIS_URL: z');
+
+      const configurationTs = await project.fs.readFile(
+        `${project.root}/src/infrastructure/config/configuration.ts`,
+      );
+      expect(configurationTs).toContain('readonly redis: {');
+      expect(configurationTs).toContain('redis: {');
+      expect(configurationTs).toContain('process.env.REDIS_URL');
+
       await project.writeEnv({
         databaseUrl: DATABASE_URL,
         jwtSecret: JWT_SECRET,

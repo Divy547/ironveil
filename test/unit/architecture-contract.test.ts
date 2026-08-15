@@ -46,13 +46,13 @@ describe('generated architecture contract', () => {
       projectName: 'test-api',
     });
 
-    const destination = await generateProject(
+    const result = await generateProject(
       config,
       temporaryDirectory,
     );
 
     return {
-      destination,
+      destination: result.destination,
       fs: createFileSystem(),
     };
   }

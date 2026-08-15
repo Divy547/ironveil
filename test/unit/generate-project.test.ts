@@ -46,13 +46,13 @@ describe('generateProject', () => {
       projectName: 'test-api',
     });
 
-    const destination = await generateProject(
+    const result = await generateProject(
       config,
       temporaryDirectory,
     );
 
     return {
-      destination,
+      destination: result.destination,
       fs: createFileSystem(),
     };
   }
@@ -281,5 +281,59 @@ describe('generateProject', () => {
     ).rejects.toThrow(
       'Destination already exists',
     );
+  });
+
+  it('returns a complete structured GenerationResult', async () => {
+    temporaryDirectory = await mkdtemp(
+      path.join(
+        os.tmpdir(),
+        'forgekit-generation-',
+      ),
+    );
+
+    const config = resolveConfig({
+      projectName: 'structured-api',
+    });
+
+    const result = await generateProject(
+      config,
+      temporaryDirectory,
+    );
+
+    expect(result.projectName).toBe('structured-api');
+    expect(result.destination).toBe(path.join(temporaryDirectory, 'structured-api'));
+    expect(result.config).toEqual(config);
+    expect(result.generators).toContain('base');
+    expect(result.generators).toContain('config');
+    expect(result.generators).toContain('prisma');
+    expect(result.files).toContain('package.json');
+    expect(result.files).toContain('src/main.ts');
+    expect(result.files.every((f) => !f.includes('staging'))).toBe(true);
+  });
+
+  it('executes dry-run without writing project to destination', async () => {
+    temporaryDirectory = await mkdtemp(
+      path.join(
+        os.tmpdir(),
+        'forgekit-generation-',
+      ),
+    );
+
+    const config = resolveConfig({
+      projectName: 'dry-run-api',
+    });
+
+    const fs = createFileSystem();
+
+    const result = await generateProject(
+      config,
+      temporaryDirectory,
+      undefined,
+      { dryRun: true },
+    );
+
+    expect(result.projectName).toBe('dry-run-api');
+    expect(result.files.length).toBeGreaterThan(0);
+    expect(await fs.exists(result.destination)).toBe(false);
   });
 });

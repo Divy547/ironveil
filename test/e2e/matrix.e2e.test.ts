@@ -10,6 +10,7 @@ import {
 import { resolveConfig } from '../../src/config/index.js';
 import {
   createGeneratedProject,
+  ensurePackageManagerAvailable,
 } from './helpers/generated-project.js';
 import {
   startTestServer,
@@ -688,6 +689,200 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
         file.endsWith('.node'),
       );
       expect(hasEngineBinary).toBe(true);
+    },
+    240_000,
+  );
+
+  // =========================================================================
+  // Case 10 — pnpm Project Lifecycle & Artifact Purity (F12)
+  // =========================================================================
+  it(
+    'Case 10: generates, validates, installs, and builds a pnpm project with full artifact purity',
+    async () => {
+      await ensurePackageManagerAvailable('pnpm');
+
+      const config = resolveConfig({
+        projectName: 'matrix-pnpm-api',
+        packageManager: 'pnpm',
+        database: 'postgres',
+        orm: 'prisma',
+        testing: true,
+        docker: true,
+        ci: true,
+      });
+
+      expect(config.packageManager).toBe('pnpm');
+
+      project = await createGeneratedProject(
+        config,
+        'forgekit-matrix-pnpm',
+      );
+
+      // 1. Verify package.json contains packageManager: "pnpm@10.5.2"
+      const packageJson = JSON.parse(
+        await project.fs.readFile(`${project.root}/package.json`),
+      ) as { packageManager?: string; scripts?: Record<string, string> };
+      expect(packageJson.packageManager).toBe('pnpm@10.5.2');
+
+      // 2. Verify artifact purity (no foreign lockfiles generated)
+      expect(
+        await project.fs.exists(`${project.root}/package-lock.json`),
+      ).toBe(false);
+      expect(
+        await project.fs.exists(`${project.root}/yarn.lock`),
+      ).toBe(false);
+
+      // 3. Verify README uses pnpm and has zero npm/npx contamination
+      const readme = await project.fs.readFile(`${project.root}/README.md`);
+      expect(readme).toContain('pnpm install');
+      expect(readme).toContain('pnpm run start:dev');
+      expect(readme).toContain('pnpm run typecheck');
+      expect(readme).toContain('pnpm run build');
+      expect(readme).toContain('pnpm exec prisma generate');
+      expect(readme).toContain('pnpm test');
+      expect(readme).not.toMatch(/\bnpm install\b/);
+      expect(readme).not.toMatch(/\bnpm run\b/);
+      expect(readme).not.toMatch(/\bnpx prisma\b/);
+
+      // 4. Verify Dockerfile uses Corepack + pnpm
+      const dockerfile = await project.fs.readFile(`${project.root}/Dockerfile`);
+      expect(dockerfile).toContain('RUN corepack enable && pnpm install');
+      expect(dockerfile).toContain('RUN pnpm exec prisma generate');
+      expect(dockerfile).toContain('RUN pnpm run build');
+      expect(dockerfile).not.toContain('RUN npm install');
+
+      // 5. Verify CI workflow uses pnpm/action-setup@v4 with version 10.5.2 and no lockfile-dependent cache
+      const workflow = await project.fs.readFile(
+        `${project.root}/.github/workflows/ci.yml`,
+      );
+      expect(workflow).toContain('uses: pnpm/action-setup@v4');
+      expect(workflow).toContain("version: '10.5.2'");
+      expect(workflow).not.toContain('cache:');
+      expect(workflow).toContain('run: pnpm install');
+      expect(workflow).toContain('run: pnpm exec prisma generate');
+      expect(workflow).toContain('run: pnpm run typecheck');
+      expect(workflow).toContain('run: pnpm test');
+      expect(workflow).toContain('run: pnpm run build');
+
+      // 6. Execute full pnpm lifecycle
+      await project.writeEnv({
+        databaseUrl: DATABASE_URL,
+      });
+
+      await project.install();
+      await project.prismaGenerate();
+      await project.typecheck();
+      await project.test();
+      await project.build();
+
+      expect(
+        await project.fs.exists(`${project.root}/dist/main.js`),
+      ).toBe(true);
+
+      // Verify that after pnpm install, pnpm-lock.yaml is created and package-lock.json is NOT created
+      expect(
+        await project.fs.exists(`${project.root}/pnpm-lock.yaml`),
+      ).toBe(true);
+      expect(
+        await project.fs.exists(`${project.root}/package-lock.json`),
+      ).toBe(false);
+    },
+    240_000,
+  );
+
+  // =========================================================================
+  // Case 11 — yarn Project Lifecycle & Artifact Purity (F12)
+  // =========================================================================
+  it(
+    'Case 11: generates, validates, installs, and builds a yarn project with full artifact purity',
+    async () => {
+      await ensurePackageManagerAvailable('yarn');
+
+      const config = resolveConfig({
+        projectName: 'matrix-yarn-api',
+        packageManager: 'yarn',
+        database: 'postgres',
+        orm: 'prisma',
+        testing: true,
+        docker: true,
+        ci: true,
+      });
+
+      expect(config.packageManager).toBe('yarn');
+
+      project = await createGeneratedProject(
+        config,
+        'forgekit-matrix-yarn',
+      );
+
+      // 1. Verify package.json contains packageManager: "yarn@1.22.22"
+      const packageJson = JSON.parse(
+        await project.fs.readFile(`${project.root}/package.json`),
+      ) as { packageManager?: string; scripts?: Record<string, string> };
+      expect(packageJson.packageManager).toBe('yarn@1.22.22');
+
+      // 2. Verify artifact purity (no foreign lockfiles generated)
+      expect(
+        await project.fs.exists(`${project.root}/package-lock.json`),
+      ).toBe(false);
+      expect(
+        await project.fs.exists(`${project.root}/pnpm-lock.yaml`),
+      ).toBe(false);
+
+      // 3. Verify README uses yarn and has zero npm/npx contamination
+      const readme = await project.fs.readFile(`${project.root}/README.md`);
+      expect(readme).toContain('yarn install');
+      expect(readme).toContain('yarn start:dev');
+      expect(readme).toContain('yarn typecheck');
+      expect(readme).toContain('yarn build');
+      expect(readme).toContain('yarn prisma generate');
+      expect(readme).toContain('yarn test');
+      expect(readme).not.toMatch(/\bnpm install\b/);
+      expect(readme).not.toMatch(/\bnpm run\b/);
+      expect(readme).not.toMatch(/\bnpx prisma\b/);
+
+      // 4. Verify Dockerfile uses Corepack + yarn
+      const dockerfile = await project.fs.readFile(`${project.root}/Dockerfile`);
+      expect(dockerfile).toContain('RUN corepack enable && yarn install');
+      expect(dockerfile).toContain('RUN yarn prisma generate');
+      expect(dockerfile).toContain('RUN yarn build');
+      expect(dockerfile).not.toContain('RUN npm install');
+
+      // 5. Verify CI workflow enables Corepack and has no lockfile-dependent cache
+      const workflow = await project.fs.readFile(
+        `${project.root}/.github/workflows/ci.yml`,
+      );
+      expect(workflow).toContain('name: Enable Corepack');
+      expect(workflow).toContain('run: corepack enable');
+      expect(workflow).not.toContain('cache:');
+      expect(workflow).toContain('run: yarn install');
+      expect(workflow).toContain('run: yarn prisma generate');
+      expect(workflow).toContain('run: yarn typecheck');
+      expect(workflow).toContain('run: yarn test');
+      expect(workflow).toContain('run: yarn build');
+
+      // 6. Execute full yarn lifecycle
+      await project.writeEnv({
+        databaseUrl: DATABASE_URL,
+      });
+
+      await project.install();
+      await project.prismaGenerate();
+      await project.typecheck();
+      await project.test();
+      await project.build();
+
+      expect(
+        await project.fs.exists(`${project.root}/dist/main.js`),
+      ).toBe(true);
+
+      // Verify that after yarn install, yarn.lock is created and package-lock.json is NOT created
+      expect(
+        await project.fs.exists(`${project.root}/yarn.lock`),
+      ).toBe(true);
+      expect(
+        await project.fs.exists(`${project.root}/package-lock.json`),
+      ).toBe(false);
     },
     240_000,
   );

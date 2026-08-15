@@ -1,8 +1,32 @@
 import * as p from '@clack/prompts';
-import type { Auth } from '../../config/index.js';
+import type { Auth, PackageManager } from '../../config/index.js';
 import type { CreateCommandOptions } from '../options/create.options.js';
 
 export async function promptCreateOptions(): Promise<CreateCommandOptions> {
+  const packageManager = await p.select<PackageManager>({
+    message: 'Package manager',
+    options: [
+      {
+        value: 'npm',
+        label: 'npm',
+      },
+      {
+        value: 'pnpm',
+        label: 'pnpm',
+      },
+      {
+        value: 'yarn',
+        label: 'yarn',
+      },
+    ],
+    initialValue: 'npm',
+  });
+
+  if (p.isCancel(packageManager)) {
+    p.cancel('Operation cancelled.');
+    process.exit(130);
+  }
+
   const redis = await p.confirm({
     message: 'Enable Redis?',
     initialValue: false,
@@ -74,6 +98,7 @@ export async function promptCreateOptions(): Promise<CreateCommandOptions> {
   }
 
   return {
+    packageManager,
     redis,
     auth,
     swagger,

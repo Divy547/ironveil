@@ -76,14 +76,7 @@ describe('ForgeKit Testing Generator E2E', () => {
       expect(pkg.devDependencies?.['jest']).toBeDefined();
       expect(pkg.devDependencies?.['supertest']).toBeDefined();
 
-      // 3. Execute installation, generation, typecheck, tests, and build
-      await project.writeEnv({
-        databaseUrl:
-          'postgresql://postgres:postgres@localhost:5432/forgekit-testing-e2e?schema=public',
-        redisUrl: 'redis://localhost:6379',
-        jwtSecret: 'forgekit-testing-e2e-super-secret-key-32chars',
-      });
-
+      // 3. Execute installation and generation without writing .env
       await project.install();
       await project.prismaGenerate();
 
@@ -91,12 +84,12 @@ describe('ForgeKit Testing Generator E2E', () => {
         cwd: project.root,
       });
 
-      // Execute generated unit tests
+      // Execute generated unit tests (verifies test environment runs without pre-existing .env)
       await execFileAsync('npm', ['test'], {
         cwd: project.root,
       });
 
-      // Execute generated E2E tests (deterministic, requires no DB/Redis)
+      // Execute generated E2E tests (deterministic, requires no DB/Redis daemon)
       await execFileAsync('npm', ['run', 'test:e2e'], {
         cwd: project.root,
       });
@@ -155,6 +148,68 @@ describe('ForgeKit Testing Generator E2E', () => {
         cwd: project.root,
       });
 
+      await project.build();
+
+      expect(
+        await project.fs.exists(`${project.root}/dist/main.js`),
+      ).toBe(true);
+    },
+    180_000,
+  );
+
+  it(
+    'Case 3: executes unit and E2E tests in a Prisma-only project without external services or .env',
+    async () => {
+      project = await createGeneratedProject(
+        resolveConfig({
+          projectName: 'prisma-testing-api',
+          testing: true,
+          database: 'postgres',
+          orm: 'prisma',
+          redis: false,
+          auth: 'none',
+          swagger: false,
+          docker: false,
+          ci: false,
+        }),
+        'forgekit-prisma-testing-e2e',
+      );
+
+      // Verify feature-aware test file contents
+      const specContent = await project.fs.readFile(
+        `${project.root}/src/app.module.spec.ts`,
+      );
+      expect(specContent).toContain('process.env.DATABASE_URL =');
+      expect(specContent).not.toContain('REDIS_URL');
+      expect(specContent).not.toContain('JWT_SECRET');
+
+      const e2eContent = await project.fs.readFile(
+        `${project.root}/test/app.e2e-spec.ts`,
+      );
+      expect(e2eContent).toContain('process.env.DATABASE_URL =');
+      expect(e2eContent).not.toContain('REDIS_URL');
+      expect(e2eContent).not.toContain('JWT_SECRET');
+
+      // Install and run Prisma generate
+      await project.install();
+      await project.prismaGenerate();
+
+      // Run typecheck
+      await execFileAsync('npm', ['run', 'typecheck'], {
+        cwd: project.root,
+      });
+
+      // Run unit tests (without .env file)
+      await execFileAsync('npm', ['test'], {
+        cwd: project.root,
+      });
+
+      // Run E2E tests (without PostgreSQL daemon or .env file)
+      await execFileAsync('npm', ['run', 'test:e2e'], {
+        cwd: project.root,
+      });
+
+      // Run build
       await project.build();
 
       expect(

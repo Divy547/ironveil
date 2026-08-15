@@ -154,11 +154,77 @@ describe('CiGenerator', () => {
     expect(workflowContent).toContain('actions/checkout@v4');
     expect(workflowContent).toContain('actions/setup-node@v4');
     expect(workflowContent).toContain("node-version: '22'");
-    expect(workflowContent).toContain("cache: 'npm'");
+    expect(workflowContent).not.toContain('cache:');
     expect(workflowContent).toContain('run: npm install');
     expect(workflowContent).toContain('run: npm run typecheck');
     expect(workflowContent).toContain('run: npm run build');
     expect(workflowContent).not.toContain('npm ci');
+  });
+
+  it('generates expected workflow content for pnpm with pnpm/action-setup@v4 version 10.5.2', async () => {
+    const { fs, context } = await createContext({
+      ci: true,
+      packageManager: 'pnpm',
+      database: 'postgres',
+      orm: 'prisma',
+      testing: true,
+    });
+    const generator = new CiGenerator();
+
+    await generator.generate(context);
+
+    const workflowContent = await fs.readFile(
+      path.join(
+        temporaryDirectory,
+        '.github',
+        'workflows',
+        'ci.yml',
+      ),
+    );
+
+    expect(workflowContent).toContain('uses: pnpm/action-setup@v4');
+    expect(workflowContent).toContain("version: '10.5.2'");
+    expect(workflowContent).not.toContain('cache:');
+    expect(workflowContent).toContain('run: pnpm install');
+    expect(workflowContent).toContain('run: pnpm exec prisma generate');
+    expect(workflowContent).toContain('run: pnpm run typecheck');
+    expect(workflowContent).toContain('run: pnpm test');
+    expect(workflowContent).toContain('run: pnpm run build');
+    expect(workflowContent).not.toMatch(/\bnpm install\b/);
+    expect(workflowContent).not.toMatch(/\bnpm run\b/);
+    expect(workflowContent).not.toMatch(/\bnpx prisma\b/);
+  });
+
+  it('generates expected workflow content for yarn with corepack enable', async () => {
+    const { fs, context } = await createContext({
+      ci: true,
+      packageManager: 'yarn',
+      database: 'postgres',
+      orm: 'prisma',
+      testing: true,
+    });
+    const generator = new CiGenerator();
+
+    await generator.generate(context);
+
+    const workflowContent = await fs.readFile(
+      path.join(
+        temporaryDirectory,
+        '.github',
+        'workflows',
+        'ci.yml',
+      ),
+    );
+
+    expect(workflowContent).toContain('name: Enable Corepack');
+    expect(workflowContent).toContain('run: corepack enable');
+    expect(workflowContent).not.toContain('cache:');
+    expect(workflowContent).toContain('run: yarn install');
+    expect(workflowContent).toContain('run: yarn prisma generate');
+    expect(workflowContent).toContain('run: yarn typecheck');
+    expect(workflowContent).toContain('run: yarn test');
+    expect(workflowContent).toContain('run: yarn build');
+    expect(workflowContent).not.toContain('npm install');
   });
 
   it('includes Prisma generate step when Prisma is enabled', async () => {

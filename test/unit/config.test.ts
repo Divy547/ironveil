@@ -65,6 +65,38 @@ describe('ForgeKit configuration', () => {
     ).toThrow(ConfigError);
   });
 
+  it('accepts pnpm and yarn package managers', () => {
+    const pnpmConfig = resolveConfig({
+      projectName: 'bonfire-api',
+      packageManager: 'pnpm',
+    });
+    expect(pnpmConfig.packageManager).toBe('pnpm');
+
+    const yarnConfig = resolveConfig({
+      projectName: 'bonfire-api',
+      packageManager: 'yarn',
+    });
+    expect(yarnConfig.packageManager).toBe('yarn');
+  });
+
+  it('rejects bun package manager', () => {
+    expect(() =>
+      resolveConfig({
+        projectName: 'bonfire-api',
+        packageManager: 'bun' as never,
+      }),
+    ).toThrow(ConfigError);
+  });
+
+  it('rejects invalid package manager values', () => {
+    expect(() =>
+      resolveConfig({
+        projectName: 'bonfire-api',
+        packageManager: 'invalid-pm' as never,
+      }),
+    ).toThrow(ConfigError);
+  });
+
   it('freezes the resolved configuration', () => {
     const config = resolveConfig({
       projectName: 'bonfire-api',

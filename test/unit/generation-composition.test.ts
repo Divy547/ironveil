@@ -132,7 +132,7 @@ describe('Generator composition', () => {
       auth: 'jwt',
     });
 
-    const destination = await generateProject(
+    const { destination } = await generateProject(
       config,
       temporaryDirectory,
     );
@@ -264,6 +264,23 @@ describe('Generator composition', () => {
         '@types/passport-jwt'
       ],
     ).toBe('4.0.1');
+
+    const envExample = await fs.readFile(
+      path.join(destination, '.env.example'),
+    );
+    expect(envExample).toContain('JWT_SECRET="replace-this-with-a-random-secret-at-least-32-characters-long"');
+
+    const envTs = await fs.readFile(
+      path.join(destination, 'src', 'infrastructure', 'config', 'environment.ts'),
+    );
+    expect(envTs).toContain('JWT_SECRET: z');
+
+    const configTs = await fs.readFile(
+      path.join(destination, 'src', 'infrastructure', 'config', 'configuration.ts'),
+    );
+    expect(configTs).toContain('readonly auth: {');
+    expect(configTs).toContain('auth: {');
+    expect(configTs).toContain('process.env.JWT_SECRET');
   });
 
   it('does not generate auth output when JWT is disabled', async () => {
@@ -279,7 +296,7 @@ describe('Generator composition', () => {
       auth: 'none',
     });
 
-    const destination = await generateProject(
+    const { destination } = await generateProject(
       config,
       temporaryDirectory,
     );
@@ -318,6 +335,22 @@ describe('Generator composition', () => {
         ),
       ),
     ).toBe(true);
+
+    const envExample = await fs.readFile(
+      path.join(destination, '.env.example'),
+    );
+    expect(envExample).not.toContain('JWT_SECRET');
+
+    const envTs = await fs.readFile(
+      path.join(destination, 'src', 'infrastructure', 'config', 'environment.ts'),
+    );
+    expect(envTs).not.toContain('JWT_SECRET');
+
+    const configTs = await fs.readFile(
+      path.join(destination, 'src', 'infrastructure', 'config', 'configuration.ts'),
+    );
+    expect(configTs).not.toContain('auth:');
+    expect(configTs).not.toContain('JWT_SECRET');
   });
 
   it('does not generate Redis output when redis is disabled', async () => {
@@ -333,7 +366,7 @@ describe('Generator composition', () => {
       redis: false,
     });
 
-    const destination = await generateProject(
+    const { destination } = await generateProject(
       config,
       temporaryDirectory,
     );
@@ -414,7 +447,7 @@ describe('Generator composition', () => {
       redis: true,
     });
 
-    const destination = await generateProject(
+    const { destination } = await generateProject(
       config,
       temporaryDirectory,
     );
@@ -512,7 +545,7 @@ describe('Generator composition', () => {
       swagger: true,
     });
 
-    const destination = await generateProject(
+    const { destination } = await generateProject(
       config,
       temporaryDirectory,
     );
@@ -568,7 +601,7 @@ describe('Generator composition', () => {
       docker: false,
     });
 
-    const destination = await generateProject(
+    const { destination } = await generateProject(
       config,
       temporaryDirectory,
     );
@@ -617,7 +650,7 @@ describe('Generator composition', () => {
       redis: false,
     });
 
-    const destination = await generateProject(
+    const { destination } = await generateProject(
       config,
       temporaryDirectory,
     );
@@ -675,7 +708,7 @@ describe('Generator composition', () => {
       redis: true,
     });
 
-    const destination = await generateProject(
+    const { destination } = await generateProject(
       config,
       temporaryDirectory,
     );
@@ -713,7 +746,7 @@ describe('Generator composition', () => {
       docker: true,
     });
 
-    const destination = await generateProject(
+    const { destination } = await generateProject(
       config,
       temporaryDirectory,
     );
@@ -802,7 +835,7 @@ describe('Generator composition', () => {
       ci: false,
     });
 
-    const destination = await generateProject(
+    const { destination } = await generateProject(
       config,
       temporaryDirectory,
     );
@@ -838,7 +871,7 @@ describe('Generator composition', () => {
       testing: false,
     });
 
-    const destination = await generateProject(
+    const { destination } = await generateProject(
       config,
       temporaryDirectory,
     );
