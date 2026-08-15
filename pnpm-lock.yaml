@@ -203,9 +203,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  ironveil: 'link:'
-
 importers:
 
   .:
