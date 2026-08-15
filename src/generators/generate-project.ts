@@ -26,6 +26,8 @@ import {
   createFileSystem,
   type FileSystem,
 } from '../utils/filesystem.js';
+import type { PackageJson } from '../utils/package-manifest.js';
+import { createPackageValidator } from '../validation/index.js';
 import { GenerationError } from './core/generation-error.js';
 
 export interface GenerateProjectOptions {
@@ -125,6 +127,41 @@ export async function generateProject(
       plan,
       context,
     );
+
+    // Read and parse package.json from staging directory
+    const packageJsonPath = path.join(stagingDestination, 'package.json');
+    let packageJsonContent: string;
+    try {
+      packageJsonContent = await trackingFs.readFile(packageJsonPath);
+    } catch (readError) {
+      throw new GenerationError(
+        `Failed to read package.json from staging directory: ${readError instanceof Error ? readError.message : String(readError)}`,
+        {
+          projectName: config.projectName,
+          generatorName: 'package-validator',
+          destination: stagingDestination,
+          cause: readError,
+        },
+      );
+    }
+
+    let parsedManifest: PackageJson;
+    try {
+      parsedManifest = JSON.parse(packageJsonContent) as PackageJson;
+    } catch (parseError) {
+      throw new GenerationError(
+        `Failed to parse package.json from staging directory: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+        {
+          projectName: config.projectName,
+          generatorName: 'package-validator',
+          destination: stagingDestination,
+          cause: parseError,
+        },
+      );
+    }
+
+    const validator = createPackageValidator();
+    validator.validateOrThrow(parsedManifest, config, stagingDestination);
 
     const result: GenerationResult = {
       projectName: config.projectName,
