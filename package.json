@@ -20,7 +20,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run test/unit",
     "test:watch": "vitest test/unit",
-    "test:e2e": "vitest run test/e2e --maxWorkers=1"
+    "test:e2e": "vitest run test/e2e --maxWorkers=1",
+    "test:e2e:fast": "vitest run test/e2e --maxWorkers=3"
   },
   "keywords": [
     "nestjs",
