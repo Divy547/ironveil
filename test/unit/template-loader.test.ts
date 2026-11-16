@@ -33,7 +33,7 @@ describe('TemplateLoader', () => {
     temporaryDirectory = await mkdtemp(
       path.join(
         os.tmpdir(),
-        'forgekit-template-',
+        'ironveil-template-',
       ),
     );
 

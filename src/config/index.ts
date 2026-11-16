@@ -1,7 +1,7 @@
 export {
-  ForgeKitConfigSchema,
-  type ForgeKitConfigInput,
-  type ForgeKitConfigOutput,
+  IronveilConfigSchema,
+  type IronveilConfigInput,
+  type IronveilConfigOutput,
 } from './schema.js';
 
 export {
@@ -12,12 +12,12 @@ export {
 export type {
   Auth,
   Database,
-  ForgeKitConfig,
+  IronveilConfig,
   Orm,
   PackageManager,
 } from './types.js';
 
 export {
-  FORGEKIT_VERSIONS,
-  type ForgeKitVersions,
+  IRONVEIL_VERSIONS,
+  type IronveilVersions,
 } from './versions.js';

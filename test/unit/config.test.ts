@@ -4,7 +4,7 @@ import {
   resolveConfig,
 } from '../../src/config/index.js';
 
-describe('ForgeKit configuration', () => {
+describe('Ironveil configuration', () => {
   it('applies default configuration values', () => {
     const config = resolveConfig({
       projectName: 'bonfire-api',

@@ -12,9 +12,9 @@ import {
   ensurePackageManagerAvailable,
 } from './helpers/generated-project.js';
 import {
-  installPackedForgeKit,
-  packForgeKit,
-  type InstalledForgeKit,
+  installPackedIronveil,
+  packIronveil,
+  type InstalledIronveil,
   type PackResult,
 } from './helpers/pack-helper.js';
 
@@ -24,23 +24,23 @@ const JWT_SECRET = 'release-e2e-secret-key-12345678901234567890';
 
 describe('F15 — Release & Packaged Artifact Verification', () => {
   let packResult: PackResult;
-  let installedKit: InstalledForgeKit;
+  let installedKit: InstalledIronveil;
   let workspaceDir: string;
   const fs = createFileSystem();
 
   beforeAll(async () => {
     // 1. Pack the repository
-    packResult = await packForgeKit();
+    packResult = await packIronveil();
 
     // 2. Install the packed tarball into an isolated environment
-    installedKit = await installPackedForgeKit(
+    installedKit = await installPackedIronveil(
       packResult.tarballPath,
-      'forgekit-release-env',
+      'ironveil-release-env',
     );
 
     // 3. Create a clean workspace for generated projects
     workspaceDir = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-release-workspace-'),
+      path.join(os.tmpdir(), 'ironveil-release-workspace-'),
     );
   }, 300_000);
 
@@ -120,7 +120,7 @@ describe('F15 — Release & Packaged Artifact Verification', () => {
     expect(helpResult.stdout).toContain('create');
 
     const versionResult = await installedKit.runCli(['--version']);
-    expect(versionResult.stdout.trim()).toBe('0.2.0');
+    expect(versionResult.stdout.trim()).toBe('0.2.1');
   });
 
   // =========================================================================
@@ -187,7 +187,7 @@ describe('F15 — Release & Packaged Artifact Verification', () => {
         await fs.exists(path.join(projectPath, 'jest.config.ts')),
       ).toBe(true);
 
-      // Validate manifest against FORGEKIT_VERSIONS
+      // Validate manifest against IRONVEIL_VERSIONS
       await assertProjectManifestMatchesVersions(projectPath, config, fs);
 
       // Execute generated project lifecycle

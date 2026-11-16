@@ -1,5 +1,5 @@
 import path from 'node:path';
-import type { ForgeKitConfig } from '../config/index.js';
+import type { IronveilConfig } from '../config/index.js';
 import {
   createGenerationContext,
 } from './core/generation-context.js';
@@ -37,7 +37,7 @@ export interface GenerateProjectOptions {
 export interface GenerationResult {
   readonly projectName: string;
   readonly destination: string;
-  readonly config: ForgeKitConfig;
+  readonly config: IronveilConfig;
   readonly generators: readonly string[];
   readonly files: readonly string[];
 }
@@ -65,7 +65,7 @@ function createTrackingFileSystem(
 }
 
 export async function generateProject(
-  config: ForgeKitConfig,
+  config: IronveilConfig,
   cwd: string = process.cwd(),
   generators: readonly Generator[] = createGenerators(),
   options: GenerateProjectOptions = {},

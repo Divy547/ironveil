@@ -24,7 +24,7 @@ describe('Generation Safety / Staging Lifecycle', () => {
 
   it('successful generation moves staging to destination and removes staging directory', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-safety-success-'),
+      path.join(os.tmpdir(), 'ironveil-safety-success-'),
     );
 
     const config = resolveConfig({
@@ -51,7 +51,7 @@ describe('Generation Safety / Staging Lifecycle', () => {
 
   it('rejects existing destination without creating staging directory', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-safety-existing-'),
+      path.join(os.tmpdir(), 'ironveil-safety-existing-'),
     );
 
     const destination = path.join(temporaryDirectory, 'existing-api');
@@ -80,7 +80,7 @@ describe('Generation Safety / Staging Lifecycle', () => {
 
   it('cleans up staging directory on generator failure and leaves destination untouched', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-safety-fail-'),
+      path.join(os.tmpdir(), 'ironveil-safety-fail-'),
     );
 
     const destination = path.join(temporaryDirectory, 'failing-api');
@@ -127,7 +127,7 @@ describe('Generation Safety / Staging Lifecycle', () => {
 
   it('allows immediate retry after a generation failure', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-safety-retry-'),
+      path.join(os.tmpdir(), 'ironveil-safety-retry-'),
     );
 
     const failingGenerator: Generator = {

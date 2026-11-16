@@ -1,5 +1,5 @@
-import type { ForgeKitConfig } from '../config/index.js';
-import { FORGEKIT_VERSIONS } from '../config/versions.js';
+import type { IronveilConfig } from '../config/index.js';
+import { IRONVEIL_VERSIONS } from '../config/versions.js';
 import { GenerationError } from '../generators/core/generation-error.js';
 import type { PackageJson } from '../utils/package-manifest.js';
 
@@ -52,12 +52,12 @@ export class PackageValidationError extends GenerationError {
 export interface PackageValidator {
   validate(
     manifest: PackageJson,
-    config: ForgeKitConfig,
+    config: IronveilConfig,
   ): PackageValidationResult;
 
   validateOrThrow(
     manifest: PackageJson,
-    config: ForgeKitConfig,
+    config: IronveilConfig,
     destination?: string,
   ): void;
 }
@@ -66,7 +66,7 @@ export function createPackageValidator(): PackageValidator {
   return {
     validate(
       manifest: PackageJson,
-      config: ForgeKitConfig,
+      config: IronveilConfig,
     ): PackageValidationResult {
       const issues: PackageValidationIssue[] = [];
 
@@ -143,34 +143,34 @@ export function createPackageValidator(): PackageValidator {
 
       // ── B. Required Dependencies & Version Drift ───────────────────────
       const requiredDependencies: Record<string, string> = {
-        ...FORGEKIT_VERSIONS.dependencies.base,
+        ...IRONVEIL_VERSIONS.dependencies.base,
       };
 
       if (config.auth === 'jwt') {
         Object.assign(
           requiredDependencies,
-          FORGEKIT_VERSIONS.dependencies.auth,
+          IRONVEIL_VERSIONS.dependencies.auth,
         );
       }
 
       if (hasPrisma) {
         Object.assign(
           requiredDependencies,
-          FORGEKIT_VERSIONS.dependencies.prisma,
+          IRONVEIL_VERSIONS.dependencies.prisma,
         );
       }
 
       if (config.redis) {
         Object.assign(
           requiredDependencies,
-          FORGEKIT_VERSIONS.dependencies.redis,
+          IRONVEIL_VERSIONS.dependencies.redis,
         );
       }
 
       if (config.swagger) {
         Object.assign(
           requiredDependencies,
-          FORGEKIT_VERSIONS.dependencies.swagger,
+          IRONVEIL_VERSIONS.dependencies.swagger,
         );
       }
 
@@ -195,7 +195,7 @@ export function createPackageValidator(): PackageValidator {
 
       // ── C. Feature Dependency Leakage ──────────────────────────────────
       if (config.auth !== 'jwt') {
-        for (const pkg of Object.keys(FORGEKIT_VERSIONS.dependencies.auth)) {
+        for (const pkg of Object.keys(IRONVEIL_VERSIONS.dependencies.auth)) {
           if (manifestDependencies[pkg] !== undefined) {
             issues.push({
               code: 'FEATURE_DEPENDENCY_LEAKAGE',
@@ -207,7 +207,7 @@ export function createPackageValidator(): PackageValidator {
       }
 
       if (!hasPrisma) {
-        for (const pkg of Object.keys(FORGEKIT_VERSIONS.dependencies.prisma)) {
+        for (const pkg of Object.keys(IRONVEIL_VERSIONS.dependencies.prisma)) {
           if (manifestDependencies[pkg] !== undefined) {
             issues.push({
               code: 'FEATURE_DEPENDENCY_LEAKAGE',
@@ -219,7 +219,7 @@ export function createPackageValidator(): PackageValidator {
       }
 
       if (!config.redis) {
-        for (const pkg of Object.keys(FORGEKIT_VERSIONS.dependencies.redis)) {
+        for (const pkg of Object.keys(IRONVEIL_VERSIONS.dependencies.redis)) {
           if (manifestDependencies[pkg] !== undefined) {
             issues.push({
               code: 'FEATURE_DEPENDENCY_LEAKAGE',
@@ -231,7 +231,7 @@ export function createPackageValidator(): PackageValidator {
       }
 
       if (!config.swagger) {
-        for (const pkg of Object.keys(FORGEKIT_VERSIONS.dependencies.swagger)) {
+        for (const pkg of Object.keys(IRONVEIL_VERSIONS.dependencies.swagger)) {
           if (manifestDependencies[pkg] !== undefined) {
             issues.push({
               code: 'FEATURE_DEPENDENCY_LEAKAGE',
@@ -244,27 +244,27 @@ export function createPackageValidator(): PackageValidator {
 
       // ── D. Required devDependencies & Version Drift ────────────────────
       const requiredDevDependencies: Record<string, string> = {
-        ...FORGEKIT_VERSIONS.devDependencies.base,
+        ...IRONVEIL_VERSIONS.devDependencies.base,
       };
 
       if (config.auth === 'jwt') {
         Object.assign(
           requiredDevDependencies,
-          FORGEKIT_VERSIONS.devDependencies.auth,
+          IRONVEIL_VERSIONS.devDependencies.auth,
         );
       }
 
       if (hasPrisma) {
         Object.assign(
           requiredDevDependencies,
-          FORGEKIT_VERSIONS.devDependencies.prisma,
+          IRONVEIL_VERSIONS.devDependencies.prisma,
         );
       }
 
       if (config.testing) {
         Object.assign(
           requiredDevDependencies,
-          FORGEKIT_VERSIONS.devDependencies.testing,
+          IRONVEIL_VERSIONS.devDependencies.testing,
         );
       }
 
@@ -289,7 +289,7 @@ export function createPackageValidator(): PackageValidator {
 
       // ── E. Feature devDependency Leakage ───────────────────────────────
       if (config.auth !== 'jwt') {
-        for (const pkg of Object.keys(FORGEKIT_VERSIONS.devDependencies.auth)) {
+        for (const pkg of Object.keys(IRONVEIL_VERSIONS.devDependencies.auth)) {
           if (manifestDevDependencies[pkg] !== undefined) {
             issues.push({
               code: 'FEATURE_DEV_DEPENDENCY_LEAKAGE',
@@ -301,7 +301,7 @@ export function createPackageValidator(): PackageValidator {
       }
 
       if (!hasPrisma) {
-        for (const pkg of Object.keys(FORGEKIT_VERSIONS.devDependencies.prisma)) {
+        for (const pkg of Object.keys(IRONVEIL_VERSIONS.devDependencies.prisma)) {
           if (manifestDevDependencies[pkg] !== undefined) {
             issues.push({
               code: 'FEATURE_DEV_DEPENDENCY_LEAKAGE',
@@ -313,7 +313,7 @@ export function createPackageValidator(): PackageValidator {
       }
 
       if (!config.testing) {
-        for (const pkg of Object.keys(FORGEKIT_VERSIONS.devDependencies.testing)) {
+        for (const pkg of Object.keys(IRONVEIL_VERSIONS.devDependencies.testing)) {
           if (manifestDevDependencies[pkg] !== undefined) {
             issues.push({
               code: 'FEATURE_DEV_DEPENDENCY_LEAKAGE',
@@ -437,7 +437,7 @@ export function createPackageValidator(): PackageValidator {
 
       // ── I. Package Manager Metadata ────────────────────────────────────
       if (config.packageManager === 'pnpm') {
-        const expected = `pnpm@${FORGEKIT_VERSIONS.tools.pnpm}`;
+        const expected = `pnpm@${IRONVEIL_VERSIONS.tools.pnpm}`;
         if (manifest.packageManager !== expected) {
           issues.push({
             code: 'INVALID_PACKAGE_MANAGER',
@@ -446,7 +446,7 @@ export function createPackageValidator(): PackageValidator {
           });
         }
       } else if (config.packageManager === 'yarn') {
-        const expected = `yarn@${FORGEKIT_VERSIONS.tools.yarn}`;
+        const expected = `yarn@${IRONVEIL_VERSIONS.tools.yarn}`;
         if (manifest.packageManager !== expected) {
           issues.push({
             code: 'INVALID_PACKAGE_MANAGER',
@@ -473,7 +473,7 @@ export function createPackageValidator(): PackageValidator {
 
     validateOrThrow(
       manifest: PackageJson,
-      config: ForgeKitConfig,
+      config: IronveilConfig,
       destination?: string,
     ): void {
       const result = this.validate(manifest, config);

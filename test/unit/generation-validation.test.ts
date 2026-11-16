@@ -26,7 +26,7 @@ describe('Generation Pipeline Validation Integration', () => {
 
   it('valid project generation passes validation and creates destination', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-val-success-'),
+      path.join(os.tmpdir(), 'ironveil-val-success-'),
     );
 
     const config = resolveConfig({
@@ -52,7 +52,7 @@ describe('Generation Pipeline Validation Integration', () => {
 
   it('aborts generation, deletes staging, and leaves destination untouched on package validation failure', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-val-fail-'),
+      path.join(os.tmpdir(), 'ironveil-val-fail-'),
     );
 
     const destination = path.join(temporaryDirectory, 'val-fail-api');
@@ -107,7 +107,7 @@ describe('Generation Pipeline Validation Integration', () => {
 
   it('aborts generation and cleans up staging when package.json is malformed JSON', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-val-json-fail-'),
+      path.join(os.tmpdir(), 'ironveil-val-json-fail-'),
     );
 
     const destination = path.join(temporaryDirectory, 'val-json-fail-api');
@@ -155,7 +155,7 @@ describe('Generation Pipeline Validation Integration', () => {
 
   it('aborts generation and cleans up staging when package.json is missing', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-val-missing-fail-'),
+      path.join(os.tmpdir(), 'ironveil-val-missing-fail-'),
     );
 
     const destination = path.join(temporaryDirectory, 'val-missing-fail-api');
@@ -202,7 +202,7 @@ describe('Generation Pipeline Validation Integration', () => {
 
   it('runs validation during dryRun mode and catches violations', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-val-dryrun-'),
+      path.join(os.tmpdir(), 'ironveil-val-dryrun-'),
     );
 
     const corruptingGenerator: Generator = {

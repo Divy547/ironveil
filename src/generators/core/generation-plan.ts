@@ -1,4 +1,4 @@
-import type { ForgeKitConfig } from '../../config/index.js';
+import type { IronveilConfig } from '../../config/index.js';
 import { createGenerators } from './generator-registry.js';
 import type { Generator } from './generator.js';
 
@@ -7,7 +7,7 @@ export interface GenerationPlan {
 }
 
 export function createGenerationPlan(
-  config: ForgeKitConfig,
+  config: IronveilConfig,
   generators: readonly Generator[] = createGenerators(),
 ): GenerationPlan {
   const selectedGenerators = generators.filter(

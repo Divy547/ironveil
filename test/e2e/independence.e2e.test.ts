@@ -37,7 +37,7 @@ async function scanFilesRecursively(
   return files;
 }
 
-describe('ForgeKit project independence E2E', () => {
+describe('Ironveil project independence E2E', () => {
   let project:
     | Awaited<
         ReturnType<
@@ -52,7 +52,7 @@ describe('ForgeKit project independence E2E', () => {
   });
 
   it(
-    'generates a project completely independent from ForgeKit at build and runtime',
+    'generates a project completely independent from Ironveil at build and runtime',
     async () => {
       project =
         await createGeneratedProject(
@@ -68,10 +68,10 @@ describe('ForgeKit project independence E2E', () => {
             ci: true,
             testing: true,
           }),
-          'forgekit-independence-e2e',
+          'ironveil-independence-e2e',
         );
 
-      // 1. Verify package.json contains zero ForgeKit dependencies
+      // 1. Verify package.json contains zero Ironveil dependencies
       const packageJson = JSON.parse(
         await project.fs.readFile(
           `${project.root}/package.json`,
@@ -86,16 +86,16 @@ describe('ForgeKit project independence E2E', () => {
       expect(packageJson.name).toBe(
         'generated-independent-api',
       );
-      expect(packageJson.dependencies?.forgekit).toBeUndefined();
-      expect(packageJson.devDependencies?.forgekit).toBeUndefined();
+      expect(packageJson.dependencies?.ironveil).toBeUndefined();
+      expect(packageJson.devDependencies?.ironveil).toBeUndefined();
 
-      // Verify scripts do not invoke forgekit
+      // Verify scripts do not invoke ironveil
       for (const [scriptName, scriptCmd] of Object.entries(packageJson.scripts ?? {})) {
-        expect(scriptCmd).not.toContain('forgekit');
-        expect(scriptCmd).not.toContain('ForgeKit');
+        expect(scriptCmd).not.toContain('ironveil');
+        expect(scriptCmd).not.toContain('Ironveil');
       }
 
-      // 2. Scan all generated code files for ForgeKit imports or dependencies
+      // 2. Scan all generated code files for Ironveil imports or dependencies
       const sourceAndTestFiles = await scanFilesRecursively(project.root);
       const codeFiles = sourceAndTestFiles.filter((filePath) =>
         /\.(ts|js|json|yml|yaml)$/.test(filePath) &&
@@ -104,10 +104,10 @@ describe('ForgeKit project independence E2E', () => {
 
       for (const file of codeFiles) {
         const content = await readFile(file, 'utf8');
-        expect(content).not.toContain('from "forgekit"');
-        expect(content).not.toContain("from 'forgekit'");
-        expect(content).not.toContain('require("forgekit")');
-        expect(content).not.toContain("require('forgekit')");
+        expect(content).not.toContain('from "ironveil"');
+        expect(content).not.toContain("from 'ironveil'");
+        expect(content).not.toContain('require("ironveil")');
+        expect(content).not.toContain("require('ironveil')");
       }
 
       // 3. Verify no workspace or monorepo links exist
@@ -120,10 +120,10 @@ describe('ForgeKit project independence E2E', () => {
       // 4. Verify standalone install, prisma generate, typecheck, and build
       await project.writeEnv({
         databaseUrl:
-          'postgresql://postgres:postgres@localhost:5432/forgekit-independence-e2e?schema=public',
+          'postgresql://postgres:postgres@localhost:5432/ironveil-independence-e2e?schema=public',
         redisUrl: 'redis://localhost:6379',
         jwtSecret:
-          'forgekit-e2e-super-secret-key-2026-change-me',
+          'ironveil-e2e-super-secret-key-2026-change-me',
       });
 
       await project.install();

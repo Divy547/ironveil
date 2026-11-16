@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const ForgeKitConfigSchema = z.object({
+export const IronveilConfigSchema = z.object({
   projectName: z
     .string()
     .trim()
@@ -29,6 +29,6 @@ export const ForgeKitConfigSchema = z.object({
   packageManager: z.enum(['npm', 'pnpm', 'yarn']).default('npm'),
 });
 
-export type ForgeKitConfigInput = z.input<typeof ForgeKitConfigSchema>;
+export type IronveilConfigInput = z.input<typeof IronveilConfigSchema>;
 
-export type ForgeKitConfigOutput = z.output<typeof ForgeKitConfigSchema>;
+export type IronveilConfigOutput = z.output<typeof IronveilConfigSchema>;

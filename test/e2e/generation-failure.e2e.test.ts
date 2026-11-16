@@ -10,7 +10,7 @@ import { GenerationError } from '../../src/generators/core/generation-error.js';
 import { createGenerators } from '../../src/generators/core/generator-registry.js';
 import type { Generator } from '../../src/generators/core/generator.js';
 
-describe('ForgeKit Generation Failure E2E', () => {
+describe('Ironveil Generation Failure E2E', () => {
   let temporaryDirectory: string;
 
   afterEach(async () => {
@@ -24,7 +24,7 @@ describe('ForgeKit Generation Failure E2E', () => {
 
   it('preserves existing directory and rejects collision before staging', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-e2e-failure-existing-'),
+      path.join(os.tmpdir(), 'ironveil-e2e-failure-existing-'),
     );
 
     const destination = path.join(temporaryDirectory, 'existing-project');
@@ -51,7 +51,7 @@ describe('ForgeKit Generation Failure E2E', () => {
 
   it('leaves zero files at destination and removes staging on pipeline error', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-e2e-failure-cleanup-'),
+      path.join(os.tmpdir(), 'ironveil-e2e-failure-cleanup-'),
     );
 
     const destination = path.join(temporaryDirectory, 'broken-pipeline-app');

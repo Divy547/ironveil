@@ -8,8 +8,8 @@ import os from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
-import type { ForgeKitConfig, PackageManager } from '../../../src/config/index.js';
-import { FORGEKIT_VERSIONS } from '../../../src/config/versions.js';
+import type { IronveilConfig, PackageManager } from '../../../src/config/index.js';
+import { IRONVEIL_VERSIONS } from '../../../src/config/versions.js';
 import { generateProject } from '../../../src/generators/generate-project.js';
 import { createFileSystem } from '../../../src/utils/filesystem.js';
 import { getPackageManagerSpec } from '../../../src/utils/package-manager.js';
@@ -42,7 +42,7 @@ export interface GeneratedProject {
 
 export async function assertProjectManifestMatchesVersions(
   projectRoot: string,
-  config: ForgeKitConfig,
+  config: IronveilConfig,
   fs: ReturnType<typeof createFileSystem>,
 ): Promise<void> {
   const packageJsonContent = await fs.readFile(path.join(projectRoot, 'package.json'));
@@ -52,33 +52,33 @@ export async function assertProjectManifestMatchesVersions(
   };
 
   const expectedDependencies: Record<string, string> = {
-    ...FORGEKIT_VERSIONS.dependencies.base,
+    ...IRONVEIL_VERSIONS.dependencies.base,
   };
 
   const expectedDevDependencies: Record<string, string> = {
-    ...FORGEKIT_VERSIONS.devDependencies.base,
+    ...IRONVEIL_VERSIONS.devDependencies.base,
   };
 
   if (config.auth === 'jwt') {
-    Object.assign(expectedDependencies, FORGEKIT_VERSIONS.dependencies.auth);
-    Object.assign(expectedDevDependencies, FORGEKIT_VERSIONS.devDependencies.auth);
+    Object.assign(expectedDependencies, IRONVEIL_VERSIONS.dependencies.auth);
+    Object.assign(expectedDevDependencies, IRONVEIL_VERSIONS.devDependencies.auth);
   }
 
   if (config.database === 'postgres' && config.orm === 'prisma') {
-    Object.assign(expectedDependencies, FORGEKIT_VERSIONS.dependencies.prisma);
-    Object.assign(expectedDevDependencies, FORGEKIT_VERSIONS.devDependencies.prisma);
+    Object.assign(expectedDependencies, IRONVEIL_VERSIONS.dependencies.prisma);
+    Object.assign(expectedDevDependencies, IRONVEIL_VERSIONS.devDependencies.prisma);
   }
 
   if (config.redis) {
-    Object.assign(expectedDependencies, FORGEKIT_VERSIONS.dependencies.redis);
+    Object.assign(expectedDependencies, IRONVEIL_VERSIONS.dependencies.redis);
   }
 
   if (config.swagger) {
-    Object.assign(expectedDependencies, FORGEKIT_VERSIONS.dependencies.swagger);
+    Object.assign(expectedDependencies, IRONVEIL_VERSIONS.dependencies.swagger);
   }
 
   if (config.testing) {
-    Object.assign(expectedDevDependencies, FORGEKIT_VERSIONS.devDependencies.testing);
+    Object.assign(expectedDevDependencies, IRONVEIL_VERSIONS.devDependencies.testing);
   }
 
   for (const [dep, version] of Object.entries(expectedDependencies)) {
@@ -138,7 +138,7 @@ export async function ensurePackageManagerAvailable(
 }
 
 export async function createGeneratedProject(
-  config: ForgeKitConfig,
+  config: IronveilConfig,
   prefix: string,
 ): Promise<GeneratedProject> {
   const temporaryDirectory = await mkdtemp(

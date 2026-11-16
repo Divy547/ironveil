@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ForgeKitConfig } from '../../src/config/index.js';
+import type { IronveilConfig } from '../../src/config/index.js';
 import type { GenerationContext } from '../../src/generators/core/generation-context.js';
 import type { Generator } from '../../src/generators/core/generator.js';
 import type { GenerationPlan } from '../../src/generators/core/generation-plan.js';
@@ -15,7 +15,7 @@ function createGenerator(
   return {
     name,
 
-    shouldRun(_config: ForgeKitConfig): boolean {
+    shouldRun(_config: IronveilConfig): boolean {
       return true;
     },
 

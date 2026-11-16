@@ -10,7 +10,7 @@ import {
   expect,
   it,
 } from 'vitest';
-import { resolveConfig, FORGEKIT_VERSIONS } from '../../src/config/index.js';
+import { resolveConfig, IRONVEIL_VERSIONS } from '../../src/config/index.js';
 import {
   createGenerationContext,
 } from '../../src/generators/core/generation-context.js';
@@ -62,14 +62,14 @@ describe('BaseProjectGenerator', () => {
     temporaryDirectory = await mkdtemp(
       path.join(
         os.tmpdir(),
-        'forgekit-project-',
+        'ironveil-project-',
       ),
     );
 
     templateDirectory = await mkdtemp(
       path.join(
         os.tmpdir(),
-        'forgekit-templates-',
+        'ironveil-templates-',
       ),
     );
 
@@ -212,10 +212,10 @@ describe('BaseProjectGenerator', () => {
 
     expect(packageJson.name).toBe('test-api');
     expect(packageJson.dependencies).toEqual(
-      FORGEKIT_VERSIONS.dependencies.base,
+      IRONVEIL_VERSIONS.dependencies.base,
     );
     expect(packageJson.devDependencies).toEqual(
-      FORGEKIT_VERSIONS.devDependencies.base,
+      IRONVEIL_VERSIONS.devDependencies.base,
     );
 
     expect(

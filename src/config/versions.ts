@@ -1,4 +1,4 @@
-export const FORGEKIT_VERSIONS = {
+export const IRONVEIL_VERSIONS = {
   dependencies: {
     base: {
       '@nestjs/common': '^11.0.0',
@@ -65,4 +65,4 @@ export const FORGEKIT_VERSIONS = {
   },
 } as const;
 
-export type ForgeKitVersions = typeof FORGEKIT_VERSIONS;
+export type IronveilVersions = typeof IRONVEIL_VERSIONS;

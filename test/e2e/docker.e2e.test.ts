@@ -10,10 +10,10 @@ import {
 } from './helpers/generated-project.js';
 
 const DATABASE_URL =
-  'postgresql://postgres:postgres@localhost:5432/forgekit-docker-e2e?schema=public';
+  'postgresql://postgres:postgres@localhost:5432/ironveil-docker-e2e?schema=public';
 
 const JWT_SECRET =
-  'forgekit-docker-e2e-super-secret-key-2026';
+  'ironveil-docker-e2e-super-secret-key-2026';
 
 describe('Ironveil Docker E2E', () => {
   let project:
@@ -40,7 +40,7 @@ describe('Ironveil Docker E2E', () => {
           auth: 'jwt',
           swagger: true,
         }),
-        'forgekit-docker-enabled-e2e',
+        'ironveil-docker-enabled-e2e',
       );
 
       // 1. Verify Docker files exist
@@ -65,8 +65,8 @@ describe('Ironveil Docker E2E', () => {
       expect(dockerfile).toContain('npx prisma generate');
       expect(dockerfile).toContain('npm run build');
       expect(dockerfile).toContain('CMD ["node", "dist/main.js"]');
-      expect(dockerfile).not.toContain('forgekit');
-      expect(dockerfile).not.toContain('ForgeKit');
+      expect(dockerfile).not.toContain('ironveil');
+      expect(dockerfile).not.toContain('Ironveil');
 
       // 3. Verify .dockerignore content
       const dockerignore = await project.fs.readFile(
@@ -102,8 +102,8 @@ describe('Ironveil Docker E2E', () => {
       expect(compose).toContain('condition: service_healthy');
       expect(compose).toContain('postgres_data:');
       expect(compose).toContain('redis_data:');
-      expect(compose).not.toContain('forgekit');
-      expect(compose).not.toContain('ForgeKit');
+      expect(compose).not.toContain('ironveil');
+      expect(compose).not.toContain('Ironveil');
 
       // 6. Verify package.json scripts
       const packageJsonContent = await project.fs.readFile(
@@ -117,8 +117,8 @@ describe('Ironveil Docker E2E', () => {
 
       expect(packageJson.scripts?.['docker:up']).toBe('docker compose up --build');
       expect(packageJson.scripts?.['docker:down']).toBe('docker compose down');
-      expect(packageJson.dependencies?.forgekit).toBeUndefined();
-      expect(packageJson.devDependencies?.forgekit).toBeUndefined();
+      expect(packageJson.dependencies?.ironveil).toBeUndefined();
+      expect(packageJson.devDependencies?.ironveil).toBeUndefined();
 
       // 7. Verify generated README contains both host-based and containerized workflows
       const readme = await project.fs.readFile(
@@ -165,7 +165,7 @@ describe('Ironveil Docker E2E', () => {
           docker: false,
           redis: false,
         }),
-        'forgekit-docker-disabled-e2e',
+        'ironveil-docker-disabled-e2e',
       );
 
       expect(

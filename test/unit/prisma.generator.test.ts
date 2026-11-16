@@ -51,7 +51,7 @@ describe('PrismaGenerator', () => {
     temporaryDirectory = await mkdtemp(
       path.join(
         os.tmpdir(),
-        'forgekit-prisma-',
+        'ironveil-prisma-',
       ),
     );
 

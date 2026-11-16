@@ -38,7 +38,7 @@ describe('generateProject', () => {
     temporaryDirectory = await mkdtemp(
       path.join(
         os.tmpdir(),
-        'forgekit-generation-',
+        'ironveil-generation-',
       ),
     );
 
@@ -254,7 +254,7 @@ describe('generateProject', () => {
     temporaryDirectory = await mkdtemp(
       path.join(
         os.tmpdir(),
-        'forgekit-generation-',
+        'ironveil-generation-',
       ),
     );
 
@@ -287,7 +287,7 @@ describe('generateProject', () => {
     temporaryDirectory = await mkdtemp(
       path.join(
         os.tmpdir(),
-        'forgekit-generation-',
+        'ironveil-generation-',
       ),
     );
 
@@ -315,7 +315,7 @@ describe('generateProject', () => {
     temporaryDirectory = await mkdtemp(
       path.join(
         os.tmpdir(),
-        'forgekit-generation-',
+        'ironveil-generation-',
       ),
     );
 

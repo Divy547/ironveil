@@ -1,5 +1,5 @@
 import path from 'node:path';
-import type { ForgeKitConfig } from '../../../config/index.js';
+import type { IronveilConfig } from '../../../config/index.js';
 import type { Generator } from '../../core/generator.js';
 import type { GenerationContext } from '../../core/generation-context.js';
 
@@ -25,7 +25,7 @@ const CONFIG_TEMPLATES = [
 export class ConfigGenerator implements Generator {
   readonly name = 'config';
 
-  shouldRun(_config: ForgeKitConfig): boolean {
+  shouldRun(_config: IronveilConfig): boolean {
     return true;
   }
 

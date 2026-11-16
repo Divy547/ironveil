@@ -51,7 +51,7 @@ describe('DockerGenerator', () => {
     temporaryDirectory = await mkdtemp(
       path.join(
         os.tmpdir(),
-        'forgekit-docker-',
+        'ironveil-docker-',
       ),
     );
 
@@ -355,7 +355,7 @@ describe('DockerGenerator', () => {
 
   it('does not generate Docker files when docker is disabled', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-docker-'),
+      path.join(os.tmpdir(), 'ironveil-docker-'),
     );
 
     const fs = createFileSystem();
@@ -435,8 +435,8 @@ describe('DockerGenerator', () => {
     expect(dockerfile).toContain('RUN npx prisma generate');
     expect(dockerfile).toContain('RUN npm run build');
     expect(dockerfile).toContain('CMD ["node", "dist/main.js"]');
-    expect(dockerfile).not.toContain('forgekit');
-    expect(dockerfile).not.toContain('ForgeKit');
+    expect(dockerfile).not.toContain('ironveil');
+    expect(dockerfile).not.toContain('Ironveil');
   });
 
   it('Dockerfile uses corepack enable for pnpm', async () => {
