@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createCli } from '../../src/cli/index.js';
 import { createFileSystem } from '../../src/utils/filesystem.js';
 
-describe('ForgeKit CLI', () => {
+describe('Ironveil CLI', () => {
   let temporaryDirectory: string;
 
   afterEach(async () => {
@@ -18,7 +18,7 @@ describe('ForgeKit CLI', () => {
     const cli = createCli();
 
     expect(cli.name()).toBe('ironveil');
-    expect(cli.version()).toBe('0.2.0');
+    expect(cli.version()).toBe('0.2.1');
   });
 
   it('registers the create command', () => {
@@ -66,7 +66,7 @@ describe('ForgeKit CLI', () => {
 
   it('creates a project with --yes non-interactively using defaults', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-cli-yes-'),
+      path.join(os.tmpdir(), 'ironveil-cli-yes-'),
     );
 
     const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(temporaryDirectory);
@@ -76,7 +76,7 @@ describe('ForgeKit CLI', () => {
     try {
       await cli.parseAsync([
         'node',
-        'forgekit',
+        'ironveil',
         'create',
         'yes-app',
         '--yes',
@@ -103,7 +103,7 @@ describe('ForgeKit CLI', () => {
 
   it('respects explicit options with --yes', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-cli-override-'),
+      path.join(os.tmpdir(), 'ironveil-cli-override-'),
     );
 
     const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(temporaryDirectory);
@@ -113,7 +113,7 @@ describe('ForgeKit CLI', () => {
     try {
       await cli.parseAsync([
         'node',
-        'forgekit',
+        'ironveil',
         'create',
         'override-app',
         '-y',
@@ -139,7 +139,7 @@ describe('ForgeKit CLI', () => {
 
   it('runs --dry-run without creating files on disk', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-cli-dryrun-'),
+      path.join(os.tmpdir(), 'ironveil-cli-dryrun-'),
     );
 
     const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(temporaryDirectory);
@@ -149,7 +149,7 @@ describe('ForgeKit CLI', () => {
     try {
       await cli.parseAsync([
         'node',
-        'forgekit',
+        'ironveil',
         'create',
         'dry-app',
         '--dry-run',
@@ -179,7 +179,7 @@ describe('ForgeKit CLI', () => {
     try {
       await cli.parseAsync([
         'node',
-        'forgekit',
+        'ironveil',
         'create',
         'invalid-!name',
         '--yes',
@@ -197,7 +197,7 @@ describe('ForgeKit CLI', () => {
 
   it('creates a project with --package-manager pnpm and includes packageManager field', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-cli-pnpm-'),
+      path.join(os.tmpdir(), 'ironveil-cli-pnpm-'),
     );
 
     const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(temporaryDirectory);
@@ -207,7 +207,7 @@ describe('ForgeKit CLI', () => {
     try {
       await cli.parseAsync([
         'node',
-        'forgekit',
+        'ironveil',
         'create',
         'pnpm-cli-app',
         '--yes',
@@ -236,7 +236,7 @@ describe('ForgeKit CLI', () => {
 
   it('creates a project with -p yarn and includes packageManager field', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-cli-yarn-'),
+      path.join(os.tmpdir(), 'ironveil-cli-yarn-'),
     );
 
     const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(temporaryDirectory);
@@ -246,7 +246,7 @@ describe('ForgeKit CLI', () => {
     try {
       await cli.parseAsync([
         'node',
-        'forgekit',
+        'ironveil',
         'create',
         'yarn-cli-app',
         '--yes',
@@ -281,7 +281,7 @@ describe('ForgeKit CLI', () => {
     try {
       await cli.parseAsync([
         'node',
-        'forgekit',
+        'ironveil',
         'create',
         'bun-app',
         '--yes',

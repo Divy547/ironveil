@@ -1,11 +1,11 @@
-import type { ForgeKitConfig } from '../config/index.js';
-import { FORGEKIT_VERSIONS } from '../config/versions.js';
+import type { IronveilConfig } from '../config/index.js';
+import { IRONVEIL_VERSIONS } from '../config/versions.js';
 import { getPackageManagerSpec } from '../utils/package-manager.js';
 
 export interface TemplateRenderer {
   render(
     template: string,
-    config: ForgeKitConfig,
+    config: IronveilConfig,
   ): string;
 }
 
@@ -223,25 +223,25 @@ export function createTemplateRenderer(): TemplateRenderer {
               '      - name: Set up Node.js',
               '        uses: actions/setup-node@v4',
               '        with:',
-              `          node-version: '${FORGEKIT_VERSIONS.tools.node}'`,
+              `          node-version: '${IRONVEIL_VERSIONS.tools.node}'`,
             ].join('\n')
           : config.packageManager === 'pnpm'
             ? [
                 '      - name: Install pnpm',
                 '        uses: pnpm/action-setup@v4',
                 '        with:',
-                `          version: '${FORGEKIT_VERSIONS.tools.pnpm}'`,
+                `          version: '${IRONVEIL_VERSIONS.tools.pnpm}'`,
                 '',
                 '      - name: Set up Node.js',
                 '        uses: actions/setup-node@v4',
                 '        with:',
-                `          node-version: '${FORGEKIT_VERSIONS.tools.node}'`,
+                `          node-version: '${IRONVEIL_VERSIONS.tools.node}'`,
               ].join('\n')
             : [
                 '      - name: Set up Node.js',
                 '        uses: actions/setup-node@v4',
                 '        with:',
-                `          node-version: '${FORGEKIT_VERSIONS.tools.node}'`,
+                `          node-version: '${IRONVEIL_VERSIONS.tools.node}'`,
                 '',
                 '      - name: Enable Corepack',
                 '        run: corepack enable',
@@ -373,7 +373,7 @@ export function createTemplateRenderer(): TemplateRenderer {
 
       // ── README: Prerequisites ────────────────────────────────────
       const prereqList: string[] = [
-        `- [Node.js](https://nodejs.org/) (version ${FORGEKIT_VERSIONS.tools.node} or later)`,
+        `- [Node.js](https://nodejs.org/) (version ${IRONVEIL_VERSIONS.tools.node} or later)`,
         `- [${pmSpec.displayName}](${pmSpec.documentationUrl}) package manager`,
       ];
 

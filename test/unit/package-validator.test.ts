@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { resolveConfig } from '../../src/config/index.js';
-import { FORGEKIT_VERSIONS } from '../../src/config/versions.js';
+import { IRONVEIL_VERSIONS } from '../../src/config/versions.js';
 import {
   createPackageValidator,
   PackageValidationError,
@@ -33,14 +33,14 @@ function buildValidManifest(configName = 'test-api', overrides: Partial<PackageJ
       'test:e2e': 'jest --config ./test/jest-e2e.json',
     },
     dependencies: {
-      ...FORGEKIT_VERSIONS.dependencies.base,
-      ...FORGEKIT_VERSIONS.dependencies.prisma,
-      ...FORGEKIT_VERSIONS.dependencies.swagger,
+      ...IRONVEIL_VERSIONS.dependencies.base,
+      ...IRONVEIL_VERSIONS.dependencies.prisma,
+      ...IRONVEIL_VERSIONS.dependencies.swagger,
     },
     devDependencies: {
-      ...FORGEKIT_VERSIONS.devDependencies.base,
-      ...FORGEKIT_VERSIONS.devDependencies.prisma,
-      ...FORGEKIT_VERSIONS.devDependencies.testing,
+      ...IRONVEIL_VERSIONS.devDependencies.base,
+      ...IRONVEIL_VERSIONS.devDependencies.prisma,
+      ...IRONVEIL_VERSIONS.devDependencies.testing,
     },
     ...overrides,
   };
@@ -73,17 +73,17 @@ describe('PackageValidator', () => {
 
       const manifest = buildValidManifest('full-api', {
         dependencies: {
-          ...FORGEKIT_VERSIONS.dependencies.base,
-          ...FORGEKIT_VERSIONS.dependencies.auth,
-          ...FORGEKIT_VERSIONS.dependencies.prisma,
-          ...FORGEKIT_VERSIONS.dependencies.redis,
-          ...FORGEKIT_VERSIONS.dependencies.swagger,
+          ...IRONVEIL_VERSIONS.dependencies.base,
+          ...IRONVEIL_VERSIONS.dependencies.auth,
+          ...IRONVEIL_VERSIONS.dependencies.prisma,
+          ...IRONVEIL_VERSIONS.dependencies.redis,
+          ...IRONVEIL_VERSIONS.dependencies.swagger,
         },
         devDependencies: {
-          ...FORGEKIT_VERSIONS.devDependencies.base,
-          ...FORGEKIT_VERSIONS.devDependencies.auth,
-          ...FORGEKIT_VERSIONS.devDependencies.prisma,
-          ...FORGEKIT_VERSIONS.devDependencies.testing,
+          ...IRONVEIL_VERSIONS.devDependencies.base,
+          ...IRONVEIL_VERSIONS.devDependencies.auth,
+          ...IRONVEIL_VERSIONS.devDependencies.prisma,
+          ...IRONVEIL_VERSIONS.devDependencies.testing,
         },
       });
 
@@ -124,16 +124,16 @@ describe('PackageValidator', () => {
       const config = resolveConfig({ projectName: 'test-api' });
       const manifest = buildValidManifest('test-api', {
         dependencies: {
-          ...FORGEKIT_VERSIONS.dependencies.base,
-          ...FORGEKIT_VERSIONS.dependencies.prisma,
-          ...FORGEKIT_VERSIONS.dependencies.swagger,
+          ...IRONVEIL_VERSIONS.dependencies.base,
+          ...IRONVEIL_VERSIONS.dependencies.prisma,
+          ...IRONVEIL_VERSIONS.dependencies.swagger,
           lodash: '^4.17.21',
           axios: '^1.7.0',
         },
         devDependencies: {
-          ...FORGEKIT_VERSIONS.devDependencies.base,
-          ...FORGEKIT_VERSIONS.devDependencies.prisma,
-          ...FORGEKIT_VERSIONS.devDependencies.testing,
+          ...IRONVEIL_VERSIONS.devDependencies.base,
+          ...IRONVEIL_VERSIONS.devDependencies.prisma,
+          ...IRONVEIL_VERSIONS.devDependencies.testing,
           rimraf: '^5.0.0',
         },
         scripts: {
@@ -262,9 +262,9 @@ describe('PackageValidator', () => {
       const config = resolveConfig({ projectName: 'test-api', redis: false });
       const manifest = buildValidManifest('test-api', {
         dependencies: {
-          ...FORGEKIT_VERSIONS.dependencies.base,
-          ...FORGEKIT_VERSIONS.dependencies.prisma,
-          ...FORGEKIT_VERSIONS.dependencies.swagger,
+          ...IRONVEIL_VERSIONS.dependencies.base,
+          ...IRONVEIL_VERSIONS.dependencies.prisma,
+          ...IRONVEIL_VERSIONS.dependencies.swagger,
           ioredis: '5.6.0', // Leaked
         },
       });
@@ -278,9 +278,9 @@ describe('PackageValidator', () => {
       const config = resolveConfig({ projectName: 'test-api', auth: 'none' });
       const manifest = buildValidManifest('test-api', {
         dependencies: {
-          ...FORGEKIT_VERSIONS.dependencies.base,
-          ...FORGEKIT_VERSIONS.dependencies.prisma,
-          ...FORGEKIT_VERSIONS.dependencies.swagger,
+          ...IRONVEIL_VERSIONS.dependencies.base,
+          ...IRONVEIL_VERSIONS.dependencies.prisma,
+          ...IRONVEIL_VERSIONS.dependencies.swagger,
           bcrypt: '6.0.0', // Leaked
         },
       });
@@ -294,8 +294,8 @@ describe('PackageValidator', () => {
       const config = resolveConfig({ projectName: 'test-api', testing: false });
       const manifest = buildValidManifest('test-api', {
         devDependencies: {
-          ...FORGEKIT_VERSIONS.devDependencies.base,
-          ...FORGEKIT_VERSIONS.devDependencies.prisma,
+          ...IRONVEIL_VERSIONS.devDependencies.base,
+          ...IRONVEIL_VERSIONS.devDependencies.prisma,
           jest: '^30.0.0', // Leaked
         },
         scripts: {
@@ -326,9 +326,9 @@ describe('PackageValidator', () => {
       const config = resolveConfig({ projectName: 'test-api' });
       const manifest = buildValidManifest('test-api', {
         dependencies: {
-          ...FORGEKIT_VERSIONS.dependencies.base,
-          ...FORGEKIT_VERSIONS.dependencies.prisma,
-          ...FORGEKIT_VERSIONS.dependencies.swagger,
+          ...IRONVEIL_VERSIONS.dependencies.base,
+          ...IRONVEIL_VERSIONS.dependencies.prisma,
+          ...IRONVEIL_VERSIONS.dependencies.swagger,
           typescript: '5.7.0', // Duplicated from devDependencies
         },
       });
@@ -382,8 +382,8 @@ describe('PackageValidator', () => {
 
       const manifest = buildValidManifest('test-api', {
         devDependencies: {
-          ...FORGEKIT_VERSIONS.devDependencies.base,
-          ...FORGEKIT_VERSIONS.devDependencies.prisma,
+          ...IRONVEIL_VERSIONS.devDependencies.base,
+          ...IRONVEIL_VERSIONS.devDependencies.prisma,
         },
         scripts: {
           build: 'nest build',

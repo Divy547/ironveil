@@ -38,7 +38,7 @@ describe('generated architecture contract', () => {
     temporaryDirectory = await mkdtemp(
       path.join(
         os.tmpdir(),
-        'forgekit-architecture-',
+        'ironveil-architecture-',
       ),
     );
 

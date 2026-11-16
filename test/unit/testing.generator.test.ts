@@ -51,7 +51,7 @@ describe('TestingGenerator', () => {
     temporaryDirectory = await mkdtemp(
       path.join(
         os.tmpdir(),
-        'forgekit-testing-',
+        'ironveil-testing-',
       ),
     );
 
@@ -215,7 +215,7 @@ describe('TestingGenerator', () => {
 
   it('does not generate testing artifacts or modify package.json when testing is disabled', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-testing-'),
+      path.join(os.tmpdir(), 'ironveil-testing-'),
     );
 
     const fs = createFileSystem();

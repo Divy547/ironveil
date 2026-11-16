@@ -10,12 +10,12 @@ import {
 } from './helpers/generated-project.js';
 
 const DATABASE_URL =
-  'postgresql://postgres:postgres@localhost:5432/forgekit-redis-e2e?schema=public';
+  'postgresql://postgres:postgres@localhost:5432/ironveil-redis-e2e?schema=public';
 
 const JWT_SECRET =
-  'forgekit-redis-e2e-super-secret-key-2026';
+  'ironveil-redis-e2e-super-secret-key-2026';
 
-describe('ForgeKit Redis E2E', () => {
+describe('Ironveil Redis E2E', () => {
   let project:
     | Awaited<
         ReturnType<
@@ -39,7 +39,7 @@ describe('ForgeKit Redis E2E', () => {
           auth: 'jwt',
           swagger: true,
         }),
-        'forgekit-redis-enabled-e2e',
+        'ironveil-redis-enabled-e2e',
       );
 
       // Verify Redis files exist
@@ -65,8 +65,8 @@ describe('ForgeKit Redis E2E', () => {
       };
 
       expect(packageJson.dependencies?.ioredis).toBe('5.6.0');
-      expect(packageJson.dependencies?.forgekit).toBeUndefined();
-      expect(packageJson.devDependencies?.forgekit).toBeUndefined();
+      expect(packageJson.dependencies?.ironveil).toBeUndefined();
+      expect(packageJson.devDependencies?.ironveil).toBeUndefined();
 
       // Verify Redis configuration artifacts
       const envExample = await project.fs.readFile(

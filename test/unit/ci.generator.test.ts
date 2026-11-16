@@ -51,7 +51,7 @@ describe('CiGenerator', () => {
     temporaryDirectory = await mkdtemp(
       path.join(
         os.tmpdir(),
-        'forgekit-ci-',
+        'ironveil-ci-',
       ),
     );
 
@@ -299,7 +299,7 @@ describe('CiGenerator', () => {
 
   it('does not generate CI workflow files when ci is disabled', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-ci-'),
+      path.join(os.tmpdir(), 'ironveil-ci-'),
     );
 
     const fs = createFileSystem();

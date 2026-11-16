@@ -1,5 +1,5 @@
 import path from 'node:path';
-import type { ForgeKitConfig } from '../../../config/index.js';
+import type { IronveilConfig } from '../../../config/index.js';
 import type { Generator } from '../../core/generator.js';
 import type { GenerationContext } from '../../core/generation-context.js';
 import {
@@ -24,7 +24,7 @@ const DOCKER_TEMPLATES = [
 export class DockerGenerator implements Generator {
   readonly name = 'docker';
 
-  shouldRun(config: ForgeKitConfig): boolean {
+  shouldRun(config: IronveilConfig): boolean {
     return config.docker;
   }
 

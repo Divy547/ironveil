@@ -12,7 +12,7 @@ import {
   createGeneratedProject,
 } from './helpers/generated-project.js';
 
-describe('ForgeKit project generation E2E', () => {
+describe('Ironveil project generation E2E', () => {
   let project:
     | Awaited<
         ReturnType<
@@ -35,7 +35,7 @@ describe('ForgeKit project generation E2E', () => {
             projectName:
               'generated-api',
           }),
-          'forgekit-generation-e2e',
+          'ironveil-generation-e2e',
         );
 
       expect(

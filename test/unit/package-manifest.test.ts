@@ -33,7 +33,7 @@ describe('PackageManifest', () => {
     temporaryDirectory = await mkdtemp(
       path.join(
         os.tmpdir(),
-        'forgekit-package-',
+        'ironveil-package-',
       ),
     );
 

@@ -20,7 +20,7 @@ describe('CLI UX & Configuration E2E', () => {
 
   it('generates a default project with --yes non-interactively', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-cli-ux-yes-'),
+      path.join(os.tmpdir(), 'ironveil-cli-ux-yes-'),
     );
 
     const { stdout, stderr } = await execFileAsync(
@@ -50,7 +50,7 @@ describe('CLI UX & Configuration E2E', () => {
 
   it('overrides schema defaults with explicit CLI options and --yes', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-cli-ux-override-'),
+      path.join(os.tmpdir(), 'ironveil-cli-ux-override-'),
     );
 
     const { stdout } = await execFileAsync(
@@ -78,7 +78,7 @@ describe('CLI UX & Configuration E2E', () => {
 
   it('runs --dry-run without creating files or leaving staging artifacts', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-cli-ux-dryrun-'),
+      path.join(os.tmpdir(), 'ironveil-cli-ux-dryrun-'),
     );
 
     const { stdout } = await execFileAsync(
@@ -100,7 +100,7 @@ describe('CLI UX & Configuration E2E', () => {
 
   it('reports collision on existing destination during --dry-run without modifying it', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-cli-ux-collision-'),
+      path.join(os.tmpdir(), 'ironveil-cli-ux-collision-'),
     );
 
     const destination = path.join(temporaryDirectory, 'existing-app');
@@ -128,7 +128,7 @@ describe('CLI UX & Configuration E2E', () => {
 
   it('reports readable error and exits with code 1 on invalid configuration', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-cli-ux-invalid-'),
+      path.join(os.tmpdir(), 'ironveil-cli-ux-invalid-'),
     );
 
     try {
@@ -148,7 +148,7 @@ describe('CLI UX & Configuration E2E', () => {
 
   it('rejects --package-manager bun with readable error and exits with code 1', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-cli-ux-bun-'),
+      path.join(os.tmpdir(), 'ironveil-cli-ux-bun-'),
     );
 
     try {
@@ -167,7 +167,7 @@ describe('CLI UX & Configuration E2E', () => {
 
   it('creates a project with --package-manager pnpm and includes packageManager in package.json', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-cli-ux-pnpm-'),
+      path.join(os.tmpdir(), 'ironveil-cli-ux-pnpm-'),
     );
 
     const { stdout } = await execFileAsync(

@@ -1,8 +1,8 @@
 import path from 'node:path';
-import type { ForgeKitConfig } from '../../../config/index.js';
+import type { IronveilConfig } from '../../../config/index.js';
 import type { Generator } from '../../core/generator.js';
 import type { GenerationContext } from '../../core/generation-context.js';
-import { FORGEKIT_VERSIONS } from '../../../config/versions.js';
+import { IRONVEIL_VERSIONS } from '../../../config/versions.js';
 import {
   createPackageManifest,
 } from '../../../utils/package-manifest.js';
@@ -61,7 +61,7 @@ const AUTH_TEMPLATES = [
 export class AuthGenerator implements Generator {
   readonly name = 'auth';
 
-  shouldRun(config: ForgeKitConfig): boolean {
+  shouldRun(config: IronveilConfig): boolean {
     return config.auth === 'jwt';
   }
 
@@ -74,11 +74,11 @@ export class AuthGenerator implements Generator {
     );
 
     await manifest.addDependencies(
-      FORGEKIT_VERSIONS.dependencies.auth,
+      IRONVEIL_VERSIONS.dependencies.auth,
     );
 
     await manifest.addDevDependencies(
-      FORGEKIT_VERSIONS.devDependencies.auth,
+      IRONVEIL_VERSIONS.devDependencies.auth,
     );
 
     for (const template of AUTH_TEMPLATES) {

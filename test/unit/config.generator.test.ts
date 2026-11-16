@@ -57,7 +57,7 @@ describe('ConfigGenerator', () => {
     temporaryDirectory = await mkdtemp(
       path.join(
         os.tmpdir(),
-        'forgekit-config-',
+        'ironveil-config-',
       ),
     );
 
@@ -124,7 +124,7 @@ describe('ConfigGenerator', () => {
     temporaryDirectory = await mkdtemp(
       path.join(
         os.tmpdir(),
-        'forgekit-config-',
+        'ironveil-config-',
       ),
     );
 
@@ -265,7 +265,7 @@ describe('ConfigGenerator', () => {
     temporaryDirectory = await mkdtemp(
       path.join(
         os.tmpdir(),
-        'forgekit-config-full-',
+        'ironveil-config-full-',
       ),
     );
 

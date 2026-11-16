@@ -22,7 +22,7 @@ describe('FileSystem', () => {
 
   it('creates directories recursively', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-fs-'),
+      path.join(os.tmpdir(), 'ironveil-fs-'),
     );
 
     const nestedDirectory = path.join(
@@ -42,7 +42,7 @@ describe('FileSystem', () => {
 
   it('writes and reads files', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-fs-'),
+      path.join(os.tmpdir(), 'ironveil-fs-'),
     );
 
     const filePath = path.join(
@@ -55,18 +55,18 @@ describe('FileSystem', () => {
 
     await fs.writeFile(
       filePath,
-      'hello forgekit',
+      'hello ironveil',
     );
 
     expect(await fs.exists(filePath)).toBe(true);
     expect(await fs.readFile(filePath)).toBe(
-      'hello forgekit',
+      'hello ironveil',
     );
   });
 
   it('removes directories and files recursively and handles missing paths safely', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-fs-'),
+      path.join(os.tmpdir(), 'ironveil-fs-'),
     );
 
     const dirPath = path.join(temporaryDirectory, 'to-delete');
@@ -87,7 +87,7 @@ describe('FileSystem', () => {
 
   it('moves directories from source to destination successfully', async () => {
     temporaryDirectory = await mkdtemp(
-      path.join(os.tmpdir(), 'forgekit-fs-'),
+      path.join(os.tmpdir(), 'ironveil-fs-'),
     );
 
     const sourceDir = path.join(temporaryDirectory, 'source');

@@ -20,14 +20,14 @@ import {
 const execFileAsync = promisify(execFile);
 
 const DATABASE_URL =
-  'postgresql://postgres:postgres@localhost:5432/forgekit-matrix-e2e?schema=public';
+  'postgresql://postgres:postgres@localhost:5432/ironveil-matrix-e2e?schema=public';
 
 const JWT_SECRET =
-  'forgekit-matrix-e2e-super-secret-key-32chars';
+  'ironveil-matrix-e2e-super-secret-key-32chars';
 
 const REDIS_URL = 'redis://localhost:6379';
 
-describe('ForgeKit Generated-Project E2E Matrix', () => {
+describe('Ironveil Generated-Project E2E Matrix', () => {
   let project:
     | Awaited<
         ReturnType<
@@ -69,7 +69,7 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
 
       project = await createGeneratedProject(
         config,
-        'forgekit-matrix-default',
+        'ironveil-matrix-default',
       );
 
       await project.assertManifestMatchesVersions();
@@ -152,7 +152,7 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
           database: 'postgres',
           orm: 'prisma',
         }),
-        'forgekit-matrix-prisma',
+        'ironveil-matrix-prisma',
       );
 
       await project.assertManifestMatchesVersions();
@@ -217,7 +217,7 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
           projectName: 'matrix-jwt-api',
           auth: 'jwt',
         }),
-        'forgekit-matrix-jwt',
+        'ironveil-matrix-jwt',
       );
 
       await project.assertManifestMatchesVersions();
@@ -289,7 +289,7 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
           orm: 'prisma',
           auth: 'jwt',
         }),
-        'forgekit-matrix-prisma-jwt',
+        'ironveil-matrix-prisma-jwt',
       );
 
       await project.assertManifestMatchesVersions();
@@ -379,7 +379,7 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
           projectName: 'matrix-redis-api',
           redis: true,
         }),
-        'forgekit-matrix-redis',
+        'ironveil-matrix-redis',
       );
 
       await project.assertManifestMatchesVersions();
@@ -437,7 +437,7 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
           redis: true,
           auth: 'jwt',
         }),
-        'forgekit-matrix-docker',
+        'ironveil-matrix-docker',
       );
 
       await project.assertManifestMatchesVersions();
@@ -502,7 +502,7 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
           ci: true,
           testing: true,
         }),
-        'forgekit-matrix-ci',
+        'ironveil-matrix-ci',
       );
 
       await project.assertManifestMatchesVersions();
@@ -545,7 +545,7 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
           projectName: 'matrix-testing-api',
           testing: true,
         }),
-        'forgekit-matrix-testing',
+        'ironveil-matrix-testing',
       );
 
       await project.assertManifestMatchesVersions();
@@ -612,7 +612,7 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
 
       project = await createGeneratedProject(
         fullConfig,
-        'forgekit-matrix-full',
+        'ironveil-matrix-full',
       );
 
       await project.assertManifestMatchesVersions();
@@ -733,7 +733,7 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
 
       project = await createGeneratedProject(
         config,
-        'forgekit-matrix-pnpm',
+        'ironveil-matrix-pnpm',
       );
 
       await project.assertManifestMatchesVersions();
@@ -832,7 +832,7 @@ describe('ForgeKit Generated-Project E2E Matrix', () => {
 
       project = await createGeneratedProject(
         config,
-        'forgekit-matrix-yarn',
+        'ironveil-matrix-yarn',
       );
 
       await project.assertManifestMatchesVersions();

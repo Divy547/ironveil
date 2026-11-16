@@ -15,12 +15,12 @@ import {
 } from './helpers/test-server.js';
 
 const DATABASE_URL =
-  'postgresql://postgres:postgres@localhost:5432/forgekit-auth-e2e?schema=public';
+  'postgresql://postgres:postgres@localhost:5432/ironveil-auth-e2e?schema=public';
 
 const JWT_SECRET =
-  'forgekit-e2e-super-secret-key-2026-change-me';
+  'ironveil-e2e-super-secret-key-2026-change-me';
 
-describe('ForgeKit JWT Auth E2E', () => {
+describe('Ironveil JWT Auth E2E', () => {
   let project:
     | Awaited<
         ReturnType<
@@ -51,7 +51,7 @@ describe('ForgeKit JWT Auth E2E', () => {
               'generated-auth-api',
             auth: 'jwt',
           }),
-          'forgekit-auth-e2e',
+          'ironveil-auth-e2e',
         );
 
       // Verify JWT configuration artifacts

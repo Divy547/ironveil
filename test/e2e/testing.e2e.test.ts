@@ -13,7 +13,7 @@ import {
 
 const execFileAsync = promisify(execFile);
 
-describe('ForgeKit Testing Generator E2E', () => {
+describe('Ironveil Testing Generator E2E', () => {
   let project:
     | Awaited<
         ReturnType<
@@ -40,7 +40,7 @@ describe('ForgeKit Testing Generator E2E', () => {
           auth: 'jwt',
           swagger: true,
         }),
-        'forgekit-testing-enabled-e2e',
+        'ironveil-testing-enabled-e2e',
       );
 
       // 1. Verify files exist
@@ -111,7 +111,7 @@ describe('ForgeKit Testing Generator E2E', () => {
           projectName: 'testing-disabled-api',
           testing: false,
         }),
-        'forgekit-testing-disabled-e2e',
+        'ironveil-testing-disabled-e2e',
       );
 
       // 1. Verify absence of testing files and directory
@@ -172,7 +172,7 @@ describe('ForgeKit Testing Generator E2E', () => {
           docker: false,
           ci: false,
         }),
-        'forgekit-prisma-testing-e2e',
+        'ironveil-prisma-testing-e2e',
       );
 
       // Verify feature-aware test file contents

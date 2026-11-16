@@ -51,7 +51,7 @@ describe('RedisGenerator', () => {
     temporaryDirectory = await mkdtemp(
       path.join(
         os.tmpdir(),
-        'forgekit-redis-',
+        'ironveil-redis-',
       ),
     );
 

@@ -1,9 +1,9 @@
 import { ZodError } from 'zod';
 import {
-  ForgeKitConfigSchema,
-  type ForgeKitConfigInput,
+  IronveilConfigSchema,
+  type IronveilConfigInput,
 } from './schema.js';
-import type { ForgeKitConfig } from './types.js';
+import type { IronveilConfig } from './types.js';
 
 export class ConfigError extends Error {
   constructor(message: string) {
@@ -13,10 +13,10 @@ export class ConfigError extends Error {
 }
 
 export function resolveConfig(
-  input: ForgeKitConfigInput,
-): ForgeKitConfig {
+  input: IronveilConfigInput,
+): IronveilConfig {
   try {
-    const config = ForgeKitConfigSchema.parse(input);
+    const config = IronveilConfigSchema.parse(input);
 
     validateFeatureDependencies(config);
 
@@ -39,7 +39,7 @@ export function resolveConfig(
 }
 
 function validateFeatureDependencies(
-  config: ForgeKitConfig,
+  config: IronveilConfig,
 ): void {
   if (config.auth === 'jwt') {
     if (

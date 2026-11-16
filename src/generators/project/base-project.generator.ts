@@ -1,8 +1,8 @@
 import path from 'node:path';
 import type { Generator } from '../core/generator.js';
 import type { GenerationContext } from '../core/generation-context.js';
-import type { ForgeKitConfig } from '../../config/index.js';
-import { FORGEKIT_VERSIONS } from '../../config/versions.js';
+import type { IronveilConfig } from '../../config/index.js';
+import { IRONVEIL_VERSIONS } from '../../config/versions.js';
 import { getPackageManagerSpec } from '../../utils/package-manager.js';
 import { createPackageManifest } from '../../utils/package-manifest.js';
 
@@ -54,7 +54,7 @@ const BASE_TEMPLATES = [
 export class BaseProjectGenerator implements Generator {
   readonly name = 'base';
 
-  shouldRun(_config: ForgeKitConfig): boolean {
+  shouldRun(_config: IronveilConfig): boolean {
     return true;
   }
 
@@ -85,8 +85,8 @@ export class BaseProjectGenerator implements Generator {
       context.fs,
     );
 
-    await manifest.addDependencies(FORGEKIT_VERSIONS.dependencies.base);
-    await manifest.addDevDependencies(FORGEKIT_VERSIONS.devDependencies.base);
+    await manifest.addDependencies(IRONVEIL_VERSIONS.dependencies.base);
+    await manifest.addDevDependencies(IRONVEIL_VERSIONS.devDependencies.base);
 
     const pmSpec = getPackageManagerSpec(context.config.packageManager);
     if (pmSpec.packageManagerField) {

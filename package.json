@@ -1,6 +1,6 @@
 {
   "name": "ironveil",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "An opinionated developer productivity CLI for bootstrapping production-ready NestJS backends.",
   "type": "module",
   "bin": {

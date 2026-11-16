@@ -15,12 +15,12 @@ import {
 } from './helpers/test-server.js';
 
 const DATABASE_URL =
-  'postgresql://postgres:postgres@localhost:5432/forgekit-swagger-e2e?schema=public';
+  'postgresql://postgres:postgres@localhost:5432/ironveil-swagger-e2e?schema=public';
 
 const JWT_SECRET =
-  'forgekit-swagger-e2e-super-secret-key-2026';
+  'ironveil-swagger-e2e-super-secret-key-2026';
 
-describe('ForgeKit Swagger E2E', () => {
+describe('Ironveil Swagger E2E', () => {
   let project:
     | Awaited<
         ReturnType<
@@ -52,7 +52,7 @@ describe('ForgeKit Swagger E2E', () => {
           database: 'postgres',
           orm: 'prisma',
         }),
-        'forgekit-swagger-enabled-e2e',
+        'ironveil-swagger-enabled-e2e',
       );
 
       await project.writeEnv({
@@ -107,7 +107,7 @@ describe('ForgeKit Swagger E2E', () => {
           database: 'postgres',
           orm: 'prisma',
         }),
-        'forgekit-swagger-disabled-e2e',
+        'ironveil-swagger-disabled-e2e',
       );
 
       await project.writeEnv({

@@ -1,8 +1,8 @@
 import path from 'node:path';
-import type { ForgeKitConfig } from '../../../config/index.js';
+import type { IronveilConfig } from '../../../config/index.js';
 import type { Generator } from '../../core/generator.js';
 import type { GenerationContext } from '../../core/generation-context.js';
-import { FORGEKIT_VERSIONS } from '../../../config/versions.js';
+import { IRONVEIL_VERSIONS } from '../../../config/versions.js';
 import {
   createPackageManifest,
 } from '../../../utils/package-manifest.js';
@@ -25,7 +25,7 @@ const REDIS_TEMPLATES = [
 export class RedisGenerator implements Generator {
   readonly name = 'redis';
 
-  shouldRun(config: ForgeKitConfig): boolean {
+  shouldRun(config: IronveilConfig): boolean {
     return config.redis;
   }
 
@@ -38,7 +38,7 @@ export class RedisGenerator implements Generator {
     );
 
     await manifest.addDependencies(
-      FORGEKIT_VERSIONS.dependencies.redis,
+      IRONVEIL_VERSIONS.dependencies.redis,
     );
 
     for (const template of REDIS_TEMPLATES) {

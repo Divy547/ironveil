@@ -51,7 +51,7 @@ describe('AuthGenerator', () => {
     temporaryDirectory = await mkdtemp(
       path.join(
         os.tmpdir(),
-        'forgekit-auth-',
+        'ironveil-auth-',
       ),
     );
 

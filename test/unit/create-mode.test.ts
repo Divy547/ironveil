@@ -20,7 +20,7 @@ describe('create command mode detection', () => {
   it('detects interactive mode when no options are provided', () => {
     const command = createTestCommand();
 
-    command.parse(['node', 'forgekit']);
+    command.parse(['node', 'ironveil']);
 
     expect(hasExplicitCreateOptions(command)).toBe(false);
   });
@@ -28,7 +28,7 @@ describe('create command mode detection', () => {
   it('detects non-interactive mode when an option is provided', () => {
     const command = createTestCommand();
 
-    command.parse(['node', 'forgekit', '--redis']);
+    command.parse(['node', 'ironveil', '--redis']);
 
     expect(hasExplicitCreateOptions(command)).toBe(true);
   });
@@ -36,7 +36,7 @@ describe('create command mode detection', () => {
   it('detects explicit negative options', () => {
     const command = createTestCommand();
 
-    command.parse(['node', 'forgekit', '--no-docker']);
+    command.parse(['node', 'ironveil', '--no-docker']);
 
     expect(hasExplicitCreateOptions(command)).toBe(true);
   });

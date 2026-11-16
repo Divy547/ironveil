@@ -14,12 +14,12 @@ import {
 const execFileAsync = promisify(execFile);
 
 const DATABASE_URL =
-  'postgresql://postgres:postgres@localhost:5432/forgekit-ci-e2e?schema=public';
+  'postgresql://postgres:postgres@localhost:5432/ironveil-ci-e2e?schema=public';
 
 const JWT_SECRET =
-  'forgekit-ci-e2e-super-secret-key-2026';
+  'ironveil-ci-e2e-super-secret-key-2026';
 
-describe('ForgeKit CI E2E', () => {
+describe('Ironveil CI E2E', () => {
   let project:
     | Awaited<
         ReturnType<
@@ -46,7 +46,7 @@ describe('ForgeKit CI E2E', () => {
           auth: 'jwt',
           swagger: true,
         }),
-        'forgekit-ci-full-e2e',
+        'ironveil-ci-full-e2e',
       );
 
       // 1. Verify workflow file exists
@@ -72,8 +72,8 @@ describe('ForgeKit CI E2E', () => {
       expect(workflowContent).toContain('run: npm test');
       expect(workflowContent).toContain('run: npm run build');
       expect(workflowContent).not.toContain('npm ci');
-      expect(workflowContent).not.toContain('forgekit');
-      expect(workflowContent).not.toContain('ForgeKit');
+      expect(workflowContent).not.toContain('ironveil');
+      expect(workflowContent).not.toContain('Ironveil');
 
       // 3. Verify package.json contains typecheck script
       const packageJsonContent = await project.fs.readFile(
@@ -85,8 +85,8 @@ describe('ForgeKit CI E2E', () => {
         devDependencies?: Record<string, string>;
       };
       expect(packageJson.scripts?.['typecheck']).toBe('tsc --noEmit');
-      expect(packageJson.dependencies?.forgekit).toBeUndefined();
-      expect(packageJson.devDependencies?.forgekit).toBeUndefined();
+      expect(packageJson.dependencies?.ironveil).toBeUndefined();
+      expect(packageJson.devDependencies?.ironveil).toBeUndefined();
 
       // 4. Actually execute the CI workflow steps on disk
       await project.writeEnv({
@@ -129,7 +129,7 @@ describe('ForgeKit CI E2E', () => {
           ci: true,
           testing: false,
         }),
-        'forgekit-ci-no-test-e2e',
+        'ironveil-ci-no-test-e2e',
       );
 
       const workflowPath = `${project.root}/.github/workflows/ci.yml`;
@@ -169,7 +169,7 @@ describe('ForgeKit CI E2E', () => {
           projectName: 'ci-disabled-api',
           ci: false,
         }),
-        'forgekit-ci-disabled-e2e',
+        'ironveil-ci-disabled-e2e',
       );
 
       expect(

@@ -6,7 +6,7 @@ export type Auth = 'none' | 'jwt';
 
 export type PackageManager = 'npm' | 'pnpm' | 'yarn';
 
-export interface ForgeKitConfig {
+export interface IronveilConfig {
   readonly projectName: string;
   readonly database: Database;
   readonly orm: Orm;

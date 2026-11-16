@@ -1,8 +1,8 @@
 import path from 'node:path';
-import type { ForgeKitConfig } from '../../../config/index.js';
+import type { IronveilConfig } from '../../../config/index.js';
 import type { Generator } from '../../core/generator.js';
 import type { GenerationContext } from '../../core/generation-context.js';
-import { FORGEKIT_VERSIONS } from '../../../config/versions.js';
+import { IRONVEIL_VERSIONS } from '../../../config/versions.js';
 import {
   createPackageManifest,
 } from '../../../utils/package-manifest.js';
@@ -35,7 +35,7 @@ const PRISMA_TEMPLATES = [
 export class PrismaGenerator implements Generator {
   readonly name = 'prisma';
 
-  shouldRun(config: ForgeKitConfig): boolean {
+  shouldRun(config: IronveilConfig): boolean {
     return (
       config.database === 'postgres' &&
       config.orm === 'prisma'
@@ -51,11 +51,11 @@ export class PrismaGenerator implements Generator {
     );
 
     await manifest.addDependencies(
-      FORGEKIT_VERSIONS.dependencies.prisma,
+      IRONVEIL_VERSIONS.dependencies.prisma,
     );
 
     await manifest.addDevDependencies(
-      FORGEKIT_VERSIONS.devDependencies.prisma,
+      IRONVEIL_VERSIONS.devDependencies.prisma,
     );
 
     await manifest.addScripts({

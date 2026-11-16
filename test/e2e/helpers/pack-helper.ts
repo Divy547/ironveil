@@ -19,7 +19,7 @@ export interface PackResult {
   cleanup(): Promise<void>;
 }
 
-export interface InstalledForgeKit {
+export interface InstalledIronveil {
   readonly envDir: string;
   readonly binPath: string;
   runCli(
@@ -29,7 +29,7 @@ export interface InstalledForgeKit {
   cleanup(): Promise<void>;
 }
 
-export async function packForgeKit(rootDir: string = REPO_ROOT): Promise<PackResult> {
+export async function packIronveil(rootDir: string = REPO_ROOT): Promise<PackResult> {
   const { stdout } = await execFileAsync('npm', ['pack', '--json'], {
     cwd: rootDir,
     env: {
@@ -80,10 +80,10 @@ export async function packForgeKit(rootDir: string = REPO_ROOT): Promise<PackRes
   };
 }
 
-export async function installPackedForgeKit(
+export async function installPackedIronveil(
   tarballPath: string,
-  prefix = 'forgekit-pkg-env',
-): Promise<InstalledForgeKit> {
+  prefix = 'ironveil-pkg-env',
+): Promise<InstalledIronveil> {
   const envDir = await mkdtemp(path.join(os.tmpdir(), `${prefix}-`));
   const fs = createFileSystem();
 
@@ -92,7 +92,7 @@ export async function installPackedForgeKit(
     path.join(envDir, 'package.json'),
     JSON.stringify(
       {
-        name: 'forgekit-isolated-test-runner',
+        name: 'ironveil-isolated-test-runner',
         version: '1.0.0',
         private: true,
       },

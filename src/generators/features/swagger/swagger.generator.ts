@@ -1,8 +1,8 @@
 import path from 'node:path';
-import type { ForgeKitConfig } from '../../../config/index.js';
+import type { IronveilConfig } from '../../../config/index.js';
 import type { Generator } from '../../core/generator.js';
 import type { GenerationContext } from '../../core/generation-context.js';
-import { FORGEKIT_VERSIONS } from '../../../config/versions.js';
+import { IRONVEIL_VERSIONS } from '../../../config/versions.js';
 import {
   createPackageManifest,
 } from '../../../utils/package-manifest.js';
@@ -19,7 +19,7 @@ const SWAGGER_TEMPLATES = [
 export class SwaggerGenerator implements Generator {
   readonly name = 'swagger';
 
-  shouldRun(config: ForgeKitConfig): boolean {
+  shouldRun(config: IronveilConfig): boolean {
     return config.swagger;
   }
 
@@ -32,7 +32,7 @@ export class SwaggerGenerator implements Generator {
     );
 
     await manifest.addDependencies(
-      FORGEKIT_VERSIONS.dependencies.swagger,
+      IRONVEIL_VERSIONS.dependencies.swagger,
     );
 
     for (const template of SWAGGER_TEMPLATES) {

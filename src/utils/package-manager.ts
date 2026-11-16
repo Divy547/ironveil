@@ -1,4 +1,4 @@
-import { FORGEKIT_VERSIONS } from '../config/versions.js';
+import { IRONVEIL_VERSIONS } from '../config/versions.js';
 
 export type PackageManager = 'npm' | 'pnpm' | 'yarn';
 
@@ -30,7 +30,7 @@ const PACKAGE_MANAGER_SPECS: Record<PackageManager, PackageManagerSpec> = {
     name: 'pnpm',
     displayName: 'pnpm',
     documentationUrl: 'https://pnpm.io/',
-    packageManagerField: `pnpm@${FORGEKIT_VERSIONS.tools.pnpm}`,
+    packageManagerField: `pnpm@${IRONVEIL_VERSIONS.tools.pnpm}`,
     install: 'pnpm install',
     run: (script: string) =>
       script === 'test' ? 'pnpm test' : `pnpm run ${script}`,
@@ -42,7 +42,7 @@ const PACKAGE_MANAGER_SPECS: Record<PackageManager, PackageManagerSpec> = {
     name: 'yarn',
     displayName: 'yarn',
     documentationUrl: 'https://yarnpkg.com/',
-    packageManagerField: `yarn@${FORGEKIT_VERSIONS.tools.yarn}`,
+    packageManagerField: `yarn@${IRONVEIL_VERSIONS.tools.yarn}`,
     install: 'yarn install',
     run: (script: string) => `yarn ${script}`,
     exec: (binary: string, args?: string) =>

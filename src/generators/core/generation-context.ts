@@ -1,10 +1,10 @@
-import type { ForgeKitConfig } from '../../config/index.js';
+import type { IronveilConfig } from '../../config/index.js';
 import type { TemplateLoader } from '../../rendering/template-loader.js';
 import type { TemplateRenderer } from '../../rendering/template-renderer.js';
 import type { FileSystem } from '../../utils/filesystem.js';
 
 export interface GenerationContext {
-  readonly config: ForgeKitConfig;
+  readonly config: IronveilConfig;
   readonly destination: string;
   readonly fs: FileSystem;
   readonly loader: TemplateLoader;
@@ -12,7 +12,7 @@ export interface GenerationContext {
 }
 
 export function createGenerationContext(
-  config: ForgeKitConfig,
+  config: IronveilConfig,
   destination: string,
   fs: FileSystem,
   loader: TemplateLoader,

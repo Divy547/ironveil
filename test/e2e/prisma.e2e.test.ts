@@ -11,9 +11,9 @@ import {
 } from './helpers/generated-project.js';
 
 const DATABASE_URL =
-  'postgresql://postgres:postgres@localhost:5432/forgekit-auth-e2e?schema=public';
+  'postgresql://postgres:postgres@localhost:5432/ironveil-auth-e2e?schema=public';
 
-describe('ForgeKit Prisma E2E', () => {
+describe('Ironveil Prisma E2E', () => {
   let project:
     | Awaited<
         ReturnType<
@@ -36,7 +36,7 @@ describe('ForgeKit Prisma E2E', () => {
             projectName:
               'generated-prisma-api',
           }),
-          'forgekit-prisma-e2e',
+          'ironveil-prisma-e2e',
         );
 
       expect(

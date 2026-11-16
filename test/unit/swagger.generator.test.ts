@@ -52,7 +52,7 @@ describe('SwaggerGenerator', () => {
     temporaryDirectory = await mkdtemp(
       path.join(
         os.tmpdir(),
-        'forgekit-swagger-',
+        'ironveil-swagger-',
       ),
     );
 
