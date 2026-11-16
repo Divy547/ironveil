@@ -54,10 +54,12 @@ export async function assertProjectManifestMatchesVersions(
   const expectedDependencies: Record<string, string> = {
     ...IRONVEIL_VERSIONS.dependencies.base,
     ...IRONVEIL_VERSIONS.dependencies.health,
+    ...IRONVEIL_VERSIONS.dependencies.logging,
   };
 
   const expectedDevDependencies: Record<string, string> = {
     ...IRONVEIL_VERSIONS.devDependencies.base,
+    ...IRONVEIL_VERSIONS.devDependencies.logging,
   };
 
   if (config.auth === 'jwt') {

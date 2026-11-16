@@ -21,6 +21,11 @@ export const IRONVEIL_VERSIONS = {
     health: {
       '@nestjs/terminus': '^11.1.1',
     },
+    logging: {
+      'nestjs-pino': '^5.3.1',
+      pino: '^10.4.0',
+      'pino-http': '^11.0.0',
+    },
     prisma: {
       '@prisma/client': '6.19.3',
     },
@@ -48,6 +53,9 @@ export const IRONVEIL_VERSIONS = {
     auth: {
       '@types/bcrypt': '6.0.0',
       '@types/passport-jwt': '4.0.1',
+    },
+    logging: {
+      'pino-pretty': '^13.2.0',
     },
     prisma: {
       prisma: '6.19.3',

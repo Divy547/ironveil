@@ -19,6 +19,7 @@ describe('GenerationPlan', () => {
     ).toEqual([
       'base',
       'config',
+      'logging',
       'health',
       'prisma',
       'swagger',
@@ -43,6 +44,7 @@ describe('GenerationPlan', () => {
     ).toEqual([
       'base',
       'config',
+      'logging',
       'health',
       'prisma',
       'auth',
@@ -68,6 +70,7 @@ describe('GenerationPlan', () => {
     ).toEqual([
       'base',
       'config',
+      'logging',
       'health',
       'prisma',
       'redis',

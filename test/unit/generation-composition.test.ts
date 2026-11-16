@@ -61,6 +61,7 @@ describe('Generator composition', () => {
     ).toEqual([
       'base',
       'config',
+      'logging',
       'health',
       'prisma',
       'swagger',
@@ -78,6 +79,7 @@ describe('Generator composition', () => {
     ).toEqual([
       'base',
       'config',
+      'logging',
       'health',
       'prisma',
       'auth',
@@ -96,6 +98,7 @@ describe('Generator composition', () => {
     ).toEqual([
       'base',
       'config',
+      'logging',
       'health',
       'prisma',
       'swagger',
@@ -113,6 +116,7 @@ describe('Generator composition', () => {
     ).toEqual([
       'base',
       'config',
+      'logging',
       'health',
       'prisma',
       'auth',

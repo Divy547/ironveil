@@ -349,6 +349,10 @@ export function createTemplateRenderer(): TemplateRenderer {
         `- **Health checks**: \`GET /health\` (liveness) and \`GET /health/ready\` (readiness, checks PostgreSQL${config.redis ? ' and Redis' : ''}) via \`@nestjs/terminus\``,
       );
 
+      featureList.push(
+        '- **Structured logging**: `nestjs-pino` with pretty output in development, JSON in production, per-request IDs (`x-request-id`), secret redaction and a `LOG_LEVEL` setting',
+      );
+
       if (hasPrisma) {
         featureList.push(
           '- **Database & ORM**: PostgreSQL integration with Prisma ORM and automated migrations',
@@ -452,6 +456,7 @@ export function createTemplateRenderer(): TemplateRenderer {
       const envRows: string[] = [
         '| `PORT` | Application HTTP port | `3000` |',
         '| `NODE_ENV` | Runtime environment mode | `development` |',
+        '| `LOG_LEVEL` | Log verbosity: `fatal`, `error`, `warn`, `info`, `debug`, `trace` or `silent` | `info` |',
       ];
 
       if (hasPrisma) {

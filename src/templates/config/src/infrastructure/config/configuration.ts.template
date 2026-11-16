@@ -1,6 +1,7 @@
 export interface AppConfig {
   readonly nodeEnv: string;
   readonly port: number;
+  readonly logLevel: string;
   {{redisConfigType}}
   {{authConfigType}}
 }
@@ -13,6 +14,8 @@ export function loadConfiguration(): AppConfig {
     port: Number(
       process.env.PORT ?? 3000,
     ),
+
+    logLevel: process.env.LOG_LEVEL ?? 'info',
 
     {{redisConfig}}
 

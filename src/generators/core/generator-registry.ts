@@ -1,6 +1,7 @@
 import type { Generator } from './generator.js';
 import { BaseProjectGenerator } from '../project/base-project.generator.js';
 import { ConfigGenerator } from '../features/config/config.generator.js';
+import { LoggingGenerator } from '../features/logging/logging.generator.js';
 import { HealthGenerator } from '../features/health/health.generator.js';
 import { PrismaGenerator } from '../features/prisma/prisma.generator.js';
 import { RedisGenerator } from '../features/redis/redis.generator.js';
@@ -14,6 +15,7 @@ export function createGenerators(): readonly Generator[] {
   return Object.freeze([
     new BaseProjectGenerator(),
     new ConfigGenerator(),
+    new LoggingGenerator(),
     new HealthGenerator(),
     new PrismaGenerator(),
     new RedisGenerator(),

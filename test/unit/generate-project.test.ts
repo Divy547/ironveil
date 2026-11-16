@@ -174,7 +174,7 @@ describe('generateProject', () => {
     );
 
     expect(main).toContain(
-      'NestFactory.create(AppModule)',
+      'NestFactory.create(AppModule, {',
     );
   });
 

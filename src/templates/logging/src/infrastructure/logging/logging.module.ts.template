@@ -1,0 +1,85 @@
+import { randomUUID } from 'node:crypto';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { LoggerModule } from 'nestjs-pino';
+
+/**
+ * Fields that must never reach the logs. Paths use pino's redaction syntax.
+ */
+export const LOG_REDACT_PATHS: readonly string[] = [
+  'req.headers.authorization',
+  'req.headers.cookie',
+  'res.headers["set-cookie"]',
+  'req.body.password',
+  'req.body.refreshToken',
+  'password',
+  '*.password',
+  '*.accessToken',
+  '*.refreshToken',
+];
+
+const REQUEST_ID_HEADER = 'x-request-id';
+const MAX_REQUEST_ID_LENGTH = 128;
+
+/**
+ * Reuses a well-formed inbound `x-request-id` (set by a proxy or gateway),
+ * otherwise generates one, and echoes it back on the response.
+ */
+export function generateRequestId(
+  req: IncomingMessage,
+  res: ServerResponse,
+): string {
+  const inbound = req.headers[REQUEST_ID_HEADER];
+  const id =
+    typeof inbound === 'string' &&
+    inbound.length > 0 &&
+    inbound.length <= MAX_REQUEST_ID_LENGTH
+      ? inbound
+      : randomUUID();
+
+  res.setHeader(REQUEST_ID_HEADER, id);
+
+  return id;
+}
+
+@Module({
+  imports: [
+    LoggerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const nodeEnv =
+          configService.get<string>('nodeEnv') ?? 'development';
+        const logLevel =
+          configService.get<string>('logLevel') ?? 'info';
+
+        return {
+          pinoHttp: {
+            level: nodeEnv === 'test' ? 'silent' : logLevel,
+            genReqId: generateRequestId,
+            redact: {
+              paths: [...LOG_REDACT_PATHS],
+              censor: '[Redacted]',
+            },
+            autoLogging: {
+              ignore: (req: IncomingMessage) =>
+                req.url?.startsWith('/health') ?? false,
+            },
+            transport:
+              nodeEnv === 'development'
+                ? {
+                    target: 'pino-pretty',
+                    options: {
+                      singleLine: true,
+                      colorize: true,
+                      translateTime: 'SYS:HH:MM:ss.l',
+                    },
+                  }
+                : undefined,
+          },
+        };
+      },
+    }),
+  ],
+})
+export class LoggingModule {}
