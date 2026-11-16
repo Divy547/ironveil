@@ -1,0 +1,10 @@
+import { SetMetadata } from '@nestjs/common';
+import type { Role } from '../types/role.type';
+
+export const ROLES_KEY = 'roles';
+
+/**
+ * Restrict a route or controller to users holding at least one of the given
+ * roles, e.g. `@Roles(Role.ADMIN)`. Enforced by the global RolesGuard.
+ */
+export const Roles = (...roles: Role[]) => SetMetadata(ROLES_KEY, roles);

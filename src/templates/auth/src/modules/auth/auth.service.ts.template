@@ -1,29 +1,37 @@
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import {
   ConflictException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import type { RegisterDto } from './dto/register.dto';
 import type { LoginDto } from './dto/login.dto';
+import type { JwtPayload } from './types/jwt-payload.type';
+import type { TokenPair } from './types/token-pair.type';
+
+const USER_PROFILE_SELECT = {
+  id: true,
+  email: true,
+  role: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
+
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
 
-  async register(
-    dto: RegisterDto,
-  ): Promise<{
-    id: string;
-    email: string;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
+  async register(dto: RegisterDto) {
     const email = dto.email.trim().toLowerCase();
 
     const existingUser =
@@ -45,20 +53,11 @@ export class AuthService {
         email,
         passwordHash,
       },
-      select: {
-        id: true,
-        email: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: USER_PROFILE_SELECT,
     });
   }
 
-  async login(
-    dto: LoginDto,
-  ): Promise<{
-    accessToken: string;
-  }> {
+  async login(dto: LoginDto): Promise<TokenPair> {
     const email = dto.email.trim().toLowerCase();
 
     const user =
@@ -84,14 +83,129 @@ export class AuthService {
       );
     }
 
-    const accessToken =
-      this.jwtService.sign({
-        sub: user.id,
-        email: user.email,
+    // Every login starts a new token family (one family per session).
+    return this.issueTokens(user, randomUUID());
+  }
+
+  /**
+   * Rotates a refresh token: the presented token is revoked and a new pair is
+   * issued in the same family. Presenting a token that was already rotated
+   * means it leaked (or the client raced itself), so the whole family is
+   * revoked and the user has to log in again.
+   */
+  async refresh(refreshToken: string): Promise<TokenPair> {
+    const stored =
+      await this.prisma.refreshToken.findUnique({
+        where: { tokenHash: hashToken(refreshToken) },
+        include: { user: true },
       });
 
-    return {
-      accessToken,
-    };
+    if (!stored) {
+      throw new UnauthorizedException(
+        'Invalid refresh token.',
+      );
+    }
+
+    if (stored.revokedAt) {
+      await this.revokeFamily(stored.familyId);
+
+      throw new UnauthorizedException(
+        'Invalid refresh token.',
+      );
+    }
+
+    if (stored.expiresAt <= new Date()) {
+      throw new UnauthorizedException(
+        'Refresh token expired.',
+      );
+    }
+
+    // Conditional update makes rotation atomic: of two concurrent requests
+    // with the same token, only one revokes it and gets a new pair.
+    const { count } =
+      await this.prisma.refreshToken.updateMany({
+        where: { id: stored.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+
+    if (count === 0) {
+      await this.revokeFamily(stored.familyId);
+
+      throw new UnauthorizedException(
+        'Invalid refresh token.',
+      );
+    }
+
+    return this.issueTokens(stored.user, stored.familyId);
   }
+
+  /** Ends the session that owns the refresh token. Unknown tokens are ignored. */
+  async logout(refreshToken: string): Promise<void> {
+    const stored =
+      await this.prisma.refreshToken.findUnique({
+        where: { tokenHash: hashToken(refreshToken) },
+      });
+
+    if (stored) {
+      await this.revokeFamily(stored.familyId);
+    }
+  }
+
+  async me(userId: string) {
+    const user =
+      await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: USER_PROFILE_SELECT,
+      });
+
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+
+    return user;
+  }
+
+  private async issueTokens(
+    user: { id: string; email: string; role: JwtPayload['role'] },
+    familyId: string,
+  ): Promise<TokenPair> {
+    const payload: JwtPayload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    };
+
+    const accessToken = this.jwtService.sign(payload);
+
+    // Opaque, high-entropy token. Only its SHA-256 hash is stored, so a
+    // database leak does not expose usable refresh tokens.
+    const refreshToken = randomBytes(48).toString('base64url');
+
+    const ttlDays =
+      this.configService.get<number>(
+        'auth.refreshTokenTtlDays',
+      ) ?? 7;
+
+    await this.prisma.refreshToken.create({
+      data: {
+        tokenHash: hashToken(refreshToken),
+        familyId,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + ttlDays * DAY_IN_MS),
+      },
+    });
+
+    return { accessToken, refreshToken };
+  }
+
+  private async revokeFamily(familyId: string): Promise<void> {
+    await this.prisma.refreshToken.updateMany({
+      where: { familyId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+}
+
+function hashToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
 }

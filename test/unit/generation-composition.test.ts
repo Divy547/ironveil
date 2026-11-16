@@ -172,6 +172,13 @@ describe('Generator composition', () => {
       'src/modules/auth/guards/jwt-auth.guard.ts',
       'src/modules/auth/strategies/jwt.strategy.ts',
       'src/modules/auth/types/jwt-payload.type.ts',
+      'src/modules/auth/types/role.type.ts',
+      'src/modules/auth/types/token-pair.type.ts',
+      'src/modules/auth/guards/roles.guard.ts',
+      'src/modules/auth/decorators/public.decorator.ts',
+      'src/modules/auth/decorators/roles.decorator.ts',
+      'src/modules/auth/decorators/current-user.decorator.ts',
+      'src/modules/auth/dto/refresh-token.dto.ts',
       'src/modules/auth/dto/register.dto.ts',
       'src/modules/auth/dto/login.dto.ts',
     ];

@@ -111,24 +111,105 @@ export function createTemplateRenderer(): TemplateRenderer {
         ? "DATABASE_URL: z\n    .string()\n    .min(1, 'DATABASE_URL is required'),"
         : '';
 
+      const isJwtAuth = config.auth === 'jwt';
+
+      const prismaAuthUserFields = isJwtAuth
+        ? '\n  role         Role     @default(USER)\n  refreshTokens RefreshToken[]'
+        : '';
+
+      const prismaAuthModels = isJwtAuth
+        ? [
+            '',
+            'enum Role {',
+            '  USER',
+            '  ADMIN',
+            '}',
+            '',
+            'model RefreshToken {',
+            '  id        String    @id @default(cuid())',
+            '  tokenHash String    @unique',
+            '  familyId  String',
+            '  userId    String',
+            '  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)',
+            '  expiresAt DateTime',
+            '  revokedAt DateTime?',
+            '  createdAt DateTime  @default(now())',
+            '',
+            '  @@index([userId])',
+            '  @@index([familyId])',
+            '}',
+          ].join('\n')
+        : '';
+
+      const migrationAuthEnum = isJwtAuth
+        ? '-- CreateEnum\nCREATE TYPE "Role" AS ENUM (\'USER\', \'ADMIN\');\n\n'
+        : '';
+
+      const migrationAuthUserColumn = isJwtAuth
+        ? '\n    "role" "Role" NOT NULL DEFAULT \'USER\','
+        : '';
+
+      const migrationAuthTables = isJwtAuth
+        ? [
+            '',
+            '',
+            '-- CreateTable',
+            'CREATE TABLE "RefreshToken" (',
+            '    "id" TEXT NOT NULL,',
+            '    "tokenHash" TEXT NOT NULL,',
+            '    "familyId" TEXT NOT NULL,',
+            '    "userId" TEXT NOT NULL,',
+            '    "expiresAt" TIMESTAMP(3) NOT NULL,',
+            '    "revokedAt" TIMESTAMP(3),',
+            '    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,',
+            '',
+            '    CONSTRAINT "RefreshToken_pkey" PRIMARY KEY ("id")',
+            ');',
+            '',
+            '-- CreateIndex',
+            'CREATE UNIQUE INDEX "RefreshToken_tokenHash_key" ON "RefreshToken"("tokenHash");',
+            '',
+            '-- CreateIndex',
+            'CREATE INDEX "RefreshToken_userId_idx" ON "RefreshToken"("userId");',
+            '',
+            '-- CreateIndex',
+            'CREATE INDEX "RefreshToken_familyId_idx" ON "RefreshToken"("familyId");',
+            '',
+            '-- AddForeignKey',
+            'ALTER TABLE "RefreshToken" ADD CONSTRAINT "RefreshToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;',
+          ].join('\n')
+        : '';
+
+      const healthPublicImport = isJwtAuth
+        ? "import { Public } from '../auth/decorators/public.decorator';"
+        : '';
+
+      const healthPublicDecorator = isJwtAuth
+        ? '@Public()\n'
+        : '';
+
       const authEnvExample =
         config.auth === 'jwt'
-          ? 'JWT_SECRET="replace-this-with-a-random-secret-at-least-32-characters-long"'
+          ? [
+              'JWT_SECRET="replace-this-with-a-random-secret-at-least-32-characters-long"',
+              'JWT_ACCESS_TTL_SECONDS=900',
+              'JWT_REFRESH_TTL_DAYS=7',
+            ].join('\n')
           : '';
 
       const authConfigType =
         config.auth === 'jwt'
-          ? 'readonly auth: {\n    readonly jwtSecret: string | undefined;\n  };'
+          ? 'readonly auth: {\n    readonly jwtSecret: string | undefined;\n    readonly accessTokenTtlSeconds: number;\n    readonly refreshTokenTtlDays: number;\n  };'
           : '';
 
       const authConfig =
         config.auth === 'jwt'
-          ? "auth: {\n      jwtSecret:\n        process.env.JWT_SECRET,\n    },"
+          ? "auth: {\n      jwtSecret:\n        process.env.JWT_SECRET,\n      accessTokenTtlSeconds: Number(\n        process.env.JWT_ACCESS_TTL_SECONDS ?? 900,\n      ),\n      refreshTokenTtlDays: Number(\n        process.env.JWT_REFRESH_TTL_DAYS ?? 7,\n      ),\n    },"
           : '';
 
       const authEnvSchema =
         config.auth === 'jwt'
-          ? "JWT_SECRET: z\n    .string()\n    .min(\n      32,\n      'JWT_SECRET must be at least 32 characters',\n    )\n    .optional(),"
+          ? "JWT_SECRET: z\n    .string()\n    .min(\n      32,\n      'JWT_SECRET must be at least 32 characters',\n    )\n    .optional(),\n\n  JWT_ACCESS_TTL_SECONDS: z.coerce\n    .number()\n    .int()\n    .min(60)\n    .default(900),\n\n  JWT_REFRESH_TTL_DAYS: z.coerce\n    .number()\n    .int()\n    .min(1)\n    .default(7),"
           : '';
 
       // ── Docker: API environment variables ──────────────────────
@@ -504,6 +585,8 @@ export function createTemplateRenderer(): TemplateRenderer {
       if (config.auth === 'jwt') {
         envRows.push(
           '| `JWT_SECRET` | Secret key used for signing JWT tokens | `your-secret-key-at-least-32-characters` |',
+          '| `JWT_ACCESS_TTL_SECONDS` | Access token lifetime in seconds (default `900`) | `900` |',
+          '| `JWT_REFRESH_TTL_DAYS` | Refresh token lifetime in days (default `7`) | `7` |',
         );
       }
 
@@ -586,11 +669,18 @@ export function createTemplateRenderer(): TemplateRenderer {
         config.auth === 'jwt'
           ? [
               '## Authentication\n',
-              'JWT-based authentication is provided using `@nestjs/jwt` and Passport.\n',
+              'JWT-based authentication is provided using `@nestjs/jwt` and Passport. **Every route is protected by default**; opt a route out with `@Public()`.\n',
               'Available endpoints:',
-              '- `POST /auth/register`: Register a new user (`{ email, password }`)',
-              '- `POST /auth/login`: Authenticate and receive a JWT access token (`{ accessToken }`)',
-              '- `GET /auth/me`: Protected route returning the current user payload (requires `Authorization: Bearer <token>` header)\n',
+              '- `POST /auth/register`: Register a new user (`{ email, password }`), public',
+              '- `POST /auth/login`: Authenticate and receive `{ accessToken, refreshToken }`, public',
+              '- `POST /auth/refresh`: Exchange a refresh token (`{ refreshToken }`) for a new pair. Refresh tokens rotate on every use; reusing an old one revokes the whole session, public',
+              '- `POST /auth/logout`: Revoke the session that owns a refresh token (`{ refreshToken }`), public',
+              '- `GET /auth/me`: Current user profile (requires `Authorization: Bearer <accessToken>` header)\n',
+              'Decorators (in `src/modules/auth/decorators/`):',
+              '- `@Public()`: skip authentication for a route or controller',
+              '- `@Roles(Role.ADMIN)`: require one of the given roles (enforced by the global `RolesGuard`)',
+              '- `@CurrentUser()`: inject the authenticated JWT payload (or `@CurrentUser(\'sub\')` for one field)\n',
+              'New users get the `USER` role. Promote an admin directly in the database (e.g. `UPDATE "User" SET role = \'ADMIN\' WHERE email = \'you@example.com\';`). Role changes take effect when the access token is next refreshed.\n',
             ].join('\n')
           : '';
 
@@ -728,6 +818,13 @@ export function createTemplateRenderer(): TemplateRenderer {
       const readmeProduction = prodStepsList.join('\n');
 
       return template
+        .replace(/\{\{\s*healthPublicImport\s*\}\}/g, healthPublicImport)
+        .replace(/\{\{\s*healthPublicDecorator\s*\}\}/g, healthPublicDecorator)
+        .replace(/\{\{\s*prismaAuthUserFields\s*\}\}/g, prismaAuthUserFields)
+        .replace(/\{\{\s*prismaAuthModels\s*\}\}/g, prismaAuthModels)
+        .replace(/\{\{\s*migrationAuthEnum\s*\}\}/g, migrationAuthEnum)
+        .replace(/\{\{\s*migrationAuthUserColumn\s*\}\}/g, migrationAuthUserColumn)
+        .replace(/\{\{\s*migrationAuthTables\s*\}\}/g, migrationAuthTables)
         .replace(/\{\{\s*healthRedisImport\s*\}\}/g, healthRedisImport)
         .replace(/\{\{\s*healthRedisProvider\s*\}\}/g, healthRedisProvider)
         .replace(/\{\{\s*healthRedisInject\s*\}\}/g, healthRedisInject)

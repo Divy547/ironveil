@@ -1,0 +1,2 @@
+// Single source of truth for roles is the `Role` enum in prisma/schema.prisma.
+export { Role } from '../../../generated/prisma/client';

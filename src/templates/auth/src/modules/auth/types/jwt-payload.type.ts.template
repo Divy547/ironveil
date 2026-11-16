@@ -1,4 +1,7 @@
+import type { Role } from './role.type';
+
 export interface JwtPayload {
   readonly sub: string;
   readonly email: string;
+  readonly role: Role;
 }

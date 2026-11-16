@@ -56,6 +56,48 @@ const AUTH_TEMPLATES = [
     destination:
       'src/modules/auth/auth.controller.ts',
   },
+  {
+    source:
+      'auth/src/modules/auth/types/role.type.ts.template',
+    destination:
+      'src/modules/auth/types/role.type.ts',
+  },
+  {
+    source:
+      'auth/src/modules/auth/types/token-pair.type.ts.template',
+    destination:
+      'src/modules/auth/types/token-pair.type.ts',
+  },
+  {
+    source:
+      'auth/src/modules/auth/decorators/public.decorator.ts.template',
+    destination:
+      'src/modules/auth/decorators/public.decorator.ts',
+  },
+  {
+    source:
+      'auth/src/modules/auth/decorators/roles.decorator.ts.template',
+    destination:
+      'src/modules/auth/decorators/roles.decorator.ts',
+  },
+  {
+    source:
+      'auth/src/modules/auth/decorators/current-user.decorator.ts.template',
+    destination:
+      'src/modules/auth/decorators/current-user.decorator.ts',
+  },
+  {
+    source:
+      'auth/src/modules/auth/guards/roles.guard.ts.template',
+    destination:
+      'src/modules/auth/guards/roles.guard.ts',
+  },
+  {
+    source:
+      'auth/src/modules/auth/dto/refresh-token.dto.ts.template',
+    destination:
+      'src/modules/auth/dto/refresh-token.dto.ts',
+  },
 ] as const;
 
 export class AuthGenerator implements Generator {
