@@ -2,6 +2,13 @@ export interface AppConfig {
   readonly nodeEnv: string;
   readonly port: number;
   readonly logLevel: string;
+  readonly security: {
+    readonly corsOrigins: readonly string[];
+    readonly throttle: {
+      readonly ttl: number;
+      readonly limit: number;
+    };
+  };
   {{redisConfigType}}
   {{authConfigType}}
 }
@@ -16,6 +23,17 @@ export function loadConfiguration(): AppConfig {
     ),
 
     logLevel: process.env.LOG_LEVEL ?? 'info',
+
+    security: {
+      corsOrigins: (process.env.CORS_ORIGINS ?? '')
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter((origin) => origin.length > 0),
+      throttle: {
+        ttl: Number(process.env.THROTTLE_TTL_MS ?? 60000),
+        limit: Number(process.env.THROTTLE_LIMIT ?? 100),
+      },
+    },
 
     {{redisConfig}}
 

@@ -34,6 +34,25 @@ export function createTemplateRenderer(): TemplateRenderer {
           ? 'setupSwagger(app);'
           : '';
 
+      const helmetSetup = config.swagger
+        ? [
+            '// Swagger UI relies on inline scripts and styles, so the strict',
+            '  // content security policy is skipped for the docs route only.',
+            '  const strictHelmet = helmet();',
+            '  const docsHelmet = helmet({ contentSecurityPolicy: false });',
+            '',
+            '  app.use((req: Request, res: Response, next: NextFunction) =>',
+            "    req.path.startsWith('/api/docs')",
+            '      ? docsHelmet(req, res, next)',
+            '      : strictHelmet(req, res, next),',
+            '  );',
+          ].join('\n')
+        : 'app.use(helmet());';
+
+      const helmetTypesImport = config.swagger
+        ? "import type { NextFunction, Request, Response } from 'express';"
+        : '';
+
       const redisModuleImport =
         config.redis
           ? "import { RedisModule } from './redis/redis.module';"
@@ -350,6 +369,10 @@ export function createTemplateRenderer(): TemplateRenderer {
       );
 
       featureList.push(
+        '- **Security defaults**: `helmet` headers, CORS driven by `CORS_ORIGINS` (off until configured) and global rate limiting via `@nestjs/throttler` (`THROTTLE_LIMIT` / `THROTTLE_TTL_MS`)',
+      );
+
+      featureList.push(
         '- **Structured logging**: `nestjs-pino` with pretty output in development, JSON in production, per-request IDs (`x-request-id`), secret redaction and a `LOG_LEVEL` setting',
       );
 
@@ -457,6 +480,9 @@ export function createTemplateRenderer(): TemplateRenderer {
         '| `PORT` | Application HTTP port | `3000` |',
         '| `NODE_ENV` | Runtime environment mode | `development` |',
         '| `LOG_LEVEL` | Log verbosity: `fatal`, `error`, `warn`, `info`, `debug`, `trace` or `silent` | `info` |',
+        '| `CORS_ORIGINS` | Comma-separated allowed CORS origins, or `*` for any. CORS is disabled when empty | `http://localhost:3000` |',
+        '| `THROTTLE_LIMIT` | Max requests per client per window | `100` |',
+        '| `THROTTLE_TTL_MS` | Rate-limit window in milliseconds | `60000` |',
       ];
 
       if (hasPrisma) {
@@ -713,6 +739,14 @@ export function createTemplateRenderer(): TemplateRenderer {
         .replace(
           /\{\{\s*authModule\s*\}\}/g,
           authModule,
+        )
+        .replace(
+          /\{\{\s*helmetTypesImport\s*\}\}/g,
+          helmetTypesImport,
+        )
+        .replace(
+          /\{\{\s*helmetSetup\s*\}\}/g,
+          helmetSetup,
         )
         .replace(
           /\{\{\s*swaggerImport\s*\}\}/g,

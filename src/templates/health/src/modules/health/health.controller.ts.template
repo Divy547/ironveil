@@ -1,8 +1,11 @@
 import { Controller, Get } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { HealthCheck, HealthCheckService } from '@nestjs/terminus';
 import { PrismaHealthIndicator } from './prisma.health';
 {{healthRedisImport}}
 
+/** Probes must never be rate limited, or orchestrators will see false failures. */
+@SkipThrottle()
 @Controller('health')
 export class HealthController {
   constructor(

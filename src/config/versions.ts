@@ -32,6 +32,10 @@ export const IRONVEIL_VERSIONS = {
     redis: {
       ioredis: '5.6.0',
     },
+    security: {
+      '@nestjs/throttler': '^6.8.0',
+      helmet: '^8.3.0',
+    },
     swagger: {
       '@nestjs/swagger': '11.0.6',
     },

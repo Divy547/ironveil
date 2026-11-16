@@ -28,6 +28,20 @@ const EnvironmentSchema = z.object({
     ])
     .default('info'),
 
+  CORS_ORIGINS: z.string().default(''),
+
+  THROTTLE_LIMIT: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .default(100),
+
+  THROTTLE_TTL_MS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .default(60000),
+
   {{databaseEnvSchema}}
 
   {{redisEnvSchema}}

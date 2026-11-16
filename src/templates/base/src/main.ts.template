@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
+import { setupSecurity } from './infrastructure/security/security.setup';
 {{swaggerImport}}
 
 async function bootstrap(): Promise<void> {
@@ -11,6 +12,8 @@ async function bootstrap(): Promise<void> {
   });
 
   app.useLogger(app.get(Logger));
+
+  setupSecurity(app);
 
   app.useGlobalPipes(
     new ValidationPipe({

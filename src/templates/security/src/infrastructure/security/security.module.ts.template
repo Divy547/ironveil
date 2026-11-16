@@ -1,0 +1,42 @@
+import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import {
+  ThrottlerGuard,
+  ThrottlerModule,
+} from '@nestjs/throttler';
+
+/**
+ * Global rate limiting. Every route is limited to THROTTLE_LIMIT requests
+ * per THROTTLE_TTL_MS per client. Opt a route out with `@SkipThrottle()`
+ * or tighten it with `@Throttle({ default: { limit, ttl } })`.
+ *
+ * Behind a reverse proxy, enable Express' `trust proxy` setting so the
+ * client IP (not the proxy's) is what gets limited.
+ */
+@Module({
+  imports: [
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        throttlers: [
+          {
+            ttl:
+              configService.get<number>('security.throttle.ttl') ??
+              60_000,
+            limit:
+              configService.get<number>('security.throttle.limit') ??
+              100,
+          },
+        ],
+      }),
+    }),
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
+})
+export class SecurityModule {}

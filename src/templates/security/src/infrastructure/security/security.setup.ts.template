@@ -1,0 +1,27 @@
+import type { INestApplication } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+{{helmetTypesImport}}
+import helmet from 'helmet';
+
+/**
+ * Applies HTTP hardening that must happen on the application instance:
+ * security headers (helmet) and CORS driven by CORS_ORIGINS.
+ *
+ * CORS is disabled unless CORS_ORIGINS lists at least one origin
+ * (comma-separated, or `*` to allow any origin).
+ */
+export function setupSecurity(app: INestApplication): void {
+  const configService = app.get(ConfigService);
+
+  {{helmetSetup}}
+
+  const origins =
+    configService.get<string[]>('security.corsOrigins') ?? [];
+
+  if (origins.length > 0) {
+    app.enableCors({
+      origin: origins.includes('*') ? true : origins,
+      credentials: !origins.includes('*'),
+    });
+  }
+}

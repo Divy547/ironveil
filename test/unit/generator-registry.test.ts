@@ -4,10 +4,10 @@ import {
 } from '../../src/generators/core/generator-registry.js';
 
 describe('GeneratorRegistry', () => {
-  it('registers the base, config, logging, health, prisma, redis, auth, swagger, testing, docker, and ci generators', () => {
+  it('registers the base, config, logging, security, health, prisma, redis, auth, swagger, testing, docker, and ci generators', () => {
     const generators = createGenerators();
 
-    expect(generators).toHaveLength(11);
+    expect(generators).toHaveLength(12);
 
     expect(
       generators.map(
@@ -17,6 +17,7 @@ describe('GeneratorRegistry', () => {
       'base',
       'config',
       'logging',
+      'security',
       'health',
       'prisma',
       'redis',

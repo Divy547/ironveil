@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { LoggingModule } from './logging/logging.module';
+import { SecurityModule } from './security/security.module';
 import { PrismaModule } from './prisma/prisma.module';
 {{redisModuleImport}}
 import { loadConfiguration } from './config/configuration';
@@ -14,6 +15,7 @@ import { validateEnvironment } from './config/environment';
       load: [loadConfiguration],
     }),
     LoggingModule,
+    SecurityModule,
     PrismaModule,
     {{redisModule}}
   ],
