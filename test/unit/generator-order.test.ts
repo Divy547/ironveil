@@ -19,6 +19,7 @@ describe('generator ordering', () => {
       'config',
       'logging',
       'security',
+      'error-handling',
       'health',
       'prisma',
       'redis',

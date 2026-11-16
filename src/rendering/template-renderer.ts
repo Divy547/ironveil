@@ -373,6 +373,10 @@ export function createTemplateRenderer(): TemplateRenderer {
       );
 
       featureList.push(
+        '- **Global error handling**: one JSON error shape for every failure (`statusCode`, `message`, `error`, `requestId`, `timestamp`); Prisma `P2002` maps to 409 and `P2025` to 404, and unexpected errors return a generic 500 while the details are logged',
+      );
+
+      featureList.push(
         '- **Structured logging**: `nestjs-pino` with pretty output in development, JSON in production, per-request IDs (`x-request-id`), secret redaction and a `LOG_LEVEL` setting',
       );
 

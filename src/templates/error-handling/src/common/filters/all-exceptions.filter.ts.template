@@ -1,0 +1,180 @@
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
+import type { Request, Response } from 'express';
+
+/**
+ * The one error shape every failing request returns, whatever threw.
+ *
+ * `message` is a string, or a string array for validation failures.
+ */
+export interface ErrorResponseBody {
+  readonly statusCode: number;
+  readonly message: string | string[];
+  readonly error: string;
+  readonly requestId: string | null;
+  readonly timestamp: string;
+}
+
+interface ResolvedError {
+  readonly statusCode: number;
+  readonly message: string | string[];
+}
+
+const INTERNAL_ERROR_MESSAGE = 'Internal server error';
+
+/**
+ * Prisma's known request errors, matched structurally so the filter does not
+ * depend on the generated client being importable.
+ */
+function isPrismaKnownRequestError(
+  exception: unknown,
+): exception is Error & {
+  code: string;
+  meta?: Record<string, unknown>;
+} {
+  return (
+    exception instanceof Error &&
+    exception.name === 'PrismaClientKnownRequestError' &&
+    typeof (exception as { code?: unknown }).code === 'string'
+  );
+}
+
+function resolveHttpException(
+  exception: HttpException,
+): ResolvedError {
+  const statusCode = exception.getStatus();
+  const body = exception.getResponse();
+
+  if (typeof body === 'string') {
+    return { statusCode, message: body };
+  }
+
+  const message = (body as { message?: unknown }).message;
+
+  if (
+    typeof message === 'string' ||
+    (Array.isArray(message) &&
+      message.every((item) => typeof item === 'string'))
+  ) {
+    return { statusCode, message };
+  }
+
+  return { statusCode, message: exception.message };
+}
+
+function resolvePrismaError(
+  exception: Error & { code: string; meta?: Record<string, unknown> },
+): ResolvedError | null {
+  switch (exception.code) {
+    case 'P2002': {
+      const target = exception.meta?.target;
+      const fields = Array.isArray(target)
+        ? target.join(', ')
+        : typeof target === 'string'
+          ? target
+          : null;
+
+      return {
+        statusCode: HttpStatus.CONFLICT,
+        message: fields
+          ? `A record with this ${fields} already exists`
+          : 'A record with these values already exists',
+      };
+    }
+    case 'P2025':
+      return {
+        statusCode: HttpStatus.NOT_FOUND,
+        message: 'Record not found',
+      };
+    default:
+      return null;
+  }
+}
+
+function resolveError(exception: unknown): ResolvedError {
+  if (exception instanceof HttpException) {
+    return resolveHttpException(exception);
+  }
+
+  if (isPrismaKnownRequestError(exception)) {
+    const mapped = resolvePrismaError(exception);
+
+    if (mapped) {
+      return mapped;
+    }
+  }
+
+  return {
+    statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+    message: INTERNAL_ERROR_MESSAGE,
+  };
+}
+
+function resolveRequestId(
+  request: Request,
+  response: Response,
+): string | null {
+  const fromRequest = (request as { id?: unknown }).id;
+
+  if (typeof fromRequest === 'string' || typeof fromRequest === 'number') {
+    return String(fromRequest);
+  }
+
+  const fromResponse = response.getHeader('x-request-id');
+
+  return typeof fromResponse === 'string' ? fromResponse : null;
+}
+
+/**
+ * Catches every exception and replies with `ErrorResponseBody`.
+ *
+ * - `HttpException`s keep their status and message.
+ * - Prisma P2002 becomes 409 and P2025 becomes 404.
+ * - Anything else becomes a 500 with a generic message, so internals never
+ *   leak. The real error is logged together with the request ID.
+ */
+@Catch()
+export class AllExceptionsFilter implements ExceptionFilter {
+  private readonly logger = new Logger(AllExceptionsFilter.name);
+
+  catch(exception: unknown, host: ArgumentsHost): void {
+    const context = host.switchToHttp();
+    const request = context.getRequest<Request>();
+    const response = context.getResponse<Response>();
+
+    const { statusCode, message } = resolveError(exception);
+    const requestId = resolveRequestId(request, response);
+
+    if (statusCode >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      this.logger.error(
+        `${request.method} ${request.url} failed (requestId=${requestId ?? 'n/a'})`,
+        exception instanceof Error
+          ? exception.stack
+          : String(exception),
+      );
+    }
+
+    const body: ErrorResponseBody = {
+      statusCode,
+      message,
+      error:
+        HttpStatus[statusCode]
+          ?.split('_')
+          .map(
+            (word) =>
+              word.charAt(0) + word.slice(1).toLowerCase(),
+          )
+          .join(' ') ?? 'Error',
+      requestId,
+      timestamp: new Date().toISOString(),
+    };
+
+    response.status(statusCode).json(body);
+  }
+}
