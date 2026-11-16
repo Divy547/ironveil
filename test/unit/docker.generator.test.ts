@@ -289,7 +289,7 @@ describe('DockerGenerator', () => {
     );
 
     expect(compose).toContain('./node_modules/.bin/prisma migrate deploy');
-    expect(compose).toContain('node dist/main.js');
+    expect(compose).toContain('exec node dist/main.js');
   });
 
   it('uses local prisma binary for pnpm and yarn projects in docker-compose.yml', async () => {

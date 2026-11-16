@@ -13,6 +13,10 @@ async function bootstrap(): Promise<void> {
 
   app.useLogger(app.get(Logger));
 
+  // Run onModuleDestroy / onApplicationShutdown hooks (Prisma and Redis
+  // disconnect, in-flight requests drain) on SIGTERM and SIGINT.
+  app.enableShutdownHooks();
+
   setupSecurity(app);
 
   app.useGlobalPipes(

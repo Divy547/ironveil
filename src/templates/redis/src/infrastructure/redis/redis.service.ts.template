@@ -32,6 +32,16 @@ export class RedisService
   }
 
   async onModuleDestroy(): Promise<void> {
-    await this.quit();
+    if (this.status === 'end') {
+      return;
+    }
+
+    try {
+      await this.quit();
+    } catch {
+      // The connection is already closed or never opened; drop it so
+      // shutdown is never blocked by an unreachable Redis.
+      this.disconnect();
+    }
   }
 }

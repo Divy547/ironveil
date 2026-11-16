@@ -180,7 +180,7 @@ export function createTemplateRenderer(): TemplateRenderer {
 
       // ── Docker: API command ─────────────────────────────────────
       const dockerComposeApiCommand = hasPrisma
-        ? 'sh -c "./node_modules/.bin/prisma migrate deploy && node dist/main.js"'
+        ? 'sh -c "./node_modules/.bin/prisma migrate deploy && exec node dist/main.js"'
         : 'node dist/main.js';
 
       // ── Docker: postgres service ────────────────────────────────
