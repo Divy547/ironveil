@@ -2,7 +2,7 @@
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
+import * as request from 'supertest';
 {{testingE2eImports}}
 
 describe('App (e2e)', () => {
@@ -30,5 +30,21 @@ describe('App (e2e)', () => {
 
   it('is defined', () => {
     expect(app).toBeDefined();
+  });
+
+  it('GET /health reports liveness', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/health')
+      .expect(200);
+
+    expect(response.body.status).toBe('ok');
+  });
+
+  it('GET /health/ready reports readiness', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/health/ready')
+      .expect(200);
+
+    expect(response.body.status).toBe('ok');
   });
 });

@@ -64,6 +64,22 @@ export function createTemplateRenderer(): TemplateRenderer {
           ? "REDIS_URL: z\n    .string()\n    .min(1, 'REDIS_URL is required'),"
           : '';
 
+      const healthRedisImport = config.redis
+        ? "import { RedisHealthIndicator } from './redis.health';"
+        : '';
+
+      const healthRedisProvider = config.redis
+        ? 'RedisHealthIndicator,'
+        : '';
+
+      const healthRedisInject = config.redis
+        ? 'private readonly redis: RedisHealthIndicator,'
+        : '';
+
+      const healthRedisCheck = config.redis
+        ? "() => this.redis.isHealthy('redis'),"
+        : '';
+
       const hasPrisma =
         config.database === 'postgres' &&
         config.orm === 'prisma';
@@ -277,6 +293,7 @@ export function createTemplateRenderer(): TemplateRenderer {
           '      onModuleDestroy: jest.fn(),\n' +
           '      $connect: jest.fn(),\n' +
           '      $disconnect: jest.fn(),\n' +
+          "      $queryRaw: jest.fn().mockResolvedValue([{ ok: 1 }]),\n" +
           '    });',
         );
       }
@@ -291,6 +308,7 @@ export function createTemplateRenderer(): TemplateRenderer {
           '      onModuleDestroy: jest.fn(),\n' +
           '      connect: jest.fn(),\n' +
           '      quit: jest.fn(),\n' +
+          "      ping: jest.fn().mockResolvedValue('PONG'),\n" +
           '    });',
         );
       }
@@ -326,6 +344,10 @@ export function createTemplateRenderer(): TemplateRenderer {
         '- **NestJS 11**: Modular architecture with TypeScript and strict type checking',
         '- **Configuration**: Centralized configuration and environment validation using Zod',
       ];
+
+      featureList.push(
+        `- **Health checks**: \`GET /health\` (liveness) and \`GET /health/ready\` (readiness, checks PostgreSQL${config.redis ? ' and Redis' : ''}) via \`@nestjs/terminus\``,
+      );
 
       if (hasPrisma) {
         featureList.push(
@@ -671,6 +693,10 @@ export function createTemplateRenderer(): TemplateRenderer {
       const readmeProduction = prodStepsList.join('\n');
 
       return template
+        .replace(/\{\{\s*healthRedisImport\s*\}\}/g, healthRedisImport)
+        .replace(/\{\{\s*healthRedisProvider\s*\}\}/g, healthRedisProvider)
+        .replace(/\{\{\s*healthRedisInject\s*\}\}/g, healthRedisInject)
+        .replace(/\{\{\s*healthRedisCheck\s*\}\}/g, healthRedisCheck)
         .replace(
           /\{\{\s*projectName\s*\}\}/g,
           config.projectName,

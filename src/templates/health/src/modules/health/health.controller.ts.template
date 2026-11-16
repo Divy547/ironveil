@@ -1,0 +1,30 @@
+import { Controller, Get } from '@nestjs/common';
+import { HealthCheck, HealthCheckService } from '@nestjs/terminus';
+import { PrismaHealthIndicator } from './prisma.health';
+{{healthRedisImport}}
+
+@Controller('health')
+export class HealthController {
+  constructor(
+    private readonly health: HealthCheckService,
+    private readonly prisma: PrismaHealthIndicator,
+    {{healthRedisInject}}
+  ) {}
+
+  /** Liveness: the process is up and able to serve requests. */
+  @Get()
+  @HealthCheck()
+  live() {
+    return this.health.check([]);
+  }
+
+  /** Readiness: every backing service this app depends on is reachable. */
+  @Get('ready')
+  @HealthCheck()
+  ready() {
+    return this.health.check([
+      () => this.prisma.isHealthy('database'),
+      {{healthRedisCheck}}
+    ]);
+  }
+}

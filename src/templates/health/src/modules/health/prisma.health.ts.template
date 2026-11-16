@@ -1,0 +1,38 @@
+import { Injectable } from '@nestjs/common';
+import {
+  HealthIndicatorResult,
+  HealthIndicatorService,
+} from '@nestjs/terminus';
+import { PrismaService } from '../../infrastructure/prisma/prisma.service';
+
+const TIMEOUT_MS = 3000;
+
+@Injectable()
+export class PrismaHealthIndicator {
+  constructor(
+    private readonly indicators: HealthIndicatorService,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  async isHealthy(key: string): Promise<HealthIndicatorResult> {
+    const indicator = this.indicators.check(key);
+
+    try {
+      await Promise.race([
+        this.prisma.$queryRaw`SELECT 1`,
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error('Database check timed out')),
+            TIMEOUT_MS,
+          ).unref(),
+        ),
+      ]);
+
+      return indicator.up();
+    } catch (error) {
+      return indicator.down({
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+}

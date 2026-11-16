@@ -6,6 +6,7 @@ describe('IRONVEIL_VERSIONS centralized version registry', () => {
     it('defines production dependencies for base and all features', () => {
       expect(IRONVEIL_VERSIONS.dependencies.base).toBeDefined();
       expect(IRONVEIL_VERSIONS.dependencies.auth).toBeDefined();
+      expect(IRONVEIL_VERSIONS.dependencies.health).toBeDefined();
       expect(IRONVEIL_VERSIONS.dependencies.prisma).toBeDefined();
       expect(IRONVEIL_VERSIONS.dependencies.redis).toBeDefined();
       expect(IRONVEIL_VERSIONS.dependencies.swagger).toBeDefined();

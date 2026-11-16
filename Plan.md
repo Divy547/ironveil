@@ -8,7 +8,8 @@ Each phase ends in a releasable version. Each task should land with unit tests, 
 
 ## Working agreements
 
-- **Push and publish cadence:** commit and tag each phase locally (`v0.2.1`, `v0.3.0`, …). Push to GitHub after Phase 1. Publish to npm only once all phases are done (Phase 5, v1.0.0), so intermediate versions are never published. Never push, tag-push or `npm publish` without being asked.
+- **Commit cadence:** commit every task as soon as it is done (one commit per task, e.g. `feat: add health checks (1.1)`), with `Plan.md` updated in the same commit (tick the checkbox and note anything that deviated from the plan).
+- **Push and publish cadence:** tag each phase locally (`v0.2.1`, `v0.3.0`, …). Push to GitHub after Phase 1. Publish to npm only once all phases are done (Phase 5, v1.0.0), so intermediate versions are never published. Never push, tag-push or `npm publish` without being asked.
 - **E2E tests are slow (~16 min serial, ~7 min with `pnpm test:e2e:fast`, which uses 3 workers):** they run ~22 real `npm`/`pnpm`/`yarn install`s plus a build and test run per project. Do **not** run them on every change. Day to day use `pnpm typecheck && pnpm test` (seconds). Run the e2e suite only when you touch generators, templates, version pins, the CLI entrypoint or packaging, and always before a release tag. Prefer running just the affected file, e.g. `pnpm exec vitest run test/e2e/redis.e2e.test.ts`. Use `test:e2e:fast` for the full suite during development and the serial `test:e2e` for the final pre-release run (parallel runs share ports derived from the worker pid, so a rare collision is possible; if a parallel run fails oddly, re-run that file serially).
 
 ---
@@ -44,7 +45,7 @@ Tasks:
 
 The README promises production readiness, but the generated `main.ts` only sets up a `ValidationPipe`. Reviewers will notice. Close these gaps before any public launch.
 
-- [ ] **1.1 Health checks:** `@nestjs/terminus` `HealthModule` with `/health` (liveness) and `/health/ready` (readiness). Readiness checks Prisma, plus Redis when it's enabled. Point the Docker `HEALTHCHECK` at it.
+- [x] **1.1 Health checks:** `@nestjs/terminus` `HealthModule` with `/health` (liveness) and `/health/ready` (readiness). Readiness checks Prisma, plus Redis when it's enabled. Point the Docker `HEALTHCHECK` at it. *(Done: `HealthGenerator` always runs; `src/modules/health/` in generated projects. Boot-time verification that `/health` returns 200 on a real server is covered by 1.9.)*
 - [ ] **1.2 Structured logging:** `nestjs-pino`, with pretty output in dev, JSON in prod, request IDs, and redaction of `authorization` / `password` fields. Add a `LOG_LEVEL` env var.
 - [ ] **1.3 Security defaults:** `helmet`, CORS configured from env (`CORS_ORIGINS`), and `@nestjs/throttler` with env-tunable limits.
 - [ ] **1.4 Clean shutdown:** `app.enableShutdownHooks()`. Prisma and Redis services disconnect cleanly on SIGTERM.

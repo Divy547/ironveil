@@ -1,0 +1,38 @@
+import { Injectable } from '@nestjs/common';
+import {
+  HealthIndicatorResult,
+  HealthIndicatorService,
+} from '@nestjs/terminus';
+import { RedisService } from '../../infrastructure/redis/redis.service';
+
+const TIMEOUT_MS = 3000;
+
+@Injectable()
+export class RedisHealthIndicator {
+  constructor(
+    private readonly indicators: HealthIndicatorService,
+    private readonly redis: RedisService,
+  ) {}
+
+  async isHealthy(key: string): Promise<HealthIndicatorResult> {
+    const indicator = this.indicators.check(key);
+
+    try {
+      await Promise.race([
+        this.redis.ping(),
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error('Redis check timed out')),
+            TIMEOUT_MS,
+          ).unref(),
+        ),
+      ]);
+
+      return indicator.up();
+    } catch (error) {
+      return indicator.down({
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+}

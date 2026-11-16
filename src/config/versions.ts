@@ -18,6 +18,9 @@ export const IRONVEIL_VERSIONS = {
       passport: '0.7.0',
       'passport-jwt': '4.0.1',
     },
+    health: {
+      '@nestjs/terminus': '^11.1.1',
+    },
     prisma: {
       '@prisma/client': '6.19.3',
     },

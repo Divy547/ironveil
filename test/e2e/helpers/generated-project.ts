@@ -53,6 +53,7 @@ export async function assertProjectManifestMatchesVersions(
 
   const expectedDependencies: Record<string, string> = {
     ...IRONVEIL_VERSIONS.dependencies.base,
+    ...IRONVEIL_VERSIONS.dependencies.health,
   };
 
   const expectedDevDependencies: Record<string, string> = {
