@@ -26,6 +26,7 @@ describe('generator ordering', () => {
       'auth',
       'swagger',
       'testing',
+      'lint',
       'docker',
       'ci',
     ]);

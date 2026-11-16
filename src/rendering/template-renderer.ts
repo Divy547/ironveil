@@ -370,6 +370,8 @@ export function createTemplateRenderer(): TemplateRenderer {
         ? `\n      - name: Generate Prisma Client\n        run: ${pmSpec.prisma('generate')}\n        env:\n          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/db?schema=public"`
         : '';
 
+      const ciLintCommand = pmSpec.run('lint');
+
       const ciTypecheckCommand = pmSpec.run('typecheck');
 
       // ── CI: Unit test step ──────────────────────────────────────
@@ -774,6 +776,9 @@ export function createTemplateRenderer(): TemplateRenderer {
         ciStepsList.push(`3. Generate Prisma Client (\`${pmSpec.prisma('generate')}\`)`);
       }
       ciStepsList.push(
+        `${ciStepsList.length + 1}. Lint (\`${pmSpec.run('lint')}\`)`,
+      );
+      ciStepsList.push(
         `${ciStepsList.length + 1}. Typecheck validation (\`${pmSpec.run('typecheck')}\`)`,
       );
       if (config.testing) {
@@ -952,6 +957,10 @@ export function createTemplateRenderer(): TemplateRenderer {
         .replace(
           /\{\{\s*ciPrismaStep\s*\}\}/g,
           ciPrismaStep,
+        )
+        .replace(
+          /\{\{\s*ciLintCommand\s*\}\}/g,
+          ciLintCommand,
         )
         .replace(
           /\{\{\s*ciTypecheckCommand\s*\}\}/g,

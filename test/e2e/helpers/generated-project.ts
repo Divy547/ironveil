@@ -34,6 +34,7 @@ export interface GeneratedProject {
   prismaMigrateDeploy(): Promise<void>;
   build(): Promise<void>;
   typecheck(): Promise<void>;
+  lint(): Promise<void>;
   test(): Promise<void>;
   testE2e(): Promise<void>;
   assertManifestMatchesVersions(): Promise<void>;
@@ -60,6 +61,7 @@ export async function assertProjectManifestMatchesVersions(
 
   const expectedDevDependencies: Record<string, string> = {
     ...IRONVEIL_VERSIONS.devDependencies.base,
+    ...IRONVEIL_VERSIONS.devDependencies.lint,
     ...IRONVEIL_VERSIONS.devDependencies.logging,
   };
 
@@ -237,6 +239,14 @@ export async function createGeneratedProject(
 
     async build(): Promise<void> {
       const [bin, ...args] = pmSpec.run('build').split(' ');
+      await execFileAsync(bin, args, {
+        cwd: destination,
+        env: execEnv,
+      });
+    },
+
+    async lint(): Promise<void> {
+      const [bin, ...args] = pmSpec.run('lint').split(' ');
       await execFileAsync(bin, args, {
         cwd: destination,
         env: execEnv,

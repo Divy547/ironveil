@@ -26,6 +26,7 @@ describe('GenerationPlan', () => {
       'prisma',
       'swagger',
       'testing',
+      'lint',
       'docker',
       'ci',
     ]);
@@ -54,6 +55,7 @@ describe('GenerationPlan', () => {
       'auth',
       'swagger',
       'testing',
+      'lint',
       'docker',
       'ci',
     ]);
@@ -82,6 +84,7 @@ describe('GenerationPlan', () => {
       'redis',
       'swagger',
       'testing',
+      'lint',
       'docker',
       'ci',
     ]);

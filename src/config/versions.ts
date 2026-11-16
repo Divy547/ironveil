@@ -46,8 +46,6 @@ export const IRONVEIL_VERSIONS = {
       '@nestjs/schematics': '^11.0.0',
       '@types/express': '^5.0.0',
       '@types/node': '^22.0.0',
-      eslint: '^9.0.0',
-      prettier: '^3.0.0',
       'source-map-support': '^0.5.21',
       'ts-loader': '^9.5.2',
       'ts-node': '^10.9.2',
@@ -57,6 +55,14 @@ export const IRONVEIL_VERSIONS = {
     auth: {
       '@types/bcrypt': '6.0.0',
       '@types/passport-jwt': '4.0.1',
+    },
+    lint: {
+      '@eslint/js': '^9.0.0',
+      eslint: '^9.0.0',
+      'eslint-config-prettier': '^10.0.0',
+      globals: '^16.0.0',
+      prettier: '^3.0.0',
+      'typescript-eslint': '^8.0.0',
     },
     logging: {
       'pino-pretty': '^13.2.0',

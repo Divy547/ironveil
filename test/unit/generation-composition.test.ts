@@ -68,6 +68,7 @@ describe('Generator composition', () => {
       'prisma',
       'swagger',
       'testing',
+      'lint',
       'docker',
       'ci',
     ]);
@@ -89,6 +90,7 @@ describe('Generator composition', () => {
       'auth',
       'swagger',
       'testing',
+      'lint',
       'docker',
       'ci',
     ]);
@@ -109,6 +111,7 @@ describe('Generator composition', () => {
       'prisma',
       'swagger',
       'testing',
+      'lint',
       'docker',
       'ci',
     ]);
@@ -130,6 +133,7 @@ describe('Generator composition', () => {
       'auth',
       'swagger',
       'testing',
+      'lint',
       'docker',
       'ci',
     ]);

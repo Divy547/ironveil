@@ -127,6 +127,8 @@ describe('Ironveil Generated-Project E2E Matrix', () => {
       await project.install();
       await project.prismaGenerate();
 
+      await project.lint();
+
       await execFileAsync('npm', ['run', 'typecheck'], {
         cwd: project.root,
       });
@@ -261,6 +263,8 @@ describe('Ironveil Generated-Project E2E Matrix', () => {
       await project.install();
       await project.prismaGenerate();
 
+      await project.lint();
+
       await execFileAsync('npm', ['run', 'typecheck'], {
         cwd: project.root,
       });
@@ -302,6 +306,8 @@ describe('Ironveil Generated-Project E2E Matrix', () => {
       await project.install();
       await project.prismaGenerate();
       await project.prismaMigrateDeploy();
+
+      await project.lint();
 
       await execFileAsync('npm', ['run', 'typecheck'], {
         cwd: project.root,
@@ -359,11 +365,13 @@ describe('Ironveil Generated-Project E2E Matrix', () => {
       );
       expect(meRes.status).toBe(200);
       const meData = (await meRes.json()) as {
-        sub: string;
+        id: string;
         email: string;
+        role: string;
       };
-      expect(meData.sub).toBe(user.id);
+      expect(meData.id).toBe(user.id);
       expect(meData.email).toBe(email);
+      expect(meData.role).toBe('USER');
     },
     180_000,
   );
@@ -408,6 +416,8 @@ describe('Ironveil Generated-Project E2E Matrix', () => {
 
       await project.install();
       await project.prismaGenerate();
+
+      await project.lint();
 
       await execFileAsync('npm', ['run', 'typecheck'], {
         cwd: project.root,
@@ -678,6 +688,8 @@ describe('Ironveil Generated-Project E2E Matrix', () => {
       await project.prismaGenerate();
 
       // Step: typecheck
+      await project.lint();
+
       await execFileAsync('npm', ['run', 'typecheck'], {
         cwd: project.root,
       });
@@ -791,6 +803,7 @@ describe('Ironveil Generated-Project E2E Matrix', () => {
 
       await project.install();
       await project.prismaGenerate();
+      await project.lint();
       await project.typecheck();
       await project.test();
       await project.build();
@@ -890,6 +903,7 @@ describe('Ironveil Generated-Project E2E Matrix', () => {
 
       await project.install();
       await project.prismaGenerate();
+      await project.lint();
       await project.typecheck();
       await project.test();
       await project.build();

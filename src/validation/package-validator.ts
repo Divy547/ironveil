@@ -343,7 +343,9 @@ export function createPackageValidator(): PackageValidator {
         'start:dev': 'nest start --watch',
         'start:debug': 'nest start --debug --watch',
         'start:prod': 'node dist/main',
-        lint: 'eslint "{src,apps,libs,test}/**/*.ts" --fix',
+        lint: 'eslint "{src,test}/**/*.ts"',
+        'lint:fix': 'eslint "{src,test}/**/*.ts" --fix',
+        format: 'prettier --write "{src,test}/**/*.ts"',
       };
 
       if (hasPrisma) {

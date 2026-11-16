@@ -10,6 +10,7 @@ import { RedisGenerator } from '../features/redis/redis.generator.js';
 import { AuthGenerator } from '../features/auth/auth.generator.js';
 import { SwaggerGenerator } from '../features/swagger/swagger.generator.js';
 import { TestingGenerator } from '../features/testing/testing.generator.js';
+import { LintGenerator } from '../features/lint/lint.generator.js';
 import { DockerGenerator } from '../features/docker/docker.generator.js';
 import { CiGenerator } from '../features/ci/ci.generator.js';
 
@@ -26,6 +27,7 @@ export function createGenerators(): readonly Generator[] {
     new AuthGenerator(),
     new SwaggerGenerator(),
     new TestingGenerator(),
+    new LintGenerator(),
     new DockerGenerator(),
     new CiGenerator(),
   ]);
