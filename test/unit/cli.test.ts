@@ -18,7 +18,7 @@ describe('Ironveil CLI', () => {
     const cli = createCli();
 
     expect(cli.name()).toBe('ironveil');
-    expect(cli.version()).toBe('0.2.1');
+    expect(cli.version()).toBe('0.3.0');
   });
 
   it('registers the create command', () => {
