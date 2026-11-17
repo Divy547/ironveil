@@ -1,6 +1,4 @@
 import { readdir } from 'node:fs/promises';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import {
   afterEach,
   describe,
@@ -13,14 +11,14 @@ import {
   ensurePackageManagerAvailable,
 } from './helpers/generated-project.js';
 import {
-  startTestServer,
-  type TestServer,
-} from './helpers/test-server.js';
+  assertBootsAndShutsDownCleanly,
+  prepareProject,
+} from './helpers/runtime-checks.js';
 
-const execFileAsync = promisify(execFile);
-
-const DATABASE_URL =
-  'postgresql://postgres:postgres@localhost:5432/ironveil-matrix-e2e?schema=public';
+// One database per case: the cases generate different Prisma schemas and
+// migrations, and each booted server needs its own database to connect to.
+const databaseUrl = (name: string): string =>
+  `postgresql://postgres:postgres@localhost:5432/ironveil-matrix-${name}-e2e?schema=public`;
 
 const JWT_SECRET =
   'ironveil-matrix-e2e-super-secret-key-32chars';
@@ -36,12 +34,7 @@ describe('Ironveil Generated-Project E2E Matrix', () => {
       >
     | undefined;
 
-  let server: TestServer | undefined;
-
   afterEach(async () => {
-    server?.stop();
-    server = undefined;
-
     await project?.cleanup();
     project = undefined;
   });
@@ -120,26 +113,15 @@ describe('Ironveil Generated-Project E2E Matrix', () => {
       expect(readmeContent).not.toContain('## Redis Infrastructure');
       expect(readmeContent).not.toContain('## Authentication');
 
-      await project.writeEnv({
-        databaseUrl: DATABASE_URL,
+      await prepareProject(project, {
+        databaseUrl: databaseUrl('default'),
       });
 
-      await project.install();
-      await project.prismaGenerate();
-
-      await project.lint();
-
-      await execFileAsync('npm', ['run', 'typecheck'], {
-        cwd: project.root,
+      await assertBootsAndShutsDownCleanly(project, {
+        redis: false,
       });
-
-      await project.build();
-
-      expect(
-        await project.fs.exists(`${project.root}/dist/main.js`),
-      ).toBe(true);
     },
-    180_000,
+    240_000,
   );
 
   // =========================================================================
@@ -183,13 +165,9 @@ describe('Ironveil Generated-Project E2E Matrix', () => {
       expect(pkg.dependencies?.['@prisma/client']).toBeDefined();
       expect(pkg.devDependencies?.prisma).toBeDefined();
 
-      await project.writeEnv({
-        databaseUrl: DATABASE_URL,
+      await prepareProject(project, {
+        databaseUrl: databaseUrl('prisma'),
       });
-
-      await project.install();
-      await project.prismaGenerate();
-      await project.build();
 
       expect(
         await project.fs.exists(
@@ -204,8 +182,12 @@ describe('Ironveil Generated-Project E2E Matrix', () => {
         file.endsWith('.node'),
       );
       expect(hasEngineBinary).toBe(true);
+
+      await assertBootsAndShutsDownCleanly(project, {
+        redis: false,
+      });
     },
-    180_000,
+    240_000,
   );
 
   // =========================================================================
@@ -255,29 +237,22 @@ describe('Ironveil Generated-Project E2E Matrix', () => {
       expect(pkg.dependencies?.['passport-jwt']).toBeDefined();
       expect(pkg.dependencies?.bcrypt).toBeDefined();
 
-      await project.writeEnv({
-        databaseUrl: DATABASE_URL,
+      await prepareProject(project, {
+        databaseUrl: databaseUrl('jwt'),
         jwtSecret: JWT_SECRET,
       });
-
-      await project.install();
-      await project.prismaGenerate();
-
-      await project.lint();
-
-      await execFileAsync('npm', ['run', 'typecheck'], {
-        cwd: project.root,
-      });
-
-      await project.build();
 
       expect(
         await project.fs.exists(
           `${project.root}/dist/modules/auth/auth.module.js`,
         ),
       ).toBe(true);
+
+      await assertBootsAndShutsDownCleanly(project, {
+        redis: false,
+      });
     },
-    180_000,
+    240_000,
   );
 
   // =========================================================================
@@ -298,89 +273,77 @@ describe('Ironveil Generated-Project E2E Matrix', () => {
 
       await project.assertManifestMatchesVersions();
 
-      await project.writeEnv({
-        databaseUrl: DATABASE_URL,
+      await prepareProject(project, {
+        databaseUrl: databaseUrl('prisma-jwt'),
         jwtSecret: JWT_SECRET,
       });
 
-      await project.install();
-      await project.prismaGenerate();
-      await project.prismaMigrateDeploy();
+      await assertBootsAndShutsDownCleanly(project, {
+        redis: false,
+        exercise: async (server) => {
+          const email = `matrix-${process.pid}-${Date.now()}@example.com`;
+          const password = 'MatrixPassword123!';
 
-      await project.lint();
+          // 1. Register User
+          const registerRes = await fetch(
+            `${server.baseUrl}/auth/register`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, password }),
+            },
+          );
+          expect(registerRes.status).toBe(201);
+          const user = (await registerRes.json()) as {
+            id: string;
+            email: string;
+          };
+          expect(user.email).toBe(email);
 
-      await execFileAsync('npm', ['run', 'typecheck'], {
-        cwd: project.root,
+          // 2. Login User
+          const loginRes = await fetch(
+            `${server.baseUrl}/auth/login`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, password }),
+            },
+          );
+          expect(loginRes.status).toBe(201);
+          const loginData = (await loginRes.json()) as {
+            accessToken: string;
+          };
+          expect(typeof loginData.accessToken).toBe('string');
+
+          // 3. Authenticated Request
+          const meRes = await fetch(
+            `${server.baseUrl}/auth/me`,
+            {
+              headers: {
+                Authorization: `Bearer ${loginData.accessToken}`,
+              },
+            },
+          );
+          expect(meRes.status).toBe(200);
+          const meData = (await meRes.json()) as {
+            id: string;
+            email: string;
+            role: string;
+          };
+          expect(meData.id).toBe(user.id);
+          expect(meData.email).toBe(email);
+          expect(meData.role).toBe('USER');
+        },
       });
-
-      await project.build();
-
-      server = await startTestServer(
-        project.root,
-        project.baseUrl,
-      );
-
-      const email = `matrix-${process.pid}-${Date.now()}@example.com`;
-      const password = 'MatrixPassword123!';
-
-      // 1. Register User
-      const registerRes = await fetch(
-        `${project.baseUrl}/auth/register`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        },
-      );
-      expect(registerRes.status).toBe(201);
-      const user = (await registerRes.json()) as {
-        id: string;
-        email: string;
-      };
-      expect(user.email).toBe(email);
-
-      // 2. Login User
-      const loginRes = await fetch(
-        `${project.baseUrl}/auth/login`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        },
-      );
-      expect(loginRes.status).toBe(201);
-      const loginData = (await loginRes.json()) as {
-        accessToken: string;
-      };
-      expect(typeof loginData.accessToken).toBe('string');
-
-      // 3. Authenticated Request
-      const meRes = await fetch(
-        `${project.baseUrl}/auth/me`,
-        {
-          headers: {
-            Authorization: `Bearer ${loginData.accessToken}`,
-          },
-        },
-      );
-      expect(meRes.status).toBe(200);
-      const meData = (await meRes.json()) as {
-        id: string;
-        email: string;
-        role: string;
-      };
-      expect(meData.id).toBe(user.id);
-      expect(meData.email).toBe(email);
-      expect(meData.role).toBe('USER');
     },
-    180_000,
+    240_000,
   );
 
   // =========================================================================
   // Case 5 — Redis (Tier 2 Matrix Verification)
   // =========================================================================
   it(
-    'Case 5: generates and compiles Redis infrastructure without external daemon dependency',
+    'Case 5: generates, builds and boots a Redis-enabled project, then shuts it down cleanly',
     async () => {
       project = await createGeneratedProject(
         resolveConfig({
@@ -409,29 +372,22 @@ describe('Ironveil Generated-Project E2E Matrix', () => {
 
       expect(pkg.dependencies?.ioredis).toBe('5.6.0');
 
-      await project.writeEnv({
-        databaseUrl: DATABASE_URL,
+      await prepareProject(project, {
+        databaseUrl: databaseUrl('redis'),
         redisUrl: REDIS_URL,
       });
-
-      await project.install();
-      await project.prismaGenerate();
-
-      await project.lint();
-
-      await execFileAsync('npm', ['run', 'typecheck'], {
-        cwd: project.root,
-      });
-
-      await project.build();
 
       expect(
         await project.fs.exists(
           `${project.root}/dist/infrastructure/redis/redis.module.js`,
         ),
       ).toBe(true);
+
+      await assertBootsAndShutsDownCleanly(project, {
+        redis: true,
+      });
     },
-    180_000,
+    240_000,
   );
 
   // =========================================================================
@@ -483,21 +439,17 @@ describe('Ironveil Generated-Project E2E Matrix', () => {
         'docker compose down',
       );
 
-      await project.writeEnv({
-        databaseUrl: DATABASE_URL,
+      await prepareProject(project, {
+        databaseUrl: databaseUrl('docker'),
         redisUrl: REDIS_URL,
         jwtSecret: JWT_SECRET,
       });
 
-      await project.install();
-      await project.prismaGenerate();
-      await project.build();
-
-      expect(
-        await project.fs.exists(`${project.root}/dist/main.js`),
-      ).toBe(true);
+      await assertBootsAndShutsDownCleanly(project, {
+        redis: true,
+      });
     },
-    180_000,
+    240_000,
   );
 
   // =========================================================================
@@ -678,38 +630,18 @@ describe('Ironveil Generated-Project E2E Matrix', () => {
       expect(fullReadme).toContain('## Production');
 
       // Execute full lifecycle
-      await project.writeEnv({
-        databaseUrl: DATABASE_URL,
+      // Steps: install, prisma generate + migrate, lint, typecheck, build
+      await prepareProject(project, {
+        databaseUrl: databaseUrl('full'),
         redisUrl: REDIS_URL,
         jwtSecret: JWT_SECRET,
       });
 
-      await project.install();
-      await project.prismaGenerate();
-
-      // Step: typecheck
-      await project.lint();
-
-      await execFileAsync('npm', ['run', 'typecheck'], {
-        cwd: project.root,
-      });
-
       // Step: unit tests
-      await execFileAsync('npm', ['test'], {
-        cwd: project.root,
-      });
+      await project.test();
 
       // Step: E2E tests (deterministic provider overrides)
-      await execFileAsync('npm', ['run', 'test:e2e'], {
-        cwd: project.root,
-      });
-
-      // Step: build
-      await project.build();
-
-      expect(
-        await project.fs.exists(`${project.root}/dist/main.js`),
-      ).toBe(true);
+      await project.testE2e();
 
       // Verify Prisma Query Engine native binary is bundled in dist/generated/prisma
       const distPrismaFiles = await readdir(
@@ -719,8 +651,13 @@ describe('Ironveil Generated-Project E2E Matrix', () => {
         file.endsWith('.node'),
       );
       expect(hasEngineBinary).toBe(true);
+
+      // Step: boot, health, SIGTERM
+      await assertBootsAndShutsDownCleanly(project, {
+        redis: true,
+      });
     },
-    240_000,
+    300_000,
   );
 
   // =========================================================================
@@ -797,20 +734,15 @@ describe('Ironveil Generated-Project E2E Matrix', () => {
       expect(workflow).toContain('run: pnpm run build');
 
       // 6. Execute full pnpm lifecycle
-      await project.writeEnv({
-        databaseUrl: DATABASE_URL,
+      await prepareProject(project, {
+        databaseUrl: databaseUrl('pnpm'),
       });
 
-      await project.install();
-      await project.prismaGenerate();
-      await project.lint();
-      await project.typecheck();
       await project.test();
-      await project.build();
 
-      expect(
-        await project.fs.exists(`${project.root}/dist/main.js`),
-      ).toBe(true);
+      await assertBootsAndShutsDownCleanly(project, {
+        redis: false,
+      });
 
       // Verify that after pnpm install, pnpm-lock.yaml is created and package-lock.json is NOT created
       expect(
@@ -820,7 +752,7 @@ describe('Ironveil Generated-Project E2E Matrix', () => {
         await project.fs.exists(`${project.root}/package-lock.json`),
       ).toBe(false);
     },
-    240_000,
+    300_000,
   );
 
   // =========================================================================
@@ -897,20 +829,15 @@ describe('Ironveil Generated-Project E2E Matrix', () => {
       expect(workflow).toContain('run: yarn build');
 
       // 6. Execute full yarn lifecycle
-      await project.writeEnv({
-        databaseUrl: DATABASE_URL,
+      await prepareProject(project, {
+        databaseUrl: databaseUrl('yarn'),
       });
 
-      await project.install();
-      await project.prismaGenerate();
-      await project.lint();
-      await project.typecheck();
       await project.test();
-      await project.build();
 
-      expect(
-        await project.fs.exists(`${project.root}/dist/main.js`),
-      ).toBe(true);
+      await assertBootsAndShutsDownCleanly(project, {
+        redis: false,
+      });
 
       // Verify that after yarn install, yarn.lock is created and package-lock.json is NOT created
       expect(
@@ -919,6 +846,40 @@ describe('Ironveil Generated-Project E2E Matrix', () => {
       expect(
         await project.fs.exists(`${project.root}/package-lock.json`),
       ).toBe(false);
+    },
+    300_000,
+  );
+
+  // =========================================================================
+  // Case 12 — Minimal Project (every optional feature off)
+  // =========================================================================
+  it(
+    'Case 12: lints, builds, boots and shuts down a minimal project with every optional feature disabled',
+    async () => {
+      const config = resolveConfig({
+        projectName: 'matrix-minimal-api',
+        redis: false,
+        auth: 'none',
+        swagger: false,
+        docker: false,
+        ci: false,
+        testing: false,
+      });
+
+      project = await createGeneratedProject(
+        config,
+        'ironveil-matrix-minimal',
+      );
+
+      await project.assertManifestMatchesVersions();
+
+      await prepareProject(project, {
+        databaseUrl: databaseUrl('minimal'),
+      });
+
+      await assertBootsAndShutsDownCleanly(project, {
+        redis: false,
+      });
     },
     240_000,
   );
