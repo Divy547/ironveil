@@ -71,6 +71,7 @@ describe('Generator composition', () => {
       'lint',
       'docker',
       'ci',
+      'agents',
     ]);
   });
 
@@ -93,6 +94,7 @@ describe('Generator composition', () => {
       'lint',
       'docker',
       'ci',
+      'agents',
     ]);
   });
 
@@ -114,6 +116,7 @@ describe('Generator composition', () => {
       'lint',
       'docker',
       'ci',
+      'agents',
     ]);
   });
 
@@ -136,6 +139,7 @@ describe('Generator composition', () => {
       'lint',
       'docker',
       'ci',
+      'agents',
     ]);
   });
 

@@ -29,6 +29,7 @@ describe('GenerationPlan', () => {
       'lint',
       'docker',
       'ci',
+      'agents',
     ]);
   });
 
@@ -58,6 +59,7 @@ describe('GenerationPlan', () => {
       'lint',
       'docker',
       'ci',
+      'agents',
     ]);
   });
 
@@ -87,6 +89,7 @@ describe('GenerationPlan', () => {
       'lint',
       'docker',
       'ci',
+      'agents',
     ]);
   });
 
@@ -163,7 +166,8 @@ describe('GenerationPlan', () => {
     );
 
     expect(names).toContain('ci');
-    expect(names[names.length - 1]).toBe('ci');
+    expect(names[names.length - 2]).toBe('ci');
+    expect(names[names.length - 1]).toBe('agents');
   });
 
   it('excludes ci when ci is disabled', () => {
