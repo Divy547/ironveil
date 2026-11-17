@@ -182,4 +182,30 @@ describe('create-output', () => {
       'yarn start:dev',
     ]);
   });
+
+  describe('AI agent files summary', () => {
+    it('lists AGENTS.md and CLAUDE.md for ai=agents', () => {
+      const config = resolveConfig({ projectName: 'a', ai: 'agents' });
+
+      expect(getFeatureSummaries(config)).toContain(
+        'AI agent files (AGENTS.md, CLAUDE.md)',
+      );
+    });
+
+    it('also lists Cursor rules and Copilot instructions for ai=all', () => {
+      const config = resolveConfig({ projectName: 'a', ai: 'all' });
+
+      expect(getFeatureSummaries(config)).toContain(
+        'AI agent files (AGENTS.md, CLAUDE.md, Cursor rules, Copilot instructions)',
+      );
+    });
+
+    it('lists nothing for ai=none', () => {
+      const config = resolveConfig({ projectName: 'a', ai: 'none' });
+
+      expect(
+        getFeatureSummaries(config).some((f) => f.includes('AI agent files')),
+      ).toBe(false);
+    });
+  });
 });

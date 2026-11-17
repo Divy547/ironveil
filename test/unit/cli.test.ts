@@ -50,6 +50,7 @@ describe('Ironveil CLI', () => {
     expect(optionNames).toContain('--package-manager');
     expect(optionNames).toContain('--redis');
     expect(optionNames).toContain('--auth');
+    expect(optionNames).toContain('--ai');
     expect(optionNames).toContain('--no-swagger');
     expect(optionNames).toContain('--no-docker');
     expect(optionNames).toContain('--no-ci');
@@ -297,5 +298,115 @@ describe('Ironveil CLI', () => {
       process.exitCode = originalExitCode;
       errorSpy.mockRestore();
     }
+  });
+
+  describe('--ai', () => {
+    async function runCreate(
+      name: string,
+      extraArgs: string[],
+    ): Promise<{ projectPath: string; output: string }> {
+      temporaryDirectory = await mkdtemp(
+        path.join(os.tmpdir(), 'ironveil-cli-ai-'),
+      );
+
+      const cwdSpy = vi
+        .spyOn(process, 'cwd')
+        .mockReturnValue(temporaryDirectory);
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const cli = createCli();
+
+      try {
+        await cli.parseAsync(['node', 'ironveil', 'create', name, ...extraArgs]);
+
+        return {
+          projectPath: path.join(temporaryDirectory, name),
+          output: logSpy.mock.calls.map((c) => c.join(' ')).join('\n'),
+        };
+      } finally {
+        cwdSpy.mockRestore();
+        logSpy.mockRestore();
+      }
+    }
+
+    it('writes AGENTS.md and CLAUDE.md only by default', async () => {
+      const { projectPath, output } = await runCreate('ai-default', ['--yes']);
+      const fs = createFileSystem();
+
+      expect(await fs.exists(path.join(projectPath, 'AGENTS.md'))).toBe(true);
+      expect(await fs.exists(path.join(projectPath, 'CLAUDE.md'))).toBe(true);
+      expect(await fs.exists(path.join(projectPath, '.cursor'))).toBe(false);
+      expect(
+        await fs.exists(
+          path.join(projectPath, '.github/copilot-instructions.md'),
+        ),
+      ).toBe(false);
+      expect(output).toContain('• AI agent files (AGENTS.md, CLAUDE.md)');
+    });
+
+    it('--ai none writes no agent files', async () => {
+      const { projectPath, output } = await runCreate('ai-none', [
+        '--ai',
+        'none',
+      ]);
+      const fs = createFileSystem();
+
+      expect(await fs.exists(projectPath)).toBe(true);
+      expect(await fs.exists(path.join(projectPath, 'AGENTS.md'))).toBe(false);
+      expect(await fs.exists(path.join(projectPath, 'CLAUDE.md'))).toBe(false);
+      expect(output).not.toContain('AI agent files');
+    });
+
+    it('--ai all also writes the Cursor and Copilot files', async () => {
+      const { projectPath, output } = await runCreate('ai-all', [
+        '--ai',
+        'all',
+      ]);
+      const fs = createFileSystem();
+
+      expect(await fs.exists(path.join(projectPath, 'AGENTS.md'))).toBe(true);
+      expect(await fs.exists(path.join(projectPath, 'CLAUDE.md'))).toBe(true);
+      expect(
+        await fs.exists(path.join(projectPath, '.cursor/rules/project.mdc')),
+      ).toBe(true);
+      expect(
+        await fs.exists(
+          path.join(projectPath, '.github/copilot-instructions.md'),
+        ),
+      ).toBe(true);
+      expect(output).toContain('Cursor rules');
+      expect(output).toContain('Copilot');
+    });
+
+    it('--ai implies non-interactive mode (no prompts)', async () => {
+      const { projectPath } = await runCreate('ai-implied', ['--ai', 'agents']);
+      const fs = createFileSystem();
+
+      expect(await fs.exists(path.join(projectPath, 'package.json'))).toBe(true);
+    });
+
+    it('rejects an unknown --ai value with a config error and code 1', async () => {
+      const cli = createCli();
+      const originalExitCode = process.exitCode;
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      try {
+        await cli.parseAsync([
+          'node',
+          'ironveil',
+          'create',
+          'ai-bogus',
+          '--yes',
+          '--ai',
+          'bogus',
+        ]);
+        expect(process.exitCode).toBe(1);
+        const errOutput = errorSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+        expect(errOutput).toContain('Invalid configuration');
+        expect(errOutput).toContain('ai:');
+      } finally {
+        process.exitCode = originalExitCode;
+        errorSpy.mockRestore();
+      }
+    });
   });
 });

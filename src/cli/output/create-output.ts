@@ -34,6 +34,14 @@ export function getFeatureSummaries(config: GenerationResult['config']): string[
     features.push('GitHub Actions CI');
   }
 
+  if (config.ai === 'agents') {
+    features.push('AI agent files (AGENTS.md, CLAUDE.md)');
+  } else if (config.ai === 'all') {
+    features.push(
+      'AI agent files (AGENTS.md, CLAUDE.md, Cursor rules, Copilot instructions)',
+    );
+  }
+
   return features;
 }
 

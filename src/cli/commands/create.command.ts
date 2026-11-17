@@ -23,6 +23,10 @@ export function registerCreateCommand(program: Command): void {
     )
     .option('--redis', 'Enable Redis')
     .option('--auth <type>', 'Authentication type: none or jwt')
+    .option(
+      '--ai <mode>',
+      'AI agent files: none, agents (AGENTS.md + CLAUDE.md) or all (adds Cursor and Copilot files)',
+    )
     .option('--no-swagger', 'Disable Swagger')
     .option('--no-docker', 'Disable Docker')
     .option('--no-ci', 'Disable GitHub Actions')
@@ -37,6 +41,7 @@ export function registerCreateCommand(program: Command): void {
           packageManager: options.packageManager,
           redis: options.redis,
           auth: options.auth,
+          ai: options.ai,
           swagger: options.swagger,
           docker: options.docker,
           ci: options.ci,

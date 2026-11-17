@@ -1,5 +1,5 @@
 import * as p from '@clack/prompts';
-import type { Auth, PackageManager } from '../../config/index.js';
+import type { Ai, Auth, PackageManager } from '../../config/index.js';
 import type { CreateCommandOptions } from '../options/create.options.js';
 
 export async function promptCreateOptions(): Promise<CreateCommandOptions> {
@@ -97,6 +97,30 @@ export async function promptCreateOptions(): Promise<CreateCommandOptions> {
     process.exit(130);
   }
 
+  const ai = await p.select<Ai>({
+    message: 'AI agent files',
+    options: [
+      {
+        value: 'none',
+        label: 'None',
+      },
+      {
+        value: 'agents',
+        label: 'AGENTS.md + CLAUDE.md',
+      },
+      {
+        value: 'all',
+        label: 'Everything (adds Cursor rules and Copilot instructions)',
+      },
+    ],
+    initialValue: 'agents',
+  });
+
+  if (p.isCancel(ai)) {
+    p.cancel('Operation cancelled.');
+    process.exit(130);
+  }
+
   return {
     packageManager,
     redis,
@@ -105,5 +129,6 @@ export async function promptCreateOptions(): Promise<CreateCommandOptions> {
     docker,
     ci,
     testing,
+    ai,
   };
 }

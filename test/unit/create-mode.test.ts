@@ -8,6 +8,7 @@ function createTestCommand(): Command {
   command
     .option('--redis', 'Enable Redis')
     .option('--auth <type>', 'Authentication type: none or jwt')
+    .option('--ai <mode>', 'AI agent files: none, agents or all')
     .option('--no-swagger')
     .option('--no-docker')
     .option('--no-ci')
@@ -37,6 +38,14 @@ describe('create command mode detection', () => {
     const command = createTestCommand();
 
     command.parse(['node', 'ironveil', '--no-docker']);
+
+    expect(hasExplicitCreateOptions(command)).toBe(true);
+  });
+
+  it('detects non-interactive mode when --ai is provided', () => {
+    const command = createTestCommand();
+
+    command.parse(['node', 'ironveil', '--ai', 'all']);
 
     expect(hasExplicitCreateOptions(command)).toBe(true);
   });

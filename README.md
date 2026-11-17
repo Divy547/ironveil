@@ -94,6 +94,7 @@ Create a new NestJS backend application in a directory matching `<project-name>`
 | `--dry-run` | | Simulate generation without writing any files to disk | `false` |
 | `-p, --package-manager <pm>` | `-p` | Package manager to configure: `npm`, `pnpm`, or `yarn` | `npm` |
 | `--auth <type>` | | Authentication module: `none` or `jwt` | `none` |
+| `--ai <mode>` | | AI agent files: `none`, `agents` (`AGENTS.md` + `CLAUDE.md`) or `all` (also `.cursor/rules/*.mdc` and `.github/copilot-instructions.md`) | `agents` |
 | `--redis` | | Include Redis client module and infrastructure | `false` |
 | `--no-swagger` | | Disable Swagger (OpenAPI) documentation setup (enabled by default) | Enabled (`true`) |
 | `--no-docker` | | Disable Dockerfile, `.dockerignore`, and `docker-compose.yml` (enabled by default) | Enabled (`true`) |
@@ -263,7 +264,7 @@ Ironveil contains a comprehensive test suite covering unit behavior, template re
 # Run TypeScript typecheck
 pnpm run typecheck
 
-# Run unit tests (44 test files, 367 tests)
+# Run unit tests (45 test files, 379 tests)
 pnpm test
 
 # Run build
