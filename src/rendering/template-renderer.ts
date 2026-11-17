@@ -80,7 +80,7 @@ export function createTemplateRenderer(): TemplateRenderer {
 
       const redisEnvSchema =
         config.redis
-          ? "REDIS_URL: z\n    .string()\n    .min(1, 'REDIS_URL is required'),"
+          ? "REDIS_URL: requiredString('REDIS_URL').regex(\n    /^rediss?:\\/\\//,\n    'REDIS_URL must start with redis:// or rediss://',\n  ),"
           : '';
 
       const healthRedisImport = config.redis
@@ -108,7 +108,7 @@ export function createTemplateRenderer(): TemplateRenderer {
         : '';
 
       const databaseEnvSchema = hasPrisma
-        ? "DATABASE_URL: z\n    .string()\n    .min(1, 'DATABASE_URL is required'),"
+        ? "DATABASE_URL: requiredString('DATABASE_URL').regex(\n    /^postgres(ql)?:\\/\\//,\n    'DATABASE_URL must start with postgresql:// or postgres://',\n  ),"
         : '';
 
       const isJwtAuth = config.auth === 'jwt';
@@ -209,7 +209,7 @@ export function createTemplateRenderer(): TemplateRenderer {
 
       const authEnvSchema =
         config.auth === 'jwt'
-          ? "JWT_SECRET: z\n    .string()\n    .min(\n      32,\n      'JWT_SECRET must be at least 32 characters',\n    )\n    .optional(),\n\n  JWT_ACCESS_TTL_SECONDS: z.coerce\n    .number()\n    .int()\n    .min(60)\n    .default(900),\n\n  JWT_REFRESH_TTL_DAYS: z.coerce\n    .number()\n    .int()\n    .min(1)\n    .default(7),"
+          ? "JWT_SECRET: requiredString('JWT_SECRET').min(\n    32,\n    'JWT_SECRET must be at least 32 characters',\n  ),\n\n  JWT_ACCESS_TTL_SECONDS: z.coerce\n    .number()\n    .int()\n    .min(60)\n    .default(900),\n\n  JWT_REFRESH_TTL_DAYS: z.coerce\n    .number()\n    .int()\n    .min(1)\n    .default(7),"
           : '';
 
       // ── Docker: API environment variables ──────────────────────

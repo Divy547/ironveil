@@ -163,7 +163,7 @@ describe('TemplateRenderer', () => {
     expect(result).toContain('REDIS_URL="redis://localhost:6379"');
     expect(result).toContain('readonly redis: {');
     expect(result).toContain('process.env.REDIS_URL');
-    expect(result).toContain('REDIS_URL is required');
+    expect(result).toContain("REDIS_URL: requiredString('REDIS_URL')");
   });
 
   it('removes redis placeholders when redis is disabled', () => {
@@ -249,7 +249,7 @@ describe('TemplateRenderer', () => {
       expect(configTs).not.toContain('auth:');
 
       const envSchema = renderer.render(envSchemaTemplate, config);
-      expect(envSchema).toContain('DATABASE_URL: z');
+      expect(envSchema).toContain("DATABASE_URL: requiredString('DATABASE_URL')");
       expect(envSchema).not.toContain('REDIS_URL');
       expect(envSchema).not.toContain('JWT_SECRET');
     });
@@ -278,7 +278,7 @@ describe('TemplateRenderer', () => {
 
       const envSchema = renderer.render(envSchemaTemplate, config);
       expect(envSchema).toContain('DATABASE_URL');
-      expect(envSchema).toContain('REDIS_URL: z');
+      expect(envSchema).toContain("REDIS_URL: requiredString('REDIS_URL')");
       expect(envSchema).not.toContain('JWT_SECRET');
     });
 
@@ -307,7 +307,7 @@ describe('TemplateRenderer', () => {
 
       const envSchema = renderer.render(envSchemaTemplate, config);
       expect(envSchema).toContain('DATABASE_URL');
-      expect(envSchema).toContain('JWT_SECRET: z');
+      expect(envSchema).toContain("JWT_SECRET: requiredString('JWT_SECRET')");
       expect(envSchema).not.toContain('REDIS_URL');
     });
 
@@ -335,8 +335,8 @@ describe('TemplateRenderer', () => {
 
       const envSchema = renderer.render(envSchemaTemplate, config);
       expect(envSchema).toContain('DATABASE_URL');
-      expect(envSchema).toContain('REDIS_URL: z');
-      expect(envSchema).toContain('JWT_SECRET: z');
+      expect(envSchema).toContain("REDIS_URL: requiredString('REDIS_URL')");
+      expect(envSchema).toContain("JWT_SECRET: requiredString('JWT_SECRET')");
     });
 
     it('does not emit REDIS_URL when redis is disabled', () => {

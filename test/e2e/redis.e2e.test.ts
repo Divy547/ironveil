@@ -77,7 +77,7 @@ describe('Ironveil Redis E2E', () => {
       const environmentTs = await project.fs.readFile(
         `${project.root}/src/infrastructure/config/environment.ts`,
       );
-      expect(environmentTs).toContain('REDIS_URL: z');
+      expect(environmentTs).toContain("REDIS_URL: requiredString('REDIS_URL')");
 
       const configurationTs = await project.fs.readFile(
         `${project.root}/src/infrastructure/config/configuration.ts`,

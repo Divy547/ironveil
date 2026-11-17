@@ -257,7 +257,7 @@ describe('ConfigGenerator', () => {
     );
 
     expect(environment).toContain(
-      'Environment validation failed',
+      'Invalid environment configuration',
     );
   });
 
@@ -335,7 +335,7 @@ describe('ConfigGenerator', () => {
     );
 
     expect(environment).toContain('DATABASE_URL');
-    expect(environment).toContain('REDIS_URL: z');
-    expect(environment).toContain('JWT_SECRET: z');
+    expect(environment).toContain("REDIS_URL: requiredString('REDIS_URL')");
+    expect(environment).toContain("JWT_SECRET: requiredString('JWT_SECRET')");
   });
 });

@@ -300,7 +300,7 @@ describe('Generator composition', () => {
     const envTs = await fs.readFile(
       path.join(destination, 'src', 'infrastructure', 'config', 'environment.ts'),
     );
-    expect(envTs).toContain('JWT_SECRET: z');
+    expect(envTs).toContain("JWT_SECRET: requiredString('JWT_SECRET')");
 
     const configTs = await fs.readFile(
       path.join(destination, 'src', 'infrastructure', 'config', 'configuration.ts'),
@@ -533,7 +533,7 @@ describe('Generator composition', () => {
       ),
     );
 
-    expect(environmentTs).toContain('REDIS_URL: z');
+    expect(environmentTs).toContain("REDIS_URL: requiredString('REDIS_URL')");
 
     const configurationTs = await fs.readFile(
       path.join(

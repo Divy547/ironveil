@@ -67,7 +67,7 @@ describe('Ironveil JWT Auth E2E', () => {
       const environmentTs = await project.fs.readFile(
         `${project.root}/src/infrastructure/config/environment.ts`,
       );
-      expect(environmentTs).toContain('JWT_SECRET: z');
+      expect(environmentTs).toContain("JWT_SECRET: requiredString('JWT_SECRET')");
 
       const configurationTs = await project.fs.readFile(
         `${project.root}/src/infrastructure/config/configuration.ts`,
