@@ -221,6 +221,7 @@ my-api/
 ├── Dockerfile                     # Multi-stage production build
 ├── docker-compose.yml             # Local service orchestration
 ├── eslint.config.mjs              # ESLint flat config
+├── ironveil.json                  # Project manifest (version, features) read by later commands
 ├── jest.config.ts                 # Unit test configuration
 ├── nest-cli.json
 ├── package.json
@@ -264,7 +265,7 @@ Ironveil contains a comprehensive test suite covering unit behavior, template re
 # Run TypeScript typecheck
 pnpm run typecheck
 
-# Run unit tests (47 test files, 421 tests)
+# Run unit tests (50 test files, 461 tests)
 pnpm test
 
 # Run build

@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 
+import { IRONVEIL_VERSION } from '../version.js';
 import { registerCreateCommand } from './commands/create.command.js';
 
 
@@ -9,7 +10,7 @@ export function createCli(): Command {
   program
     .name('ironveil')
     .description('Production-ready NestJS backend generator')
-    .version('0.3.0');
+    .version(IRONVEIL_VERSION);
 
   registerCreateCommand(program);
 

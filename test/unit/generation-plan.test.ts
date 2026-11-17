@@ -30,6 +30,7 @@ describe('GenerationPlan', () => {
       'docker',
       'ci',
       'agents',
+      'manifest',
     ]);
   });
 
@@ -60,6 +61,7 @@ describe('GenerationPlan', () => {
       'docker',
       'ci',
       'agents',
+      'manifest',
     ]);
   });
 
@@ -90,6 +92,7 @@ describe('GenerationPlan', () => {
       'docker',
       'ci',
       'agents',
+      'manifest',
     ]);
   });
 
@@ -166,8 +169,9 @@ describe('GenerationPlan', () => {
     );
 
     expect(names).toContain('ci');
-    expect(names[names.length - 2]).toBe('ci');
-    expect(names[names.length - 1]).toBe('agents');
+    expect(names[names.length - 3]).toBe('ci');
+    expect(names[names.length - 2]).toBe('agents');
+    expect(names[names.length - 1]).toBe('manifest');
   });
 
   it('excludes ci when ci is disabled', () => {
@@ -218,5 +222,13 @@ describe('GenerationPlan', () => {
     expect(names('none')).not.toContain('agents');
     expect(names('agents')).toContain('agents');
     expect(names('all')).toContain('agents');
+  });
+
+  it("always includes the manifest generator, even when ai is 'none'", () => {
+    const names = createGenerationPlan(
+      resolveConfig({ projectName: 'test-api', ai: 'none' }),
+    ).generators.map((generator) => generator.name);
+
+    expect(names[names.length - 1]).toBe('manifest');
   });
 });

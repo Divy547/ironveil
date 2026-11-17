@@ -14,6 +14,7 @@ import { LintGenerator } from '../features/lint/lint.generator.js';
 import { DockerGenerator } from '../features/docker/docker.generator.js';
 import { CiGenerator } from '../features/ci/ci.generator.js';
 import { AgentsGenerator } from '../features/agents/agents.generator.js';
+import { ManifestGenerator } from '../features/manifest/manifest.generator.js';
 
 export function createGenerators(): readonly Generator[] {
   return Object.freeze([
@@ -32,5 +33,6 @@ export function createGenerators(): readonly Generator[] {
     new DockerGenerator(),
     new CiGenerator(),
     new AgentsGenerator(),
+    new ManifestGenerator(),
   ]);
 }

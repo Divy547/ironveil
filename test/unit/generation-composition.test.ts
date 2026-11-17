@@ -72,6 +72,7 @@ describe('Generator composition', () => {
       'docker',
       'ci',
       'agents',
+      'manifest',
     ]);
   });
 
@@ -95,6 +96,7 @@ describe('Generator composition', () => {
       'docker',
       'ci',
       'agents',
+      'manifest',
     ]);
   });
 
@@ -117,6 +119,7 @@ describe('Generator composition', () => {
       'docker',
       'ci',
       'agents',
+      'manifest',
     ]);
   });
 
@@ -140,6 +143,7 @@ describe('Generator composition', () => {
       'docker',
       'ci',
       'agents',
+      'manifest',
     ]);
   });
 
