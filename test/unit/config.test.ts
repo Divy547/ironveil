@@ -21,6 +21,7 @@ describe('Ironveil configuration', () => {
       ci: true,
       testing: true,
       packageManager: 'npm',
+      ai: 'agents',
     });
   });
 
@@ -103,5 +104,21 @@ describe('Ironveil configuration', () => {
     });
 
     expect(Object.isFrozen(config)).toBe(true);
+  });
+
+  describe('ai', () => {
+    it("defaults to 'agents'", () => {
+      expect(resolveConfig({ projectName: 'a' }).ai).toBe('agents');
+    });
+
+    it.each(['none', 'agents', 'all'] as const)('accepts %s', (ai) => {
+      expect(resolveConfig({ projectName: 'a', ai }).ai).toBe(ai);
+    });
+
+    it('rejects anything else with a readable message', () => {
+      expect(() =>
+        resolveConfig({ projectName: 'a', ai: 'cursor' as never }),
+      ).toThrow(/ai:/);
+    });
   });
 });

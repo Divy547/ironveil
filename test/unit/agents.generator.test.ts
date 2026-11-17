@@ -47,6 +47,62 @@ describe('AgentsGenerator', () => {
   });
 });
 
+describe('AgentsGenerator ai levels', () => {
+  let dir: string;
+
+  afterEach(async () => {
+    if (dir) await rm(dir, { recursive: true, force: true });
+  });
+
+  async function files(ai: 'none' | 'agents' | 'all') {
+    dir = await mkdtemp(path.join(os.tmpdir(), 'ironveil-ai-'));
+    const result = await generateProject(
+      resolveConfig({ projectName: 'test-api', ai }),
+      dir,
+    );
+    const fs = createFileSystem();
+    return {
+      generated: result.files,
+      read: (file: string) => fs.readFile(path.join(result.destination, file)),
+    };
+  }
+
+  const AI_FILES = [
+    'AGENTS.md',
+    'CLAUDE.md',
+    '.cursor/rules/project.mdc',
+    '.cursor/rules/modules.mdc',
+    '.cursor/rules/prisma.mdc',
+    '.github/copilot-instructions.md',
+  ];
+
+  it("generates no AI files when ai is 'none'", async () => {
+    const { generated } = await files('none');
+    for (const file of AI_FILES) expect(generated).not.toContain(file);
+  });
+
+  it("generates AGENTS.md and CLAUDE.md for 'agents'", async () => {
+    const { generated, read } = await files('agents');
+
+    expect(generated).toContain('AGENTS.md');
+    expect(generated).toContain('CLAUDE.md');
+    expect(generated.filter((f) => f.startsWith('.cursor/'))).toEqual([]);
+    expect(generated).not.toContain('.github/copilot-instructions.md');
+    expect(await read('CLAUDE.md')).toContain('@AGENTS.md');
+  });
+
+  it("generates every AI file for 'all', next to the CI workflow", async () => {
+    const { generated, read } = await files('all');
+
+    for (const file of AI_FILES) expect(generated).toContain(file);
+    expect(generated).toContain('.github/workflows/ci.yml');
+    expect(await read('.cursor/rules/project.mdc')).toContain('@AGENTS.md');
+    expect(await read('.github/copilot-instructions.md')).toContain(
+      'AGENTS.md',
+    );
+  });
+});
+
 describe('buildAgentsMd', () => {
   it('names the project and covers the core sections', () => {
     const md = render();

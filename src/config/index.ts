@@ -10,6 +10,7 @@ export {
 } from './resolve.js';
 
 export type {
+  Ai,
   Auth,
   Database,
   IronveilConfig,

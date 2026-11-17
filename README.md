@@ -125,7 +125,7 @@ Every generated project includes a tailored `package.json`, environment configur
 - **Graceful Shutdown**: `enableShutdownHooks()` so SIGTERM/SIGINT disconnect Prisma (and Redis) cleanly before exit.
 - **PostgreSQL & Prisma ORM**: Prisma schema, client module, service lifecycle hooks, and initial migration SQL.
 - **Lint & Format**: ESLint 9 flat config with type-aware `typescript-eslint`, Prettier config, and `lint`, `lint:fix` and `format` scripts.
-- **`AGENTS.md` for AI coding agents**: A project-specific guide that tells Claude Code, Cursor, Copilot and other agents the architecture (`common/` vs `infrastructure/` vs `modules/`), the exact commands for your package manager, step-by-step recipes for adding a module, Prisma model and endpoint, and the conventions to follow. Sections only appear for the features you enabled.
+- **`AGENTS.md` for AI coding agents**: A project-specific guide (plus a `CLAUDE.md` that imports it) that tells Claude Code, Cursor, Copilot and other agents the architecture (`common/` vs `infrastructure/` vs `modules/`), the exact commands for your package manager, step-by-step recipes for adding a module, Prisma model and endpoint, and the conventions to follow. Sections only appear for the features you enabled.
 - **Tailored README**: Generated projects get their own `README.md` with setup steps, an environment variable table, and commands for the chosen package manager and features (including health, error, logging and security behavior).
 
 ### Optional
@@ -216,6 +216,7 @@ my-api/
 ├── .prettierignore
 ├── .prettierrc
 ├── AGENTS.md                      # Guide for AI coding agents
+├── CLAUDE.md                      # Imports AGENTS.md for Claude Code
 ├── Dockerfile                     # Multi-stage production build
 ├── docker-compose.yml             # Local service orchestration
 ├── eslint.config.mjs              # ESLint flat config
@@ -262,7 +263,7 @@ Ironveil contains a comprehensive test suite covering unit behavior, template re
 # Run TypeScript typecheck
 pnpm run typecheck
 
-# Run unit tests (42 test files, 335 tests)
+# Run unit tests (44 test files, 367 tests)
 pnpm test
 
 # Run build

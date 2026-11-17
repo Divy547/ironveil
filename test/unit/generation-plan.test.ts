@@ -208,4 +208,15 @@ describe('GenerationPlan', () => {
     expect(Object.isFrozen(plan)).toBe(true);
     expect(Object.isFrozen(plan.generators)).toBe(true);
   });
+
+  it("leaves out the agents generator when ai is 'none'", () => {
+    const names = (ai: 'none' | 'agents' | 'all') =>
+      createGenerationPlan(
+        resolveConfig({ projectName: 'test-api', ai }),
+      ).generators.map((generator) => generator.name);
+
+    expect(names('none')).not.toContain('agents');
+    expect(names('agents')).toContain('agents');
+    expect(names('all')).toContain('agents');
+  });
 });

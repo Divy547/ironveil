@@ -27,6 +27,8 @@ export const IronveilConfigSchema = z.object({
   testing: z.boolean().default(true),
 
   packageManager: z.enum(['npm', 'pnpm', 'yarn']).default('npm'),
+
+  ai: z.enum(['none', 'agents', 'all']).default('agents'),
 });
 
 export type IronveilConfigInput = z.input<typeof IronveilConfigSchema>;
