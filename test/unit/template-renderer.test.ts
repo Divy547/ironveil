@@ -635,6 +635,7 @@ describe('TemplateRenderer', () => {
       '## Development',
       '{{readmeDevelopment}}',
       '{{readmeDatabase}}',
+      '{{readmeRuntime}}',
       '{{readmeAuth}}',
       '{{readmeSwagger}}',
       '{{readmeRedis}}',
@@ -746,6 +747,52 @@ describe('TemplateRenderer', () => {
 
       expect(result).not.toContain('## Continuous Integration');
       expect(result).not.toContain('.github/workflows/ci.yml');
+    });
+
+    it('documents health, errors, logging, security, shutdown and lint for every project', () => {
+      const config = resolveConfig({ projectName: 'rt-app' });
+      const result = createTemplateRenderer().render(readmeTemplate, config);
+
+      expect(result).toContain('## Health Checks');
+      expect(result).toContain('GET /health/ready');
+      expect(result).toContain('PostgreSQL is reachable');
+      expect(result).not.toContain('Redis are');
+      expect(result).toContain('## Error Responses');
+      expect(result).toContain('"requestId"');
+      expect(result).toContain('`P2002`');
+      expect(result).toContain('## Logging');
+      expect(result).toContain('x-request-id');
+      expect(result).toContain('## Security');
+      expect(result).toContain('CORS_ORIGINS');
+      expect(result).toContain('THROTTLE_LIMIT');
+      expect(result).toContain('## Graceful Shutdown');
+      expect(result).toContain('npm run lint:fix');
+      expect(result).toContain('npm run format');
+      expect(result).toContain('Lint (`npm run lint`)');
+      expect(result).toContain('NODE_ENV=production');
+      // No unresolved placeholders
+      expect(result).not.toMatch(/\{\{\s*readme\w+\s*\}\}/);
+    });
+
+    it('mentions Redis in health, shutdown and Swagger CSP only when enabled', () => {
+      const withAll = createTemplateRenderer().render(
+        readmeTemplate,
+        resolveConfig({ projectName: 'a', redis: true, swagger: true, auth: 'jwt' }),
+      );
+      expect(withAll).toContain('PostgreSQL and Redis are reachable');
+      expect(withAll).toContain('disconnects from PostgreSQL and Redis');
+      expect(withAll).toContain('relaxed for `/api/docs` only');
+      expect(withAll).toContain('both routes are `@Public()`');
+      expect(withAll).toContain('long random `JWT_SECRET`');
+
+      const bare = createTemplateRenderer().render(
+        readmeTemplate,
+        resolveConfig({ projectName: 'b', swagger: false, docker: false }),
+      );
+      expect(bare).not.toContain('relaxed for `/api/docs`');
+      expect(bare).not.toContain('HEALTHCHECK');
+      expect(bare).not.toContain('`docker stop`');
+      expect(bare).not.toContain('@Public()');
     });
 
     it('renders full-feature README containing all feature sections', () => {

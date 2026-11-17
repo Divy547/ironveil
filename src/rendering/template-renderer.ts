@@ -463,6 +463,16 @@ export function createTemplateRenderer(): TemplateRenderer {
         '- **Structured logging**: `nestjs-pino` with pretty output in development, JSON in production, per-request IDs (`x-request-id`), secret redaction and a `LOG_LEVEL` setting',
       );
 
+      featureList.push(
+        '- **Clean shutdown**: `enableShutdownHooks()` so SIGTERM/SIGINT close the HTTP server and disconnect PostgreSQL' +
+          (config.redis ? ' and Redis' : '') +
+          ' before the process exits',
+      );
+
+      featureList.push(
+        '- **Lint & format**: ESLint 9 flat config (`typescript-eslint`, type-aware) and Prettier, with `lint`, `lint:fix` and `format` scripts',
+      );
+
       if (hasPrisma) {
         featureList.push(
           '- **Database & ORM**: PostgreSQL integration with Prisma ORM and automated migrations',
@@ -471,7 +481,7 @@ export function createTemplateRenderer(): TemplateRenderer {
 
       if (config.auth === 'jwt') {
         featureList.push(
-          '- **Authentication**: JWT authentication with Passport strategies and route guards',
+          '- **Authentication**: JWT access tokens with rotating refresh tokens, a global guard (every route protected unless `@Public()`), and role-based access (`@Roles()`)',
         );
       }
 
@@ -501,7 +511,7 @@ export function createTemplateRenderer(): TemplateRenderer {
 
       if (config.ci) {
         featureList.push(
-          '- **CI/CD**: Automated GitHub Actions workflow for typecheck, testing, and builds',
+          '- **CI/CD**: Automated GitHub Actions workflow for lint, typecheck, testing, and builds',
         );
       }
 
@@ -619,6 +629,11 @@ export function createTemplateRenderer(): TemplateRenderer {
           '# 3. Start the application in development mode with hot reload',
           pmSpec.run('start:dev'),
           '',
+          '# Lint, auto-fix and format',
+          pmSpec.run('lint'),
+          pmSpec.run('lint:fix'),
+          pmSpec.run('format'),
+          '',
           '# Run TypeScript type checking',
           pmSpec.run('typecheck'),
           '',
@@ -644,6 +659,11 @@ export function createTemplateRenderer(): TemplateRenderer {
           '# Start the application in development mode with hot reload',
           pmSpec.run('start:dev'),
           '',
+          '# Lint, auto-fix and format',
+          pmSpec.run('lint'),
+          pmSpec.run('lint:fix'),
+          pmSpec.run('format'),
+          '',
           '# Run TypeScript type checking',
           pmSpec.run('typecheck'),
           '',
@@ -665,6 +685,54 @@ export function createTemplateRenderer(): TemplateRenderer {
             `- **Prisma Studio**: \`${pmSpec.prisma('studio')}\`\n`,
           ].join('\n')
         : '';
+
+      // ── README: Runtime behaviour ───────────────────────────────
+      const readmeRuntime = [
+        '## Health Checks\n',
+        'Provided by `@nestjs/terminus` in `src/modules/health/`' +
+          (config.auth === 'jwt' ? ' (both routes are `@Public()`)' : '') +
+          ':\n',
+        '- `GET /health`: liveness. Returns `200` while the process is running.',
+        `- \`GET /health/ready\`: readiness. Returns \`200\` only when PostgreSQL${config.redis ? ' and Redis are' : ' is'} reachable, otherwise \`503\`.`,
+        ...(config.docker
+          ? ['- The `Dockerfile` `HEALTHCHECK` calls `GET /health`.']
+          : []),
+        '- Health routes are excluded from access logs and from rate limiting.\n',
+        '## Error Responses\n',
+        'Every failure returns the same JSON shape (`src/common/filters/all-exceptions.filter.ts`):\n',
+        '```json',
+        '{',
+        '  "statusCode": 404,',
+        '  "message": "Not Found",',
+        '  "error": "Not Found",',
+        '  "requestId": "4f6c1c0e-8a43-4b8e-9d57-0f6f2b1c7a11",',
+        '  "timestamp": "2026-01-01T12:00:00.000Z"',
+        '}',
+        '```\n',
+        '- `message` is a string array when request validation fails.',
+        ...(hasPrisma
+          ? [
+              '- Prisma `P2002` (unique constraint) maps to `409` and `P2025` (record not found) to `404`.',
+            ]
+          : []),
+        '- Unexpected errors return a generic `500 Internal server error`. The details are logged with the `requestId`, never sent to the client.\n',
+        '## Logging\n',
+        '`nestjs-pino` logs one line per request.\n',
+        '- `NODE_ENV=development` prints human-readable output; any other value (except `test`, which is silent) prints JSON.',
+        '- `LOG_LEVEL` sets the verbosity.',
+        '- Each request gets an ID: an inbound `x-request-id` header is reused, otherwise one is generated. It is echoed on the response and included in error bodies.',
+        '- `authorization` and `cookie` headers, `password` fields and access/refresh tokens are redacted (`LOG_REDACT_PATHS` in `src/infrastructure/logging/logging.module.ts`).\n',
+        '## Security\n',
+        '- `helmet` sets secure HTTP headers' +
+          (config.swagger
+            ? ' (the content security policy is relaxed for `/api/docs` only, because Swagger UI needs inline scripts)'
+            : '') +
+          '.',
+        '- CORS is controlled by `CORS_ORIGINS`: a comma-separated list of origins, or `*`. It stays **off** when the variable is empty.',
+        '- Rate limiting uses a global `ThrottlerGuard`: `THROTTLE_LIMIT` requests per `THROTTLE_TTL_MS` per client. Exceeding it returns `429`.\n',
+        '## Graceful Shutdown\n',
+        `On SIGTERM or SIGINT the app stops accepting connections and disconnects from PostgreSQL${config.redis ? ' and Redis' : ''} before exiting. ${config.docker ? 'The container runs `node` directly (not through a shell), so `docker stop` delivers the signal to the app.' : 'Run the app with `node` directly (not through a shell wrapper) so the signal reaches it.'}\n`,
+      ].join('\n');
 
       // ── README: Authentication ──────────────────────────────────
       const readmeAuth =
@@ -818,6 +886,12 @@ export function createTemplateRenderer(): TemplateRenderer {
         `# ${hasPrisma ? '3' : '2'}. Start production server`,
         pmSpec.run('start:prod'),
         '```',
+        '',
+        'In production set `NODE_ENV=production` (JSON logs)' +
+          (config.auth === 'jwt'
+            ? ', a long random `JWT_SECRET`,'
+            : ',') +
+          ' an explicit `CORS_ORIGINS`, and point your orchestrator\'s liveness and readiness probes at `/health` and `/health/ready`. The app fails fast at boot, listing every problem, if a required environment variable is missing or invalid.',
       );
 
       const readmeProduction = prodStepsList.join('\n');
@@ -1009,6 +1083,10 @@ export function createTemplateRenderer(): TemplateRenderer {
         .replace(
           /\{\{\s*readmeDatabase\s*\}\}/g,
           readmeDatabase,
+        )
+        .replace(
+          /\{\{\s*readmeRuntime\s*\}\}/g,
+          readmeRuntime,
         )
         .replace(
           /\{\{\s*readmeAuth\s*\}\}/g,

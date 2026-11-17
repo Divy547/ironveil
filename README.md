@@ -16,7 +16,8 @@ Ironveil solves this by providing:
 - **Zero Lock-in**: Generated projects are 100% standalone standard NestJS applications with zero runtime dependencies on Ironveil.
 - **Safety First**: Atomic staging directory generation guarantees that failed generations never leave partial files or corrupted directories on disk.
 - **Package Manager Choice**: Full support for `npm`, `pnpm`, and `yarn` with tailored scripts, command mappings, and clean lockfile generation.
-- **Pre-configured Production Foundations**: Type-safe configuration, Prisma with PostgreSQL, Redis infrastructure, Swagger/OpenAPI setup, Jest unit/e2e testing, Docker containerization, and GitHub Actions CI.
+- **Production Foundations Out of the Box**: validated configuration, health checks, structured logging, security defaults, a consistent error shape and graceful shutdown, on top of Prisma with PostgreSQL, optional Redis and JWT auth, Swagger/OpenAPI, Jest testing, Docker, ESLint/Prettier and GitHub Actions CI.
+- **Verified, Not Just Generated**: an end-to-end matrix installs, lints, builds, boots and shuts down real generated projects (including `/health` and a clean SIGTERM exit), so what you get is known to work.
 
 ---
 
@@ -111,18 +112,29 @@ ironveil --version    # Output installed version (0.2.1)
 
 ## Generated Features
 
-Every generated project includes a tailored `package.json`, environment configuration, and clean modular structure:
+Every generated project includes a tailored `package.json`, environment configuration, and clean modular structure.
+
+### Always included
 
 - **Core NestJS Foundation**: NestJS 11 application with modular separation of concerns (`common/`, `infrastructure/`, `modules/`).
-- **PostgreSQL & Prisma ORM**: Fully configured Prisma schema, client module, service lifecycle hooks, and initial migration SQL.
-- **Type-Safe Configuration**: Environment variable validation powered by `@nestjs/config` and clean configuration loaders.
-- **JWT Authentication (`--auth jwt`)**: Complete authentication module with Passport JWT strategy, auth guard, login/register DTOs with `class-validator`, password hashing with `bcrypt`, and Auth controller/service.
-- **Redis Infrastructure (`--redis`)**: Configured `ioredis` service and infrastructure module ready for caching and session management.
-- **Swagger / OpenAPI Documentation**: OpenAPI specification setup configured in `src/infrastructure/swagger/` and bootstrapped in `main.ts`. (Enabled by default; disable with `--no-swagger`.)
-- **Docker & Docker Compose**: Production multi-stage `Dockerfile`, optimized `.dockerignore`, and `docker-compose.yml` configuring PostgreSQL and Redis containers. (Enabled by default; disable with `--no-docker`.)
-- **Jest Unit & E2E Testing**: Pre-configured `jest.config.ts`, unit test suite (`app.module.spec.ts`), E2E test harness (`test/app.e2e-spec.ts`), and Jest E2E configuration. (Enabled by default; disable with `--no-testing`.)
-- **GitHub Actions CI**: Pre-built `.github/workflows/ci.yml` matrix pipeline running typecheck, unit tests, and build on pull requests and pushes. (Enabled by default; disable with `--no-ci`.)
-- **Tailored README**: Generated projects receive their own customized `README.md` containing prerequisite instructions, setup steps, environment variable tables, and scripts specific to the chosen package manager and features.
+- **Environment Validation**: A zod schema checked at boot. A missing or malformed variable stops the app with one error that lists every problem, and `.env.example` always matches the schema.
+- **Health Checks**: `GET /health` (liveness) and `GET /health/ready` (readiness: PostgreSQL, plus Redis when enabled) via `@nestjs/terminus`. The Docker `HEALTHCHECK` uses it.
+- **Structured Logging**: `nestjs-pino` with pretty output in development and JSON elsewhere, a request ID on every request (`x-request-id` is reused or generated and echoed), redaction of `authorization`, cookies, passwords and tokens, and a `LOG_LEVEL` setting.
+- **Security Defaults**: `helmet` headers, CORS driven by `CORS_ORIGINS` (off until configured), and global rate limiting with `@nestjs/throttler` (`THROTTLE_LIMIT`, `THROTTLE_TTL_MS`). Health routes are exempt from throttling.
+- **Global Error Handling**: One JSON error shape for every failure (`statusCode`, `message`, `error`, `requestId`, `timestamp`). Prisma `P2002` becomes `409` and `P2025` becomes `404`; unexpected errors return a generic `500` and are logged with the request ID.
+- **Graceful Shutdown**: `enableShutdownHooks()` so SIGTERM/SIGINT disconnect Prisma (and Redis) cleanly before exit.
+- **PostgreSQL & Prisma ORM**: Prisma schema, client module, service lifecycle hooks, and initial migration SQL.
+- **Lint & Format**: ESLint 9 flat config with type-aware `typescript-eslint`, Prettier config, and `lint`, `lint:fix` and `format` scripts.
+- **Tailored README**: Generated projects get their own `README.md` with setup steps, an environment variable table, and commands for the chosen package manager and features (including health, error, logging and security behavior).
+
+### Optional
+
+- **JWT Authentication (`--auth jwt`)**: Passport JWT with short-lived access tokens and **rotating refresh tokens** (reuse of an old token revokes the whole session). Endpoints: `POST /auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout` and `GET /auth/me`. A global guard protects **every route unless it is marked `@Public()`**, with `@Roles()` + `RolesGuard` for `USER`/`ADMIN` access and a `@CurrentUser()` decorator. Passwords are hashed with `bcrypt`.
+- **Redis Infrastructure (`--redis`)**: Configured `ioredis` service and module, included in the readiness check.
+- **Swagger / OpenAPI Documentation**: Set up in `src/infrastructure/swagger/` and served at `/api/docs`. Enabled by default; disable with `--no-swagger`.
+- **Docker & Docker Compose**: Multi-stage `Dockerfile` with a health check, `.dockerignore`, and `docker-compose.yml` for the API, PostgreSQL and Redis. Enabled by default; disable with `--no-docker`.
+- **Jest Unit & E2E Testing**: `jest.config.ts`, a unit test (`app.module.spec.ts`), and an E2E harness (`test/app.e2e-spec.ts`). Enabled by default; disable with `--no-testing`.
+- **GitHub Actions CI**: `.github/workflows/ci.yml` running lint, typecheck, unit tests, and build on pull requests and pushes. Enabled by default; disable with `--no-ci`.
 
 ---
 
@@ -155,43 +167,56 @@ my-api/
 │   └── schema.prisma              # Prisma schema definition
 ├── src/
 │   ├── common/
+│   │   ├── filters/
+│   │   │   └── all-exceptions.filter.ts  # Consistent error shape
 │   │   └── common.module.ts       # Shared application utilities
 │   ├── infrastructure/
 │   │   ├── config/
 │   │   │   ├── configuration.ts   # Configuration loader
 │   │   │   └── environment.ts     # Environment schema validation
+│   │   ├── logging/
+│   │   │   └── logging.module.ts  # nestjs-pino, request IDs, redaction
 │   │   ├── prisma/
 │   │   │   ├── prisma.module.ts   # Prisma infrastructure module
 │   │   │   └── prisma.service.ts  # Database connection lifecycle
 │   │   ├── redis/                 # Redis infrastructure (optional)
 │   │   │   ├── redis.module.ts
 │   │   │   └── redis.service.ts
+│   │   ├── security/
+│   │   │   ├── security.module.ts # Global rate limiting
+│   │   │   └── security.setup.ts  # helmet + CORS
 │   │   ├── swagger/               # Swagger setup (optional)
 │   │   │   └── swagger.setup.ts
 │   │   └── infrastructure.module.ts
 │   ├── modules/
+│   │   ├── health/                # /health and /health/ready
+│   │   │   ├── health.controller.ts
+│   │   │   ├── health.module.ts
+│   │   │   ├── prisma.health.ts
+│   │   │   └── redis.health.ts    # Redis only
 │   │   └── auth/                  # JWT Authentication (optional)
-│   │       ├── dto/
-│   │       │   ├── login.dto.ts
-│   │       │   └── register.dto.ts
-│   │       ├── guards/
-│   │       │   └── jwt-auth.guard.ts
+│   │       ├── decorators/        # @Public(), @Roles(), @CurrentUser()
+│   │       ├── dto/               # login, register, refresh-token
+│   │       ├── guards/            # jwt-auth.guard, roles.guard
 │   │       ├── strategies/
 │   │       │   └── jwt.strategy.ts
 │   │       ├── types/
-│   │       │   └── jwt-payload.type.ts
 │   │       ├── auth.controller.ts
 │   │       ├── auth.module.ts
 │   │       └── auth.service.ts
 │   ├── app.module.ts              # Root application module
+│   ├── app.module.spec.ts         # Unit test (testing enabled)
 │   └── main.ts                    # Application entrypoint
 ├── test/
 │   ├── app.e2e-spec.ts            # Application E2E test suite
 │   └── jest-e2e.json              # E2E Jest configuration
 ├── .dockerignore
 ├── .env.example
+├── .prettierignore
+├── .prettierrc
 ├── Dockerfile                     # Multi-stage production build
 ├── docker-compose.yml             # Local service orchestration
+├── eslint.config.mjs              # ESLint flat config
 ├── jest.config.ts                 # Unit test configuration
 ├── nest-cli.json
 ├── package.json
@@ -235,7 +260,7 @@ Ironveil contains a comprehensive test suite covering unit behavior, template re
 # Run TypeScript typecheck
 pnpm run typecheck
 
-# Run unit tests (33 test files, 249 tests)
+# Run unit tests (41 test files, 317 tests)
 pnpm test
 
 # Run build
@@ -244,8 +269,10 @@ pnpm run build
 # Run release verification E2E test suite
 pnpm exec vitest run test/e2e/release.e2e.test.ts
 
-# Run full E2E test suite (13 test files, 41 tests)
-pnpm run test:e2e
+# Run the full E2E suite (slow: real installs, builds and boots)
+# Needs PostgreSQL on localhost:5432 and Redis on localhost:6379
+pnpm run test:e2e        # serial
+pnpm run test:e2e:fast   # 3 workers, ~half the time
 ```
 
 ---
