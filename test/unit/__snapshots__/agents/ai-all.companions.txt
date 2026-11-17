@@ -1,0 +1,39 @@
+=== CLAUDE.md ===
+# CLAUDE.md
+
+@AGENTS.md
+
+The shared rules for every AI tool live in `AGENTS.md`, imported above. Put guidance that only applies to Claude Code below this line and keep everything else in `AGENTS.md`.
+
+=== .cursor/rules/project.mdc ===
+---
+description: Project architecture, commands and conventions for this NestJS backend
+alwaysApply: true
+---
+
+Follow @AGENTS.md for the architecture, commands and conventions of this project. Run the checks listed in its "Commands" section before finishing a task.
+
+=== .cursor/rules/modules.mdc ===
+---
+description: Adding or changing NestJS modules, controllers and DTOs
+globs: src/modules/**/*.ts
+alwaysApply: false
+---
+
+Follow the "How to add a module" and "How to add an endpoint" sections of @AGENTS.md.
+
+=== .cursor/rules/prisma.mdc ===
+---
+description: Changing the Prisma schema and migrations
+globs: prisma/**/*
+alwaysApply: false
+---
+
+Follow the "How to add a Prisma model" section of @AGENTS.md. Never edit a migration that was already applied or committed.
+
+=== .github/copilot-instructions.md ===
+# Copilot instructions
+
+Read and follow `AGENTS.md` in the repository root. It describes the architecture (`src/common`, `src/infrastructure`, `src/modules`), the commands, how to add a module, Prisma model or endpoint, and the coding conventions.
+
+Before finishing a task, run `npm run lint`, `npm run typecheck`, `npm test`, `npm run build` and fix what they report.

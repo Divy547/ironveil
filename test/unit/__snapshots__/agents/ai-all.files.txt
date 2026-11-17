@@ -1,0 +1,6 @@
+AGENTS.md
+CLAUDE.md
+.cursor/rules/project.mdc
+.cursor/rules/modules.mdc
+.cursor/rules/prisma.mdc
+.github/copilot-instructions.md

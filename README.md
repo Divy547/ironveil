@@ -264,7 +264,7 @@ Ironveil contains a comprehensive test suite covering unit behavior, template re
 # Run TypeScript typecheck
 pnpm run typecheck
 
-# Run unit tests (45 test files, 379 tests)
+# Run unit tests (47 test files, 421 tests)
 pnpm test
 
 # Run build
