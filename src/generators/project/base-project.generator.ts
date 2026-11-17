@@ -24,6 +24,10 @@ const BASE_TEMPLATES = [
     destination: 'nest-cli.json',
   },
   {
+    source: 'base/.gitignore.template',
+    destination: '.gitignore',
+  },
+  {
     source: 'base/README.md.template',
     destination: 'README.md',
   },

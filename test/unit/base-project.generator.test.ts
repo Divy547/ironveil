@@ -115,6 +115,15 @@ describe('BaseProjectGenerator', () => {
       path.join(
         templateDirectory,
         'base',
+        '.gitignore.template',
+      ),
+      'node_modules/\n',
+    );
+
+    await fs.writeFile(
+      path.join(
+        templateDirectory,
+        'base',
         'README.md.template',
       ),
       '# {{projectName}}\n',

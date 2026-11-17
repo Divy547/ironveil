@@ -94,7 +94,7 @@ function architecture(config: IronveilConfig): string {
       ' directly without importing the module.',
     '- **`src/common/`**: framework-level building blocks shared by every feature (filters, and any future pipes, interceptors or generic decorators). Nothing here may depend on a feature module.',
     '- Dependencies point one way: `modules` → `infrastructure` / `common`. Never import a feature module from `common/` or `infrastructure/`.',
-    '- Do not edit `src/generated/`: it is Prisma client output, rewritten by `prisma generate`.',
+    '- Do not edit `src/generated/`: it is Prisma client output, rewritten by `prisma generate` and git-ignored.',
   ].join('\n');
 }
 
@@ -309,7 +309,7 @@ function doNot(config: IronveilConfig): string {
     'Do not read `process.env` outside `src/infrastructure/config/`.',
     'Do not bypass the `ValidationPipe`, the exception filter or the logger.',
     'Do not edit `src/generated/` or already-applied migrations.',
-    'Do not commit `.env` or any real secret; `.env.example` holds placeholders only.',
+    'Do not commit `.env` or any real secret (`.env*` is git-ignored except `.env.example`, which holds placeholders only).',
     ...(jwt
       ? ['Do not remove the global guards or mark routes `@Public()` just to make a test pass.']
       : []),
