@@ -36,6 +36,17 @@ function nextSteps(plan: AddPlan): string[] {
     case 'ci':
       steps.push('Commit .github/workflows/ci.yml; it runs on pushes and pull requests.');
       break;
+    case 'swagger':
+      steps.push('Start the API and open /api/docs for the interactive API documentation.');
+      break;
+    case 'redis':
+      steps.push(
+        'Copy REDIS_URL from .env.example into your own .env (it is required, and .env is never edited by add).',
+      );
+      if (plan.after.docker) {
+        steps.push('docker compose up -d redis   # or point REDIS_URL at an existing Redis');
+      }
+      break;
     case 'ai':
       steps.push('Read AGENTS.md and adjust it to your project before committing.');
       break;

@@ -2,12 +2,12 @@ import { resolveConfig, type Ai, type IronveilConfig } from '../config/index.js'
 import { AddError } from './add-error.js';
 
 /** Features `ironveil add` can apply in this version. */
-export const ADDABLE_FEATURES = ['ci', 'ai', 'docker', 'testing'] as const;
+export const ADDABLE_FEATURES = ['ci', 'ai', 'docker', 'testing', 'swagger', 'redis'] as const;
 
 export type AddableFeature = (typeof ADDABLE_FEATURES)[number];
 
 /** Real features that `add` will support, but not yet. */
-const COMING_FEATURES = ['swagger', 'redis', 'auth'] as const;
+const COMING_FEATURES = ['auth'] as const;
 
 export const AI_MODES = ['agents', 'all'] as const;
 

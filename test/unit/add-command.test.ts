@@ -106,6 +106,34 @@ describe('ironveil add', () => {
     expect(printed(log)).toContain('npm run docker:up');
   });
 
+  it('tells the user to set REDIS_URL in their own .env after adding redis', async () => {
+    await makeProject({ redis: false });
+
+    await run('redis');
+
+    const output = printed(log);
+    expect(output).toContain('npm install');
+    expect(output).toMatch(/REDIS_URL.*\.env/);
+    expect(output).toContain('docker compose up -d redis');
+    expect(await read('.env.example')).toContain('REDIS_URL');
+  });
+
+  it('does not suggest a redis container when the project has no docker setup', async () => {
+    await makeProject({ redis: false, docker: false });
+
+    await run('redis');
+
+    expect(printed(log)).not.toContain('docker compose');
+  });
+
+  it('points at the Swagger UI after adding swagger', async () => {
+    await makeProject({ swagger: false });
+
+    await run('swagger');
+
+    expect(printed(log)).toContain('/api/docs');
+  });
+
   it('takes an ai mode', async () => {
     await makeProject({ ai: 'none' });
 

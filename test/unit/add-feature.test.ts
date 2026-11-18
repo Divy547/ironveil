@@ -63,7 +63,14 @@ describe('planAdd', () => {
   }
 
   it('offers exactly the features this version can add', () => {
-    expect([...ADDABLE_FEATURES]).toEqual(['ci', 'ai', 'docker', 'testing']);
+    expect([...ADDABLE_FEATURES]).toEqual([
+      'ci',
+      'ai',
+      'docker',
+      'testing',
+      'swagger',
+      'redis',
+    ]);
   });
 
   describe('adding gives the same project as creating with the feature', () => {
@@ -91,6 +98,8 @@ describe('planAdd', () => {
       { label: 'ci', feature: 'ci', off: { ci: false }, on: { ci: true } },
       { label: 'docker', feature: 'docker', off: { docker: false }, on: { docker: true } },
       { label: 'testing', feature: 'testing', off: { testing: false }, on: { testing: true } },
+      { label: 'swagger', feature: 'swagger', off: { swagger: false }, on: { swagger: true } },
+      { label: 'redis', feature: 'redis', off: { redis: false }, on: { redis: true } },
       { label: 'ai (agents)', feature: 'ai', off: { ai: 'none' }, on: { ai: 'agents' } },
       { label: 'ai agents -> all', feature: 'ai', mode: 'all', off: { ai: 'agents' }, on: { ai: 'all' } },
       { label: 'ai none -> all', feature: 'ai', mode: 'all', off: { ai: 'none' }, on: { ai: 'all' } },
@@ -199,6 +208,107 @@ describe('planAdd', () => {
     });
   });
 
+  describe('swagger and redis', () => {
+    it('swagger edits main.ts and the security setup, and adds the dependencies', async () => {
+      const root = await makeProject({ swagger: false });
+
+      const plan = await planAdd({ root, feature: 'swagger' });
+
+      const changed = plan.changeSet.changes.map((change) => change.path);
+      expect(changed).toContain('src/main.ts');
+      expect(changed).toContain('package.json');
+      expect(plan.dependenciesChanged).toBe(true);
+      await plan.changeSet.apply();
+      expect(await read(root, 'src/main.ts')).toMatch(/setupSwagger/);
+      expect(JSON.parse(await read(root, 'package.json')).dependencies).toHaveProperty(
+        '@nestjs/swagger',
+      );
+      expect((await readManifest(root)).features.swagger).toBe(true);
+    });
+
+    it('swagger keeps the user\'s own edits to main.ts', async () => {
+      const root = await makeProject({ swagger: false });
+      const main = (await read(root, 'src/main.ts')).replace(
+        'await app.listen(',
+        "app.setGlobalPrefix('v1');\n  await app.listen(",
+      );
+      expect(main).toContain("app.setGlobalPrefix('v1')");
+      await write(root, 'src/main.ts', main);
+
+      await add(root, 'swagger');
+
+      const merged = await read(root, 'src/main.ts');
+      expect(merged).toContain("app.setGlobalPrefix('v1')");
+      expect(merged).toMatch(/setupSwagger/);
+    });
+
+    it('swagger warns that resources generated earlier have no Swagger decorators', async () => {
+      const root = await makeProject({ swagger: false });
+      const resource = await planResource({
+        root,
+        name: 'product',
+        fields: parseFields('name:string'),
+      });
+      await resource.changeSet.apply();
+
+      const plan = await planAdd({ root, feature: 'swagger' });
+
+      expect(plan.notes.join('\n')).toMatch(/product.*Swagger decorators/s);
+    });
+
+    it('swagger gives no resource warning when there are none', async () => {
+      const root = await makeProject({ swagger: false });
+
+      const plan = await planAdd({ root, feature: 'swagger' });
+
+      expect(plan.notes.join('\n')).not.toMatch(/decorators/);
+    });
+
+    it('redis registers in InfrastructureModule and leaves a generated resource in AppModule', async () => {
+      const root = await makeProject({ redis: false });
+      const resource = await planResource({
+        root,
+        name: 'product',
+        fields: parseFields('name:string'),
+      });
+      await resource.changeSet.apply();
+
+      await add(root, 'redis');
+
+      const appModule = await read(root, 'src/app.module.ts');
+      expect(appModule).toContain('ProductsModule');
+      expect(await read(root, 'src/infrastructure/infrastructure.module.ts')).toContain(
+        'RedisModule',
+      );
+      expect((await readManifest(root)).resources).toHaveProperty('product');
+    });
+
+    it('redis keeps a dependency the user added by hand and adds ioredis', async () => {
+      const root = await makeProject({ redis: false });
+      const pkg = JSON.parse(await read(root, 'package.json'));
+      pkg.dependencies.dayjs = '1.11.13';
+      await write(root, 'package.json', `${JSON.stringify(pkg, null, 2)}\n`);
+
+      await add(root, 'redis');
+
+      const merged = JSON.parse(await read(root, 'package.json'));
+      expect(merged.dependencies.dayjs).toBe('1.11.13');
+      expect(merged.dependencies).toHaveProperty('ioredis');
+    });
+
+    it('redis aborts and writes nothing when src/infrastructure/redis already exists differently', async () => {
+      const root = await makeProject({ redis: false });
+      await mkdir(path.join(root, 'src/infrastructure/redis'), { recursive: true });
+      await write(root, 'src/infrastructure/redis/redis.module.ts', '// my own module\n');
+      const before = await readTree(root);
+
+      await expect(planAdd({ root, feature: 'redis' })).rejects.toThrow(
+        /redis\.module\.ts.*already exists/s,
+      );
+      expect(await readTree(root)).toEqual(before);
+    });
+  });
+
   describe('input errors', () => {
     it('rejects an unknown feature and names the ones that exist', async () => {
       const root = await makeProject();
@@ -206,17 +316,14 @@ describe('planAdd', () => {
       const failure = planAdd({ root, feature: 'banana' });
 
       await expect(failure).rejects.toBeInstanceOf(AddError);
-      await expect(failure).rejects.toThrow(/Unknown feature "banana".*ci, ai, docker, testing/s);
+      await expect(failure).rejects.toThrow(/Unknown feature "banana".*ci, ai, docker, testing, swagger, redis/s);
     });
 
-    it.each(['redis', 'auth', 'swagger'])(
-      'says %s is known but not available yet',
-      async (feature) => {
-        const root = await makeProject();
+    it('says auth is known but not available yet', async () => {
+      const root = await makeProject();
 
-        await expect(planAdd({ root, feature })).rejects.toThrow(/not available yet/);
-      },
-    );
+      await expect(planAdd({ root, feature: 'auth' })).rejects.toThrow(/not available yet/);
+    });
 
     it('rejects a mode for a feature that has none', async () => {
       const root = await makeProject({ docker: false });

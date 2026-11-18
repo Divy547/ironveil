@@ -161,12 +161,14 @@ Adds a feature to a project you already created, by generating what `create` wou
 ironveil add testing          # jest config, specs, test scripts and dev dependencies
 ironveil add docker           # Dockerfile, .dockerignore, docker-compose.yml, docker:up / docker:down
 ironveil add ci               # .github/workflows/ci.yml
+ironveil add swagger          # @nestjs/swagger, the /api/docs setup, main.ts and CSP wiring
+ironveil add redis            # ioredis service and module, readiness check, REDIS_URL, docker-compose service
 ironveil add ai               # AGENTS.md + CLAUDE.md   (ironveil add ai all: + Cursor and Copilot files)
 ```
 
-Available now: `ci`, `ai`, `docker`, `testing`. `redis`, `swagger` and `auth` are coming. It accepts `--dry-run` and `--force` like `generate`.
+Available now: `ci`, `ai`, `docker`, `testing`, `swagger`, `redis`. `auth` is coming. It accepts `--dry-run` and `--force` like `generate`.
 
-How your own changes are treated: a file you never touched is replaced; a file you edited is three-way merged, so your edits stay; `package.json` is merged as JSON (your dependencies and scripts stay); `ironveil.json` keeps your recorded resources. If an edit of yours overlaps with what the feature needs, or a file it wants to create already exists with different content, `add` stops, lists the files and writes **nothing**. A `README.md` or `AGENTS.md` you rewrote is left as it is, with a note. It never installs anything: it prints the install command, and warns when the project was created by a different Ironveil version. Adding a feature that is already enabled does nothing, and features are never removed.
+How your own changes are treated: a file you never touched is replaced; a file you edited is three-way merged, so your edits stay; `package.json` is merged as JSON (your dependencies and scripts stay); `ironveil.json` keeps your recorded resources. If an edit of yours overlaps with what the feature needs, or a file it wants to create already exists with different content, `add` stops, lists the files and writes **nothing**. `add` never edits your own `.env`: after `add redis`, copy `REDIS_URL` from `.env.example` into it (the app validates it at boot). Resources generated before `add swagger` keep working but have no Swagger decorators, and `add` says so. A `README.md` or `AGENTS.md` you rewrote is left as it is, with a note. It never installs anything: it prints the install command, and warns when the project was created by a different Ironveil version. Adding a feature that is already enabled does nothing, and features are never removed.
 
 ---
 
@@ -324,7 +326,7 @@ Ironveil contains a comprehensive test suite covering unit behavior, template re
 # Run TypeScript typecheck
 pnpm run typecheck
 
-# Run unit tests (71 test files, 899 tests)
+# Run unit tests (71 test files, 915 tests)
 pnpm test
 
 # Run build

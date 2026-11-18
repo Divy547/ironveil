@@ -13,6 +13,8 @@ import {
 
 // A fresh database per run: `migrate deploy` creates it.
 const DATABASE_URL = `postgresql://postgres:postgres@localhost:5432/ironveil-add-e2e-${Date.now()}?schema=public`;
+const SWAGGER_REDIS_DATABASE_URL = `postgresql://postgres:postgres@localhost:5432/ironveil-add-sr-e2e-${Date.now()}?schema=public`;
+const REDIS_URL = 'redis://localhost:6379';
 
 describe('Ironveil add E2E', () => {
   let project: Awaited<ReturnType<typeof createGeneratedProject>> | undefined;
@@ -80,6 +82,59 @@ describe('Ironveil add E2E', () => {
       await project.testE2e();
 
       await assertBootsAndShutsDownCleanly(project, { redis: false });
+    },
+    900_000,
+  );
+
+  it(
+    'a project created without Swagger and Redis gains them next to an existing resource, then builds, passes its tests, serves /api/docs and reports Redis ready',
+    async () => {
+      project = await createGeneratedProject(
+        resolveConfig({
+          projectName: 'generated-add-swagger-redis-api',
+          swagger: false,
+          redis: false,
+        }),
+        'ironveil-add-sr-e2e',
+      );
+      const root = project.root;
+
+      const resource = await planResource({
+        root,
+        name: 'product',
+        fields: parseFields('name:string price:decimal'),
+      });
+      await applyChanges(resource.changeSet);
+
+      for (const feature of ['swagger', 'redis'] as const) {
+        const plan = await planAdd({ root, feature });
+        expect(plan.alreadyEnabled).toBe(false);
+        await applyChanges(plan.changeSet);
+      }
+
+      // `add` never edits the user's own .env, so the helper plays the user
+      // copying REDIS_URL across, as the next steps tell them to.
+      await prepareProject(project, {
+        databaseUrl: SWAGGER_REDIS_DATABASE_URL,
+        redisUrl: REDIS_URL,
+      });
+
+      await project.test();
+      await project.testE2e();
+
+      await assertBootsAndShutsDownCleanly(project, {
+        redis: true,
+        exercise: async (server) => {
+          const docs = await fetch(`${server.baseUrl}/api/docs`);
+          expect(docs.status).toBe(200);
+
+          const spec = (await (
+            await fetch(`${server.baseUrl}/api/docs-json`)
+          ).json()) as { paths: Record<string, unknown> };
+          // The resource that was generated before Swagger existed is still served.
+          expect(Object.keys(spec.paths)).toContain('/products');
+        },
+      });
     },
     900_000,
   );

@@ -96,6 +96,14 @@ export async function planAdd(options: PlanAddOptions): Promise<AddPlan> {
     );
   }
 
+  const resources = Object.keys(manifest.resources ?? {});
+  if (change.feature === 'swagger' && resources.length > 0) {
+    notes.push(
+      `Resources generated earlier (${resources.join(', ')}) have no Swagger decorators, ` +
+        'so they show up in /api/docs without descriptions. Add @ApiTags / @ApiProperty by hand, or regenerate them.',
+    );
+  }
+
   const baseFiles = await renderProject(before);
   const targetFiles = await renderProject(change.after);
   const conflicts: string[] = [];
