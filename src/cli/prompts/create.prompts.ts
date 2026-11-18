@@ -37,6 +37,23 @@ export async function promptCreateOptions(): Promise<CreateCommandOptions> {
     process.exit(130);
   }
 
+  // BullMQ keeps its jobs in Redis, so the question only makes sense with it.
+  let queue = false;
+
+  if (redis) {
+    const answer = await p.confirm({
+      message: 'Enable a background job queue (BullMQ)?',
+      initialValue: false,
+    });
+
+    if (p.isCancel(answer)) {
+      p.cancel('Operation cancelled.');
+      process.exit(130);
+    }
+
+    queue = answer;
+  }
+
   const auth = await p.select<Auth>({
     message: 'Authentication',
     options: [
@@ -124,6 +141,7 @@ export async function promptCreateOptions(): Promise<CreateCommandOptions> {
   return {
     packageManager,
     redis,
+    queue,
     auth,
     swagger,
     docker,

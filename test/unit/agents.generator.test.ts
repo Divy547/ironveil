@@ -202,6 +202,33 @@ describe('buildAgentsMd', () => {
       expect(withoutRedis).not.toContain('postgres redis');
     });
 
+    it('includes job queue guidance only with --queue', () => {
+      const withQueue = render({ redis: true, queue: true });
+      expect(withQueue).toContain('## Job queue (BullMQ)');
+      expect(withQueue).toContain('src/infrastructure/queue/');
+      expect(withQueue).toContain('BullModule.registerQueue');
+      expect(withQueue).toContain('@Processor');
+      expect(withQueue).toContain('@InjectQueue');
+      expect(withQueue).toContain('getQueueToken');
+      expect(withQueue).toContain('queue/');
+      expect(withQueue).toMatch(/idempotent/i);
+      expect(withQueue).toMatch(/every spec that boots `AppModule`/i);
+      expect(withQueue).toContain('Worker requires a connection');
+
+      const withoutQueue = render({ redis: true });
+      expect(withoutQueue).not.toContain('## Job queue');
+      expect(withoutQueue).not.toContain('BullMQ');
+      expect(withoutQueue).not.toContain('@Processor');
+    });
+
+    it('lists the queue folder in the architecture tree right after redis', () => {
+      const lines = render({ redis: true, queue: true }).split('\n');
+      const redis = lines.findIndex((line) => line.includes('redis/') && line.includes('RedisModule'));
+
+      expect(redis).toBeGreaterThan(-1);
+      expect(lines[redis + 1]).toMatch(/queue\/\s+# global BullMQ connection/);
+    });
+
     it('includes Swagger guidance only when Swagger is enabled', () => {
       const withSwagger = render({ swagger: true });
       expect(withSwagger).toContain('## API documentation');

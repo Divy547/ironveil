@@ -28,6 +28,7 @@ const FEATURE_SETS: ReadonlyArray<readonly [string, Overrides]> = [
   ['jwt', { auth: 'jwt' }],
   ['redis', { redis: true }],
   ['jwt + redis', { auth: 'jwt', redis: true }],
+  ['jwt + redis + queue', { auth: 'jwt', redis: true, queue: true }],
   ['no testing', { testing: false }],
   [
     'minimal',

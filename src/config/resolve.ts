@@ -41,6 +41,12 @@ export function resolveConfig(
 function validateFeatureDependencies(
   config: IronveilConfig,
 ): void {
+  if (config.queue && !config.redis) {
+    throw new ConfigError(
+      'The queue requires Redis (BullMQ stores its jobs there). Enable Redis as well.',
+    );
+  }
+
   if (config.auth === 'jwt') {
     if (
       config.database !== 'postgres' ||

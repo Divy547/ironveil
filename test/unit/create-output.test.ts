@@ -71,9 +71,27 @@ describe('create-output', () => {
     expect(output).toContain('• JWT Authentication');
     expect(output).toContain('• Swagger API Documentation');
     expect(output).toContain('• Redis Infrastructure');
+    expect(output).not.toContain('Background job queue');
     expect(output).toContain('• Docker & Docker Compose');
     expect(output).toContain('• Jest Unit & E2E Testing');
     expect(output).toContain('• GitHub Actions CI');
+  });
+
+  it('lists the job queue right after Redis when it is enabled', () => {
+    const config = resolveConfig({ projectName: 'q-api', redis: true, queue: true });
+
+    const output = formatSuccessOutput({
+      projectName: 'q-api',
+      destination: '/path/to/q-api',
+      config,
+      generators: ['base', 'redis', 'queue'],
+      files: ['package.json'],
+    });
+
+    const lines = output.split('\n').map((line) => line.trim());
+    const redis = lines.indexOf('• Redis Infrastructure');
+    expect(redis).toBeGreaterThan(-1);
+    expect(lines[redis + 1]).toBe('• Background job queue (BullMQ)');
   });
 
   it('formats dry-run output correctly', () => {

@@ -126,6 +126,28 @@ describe('ironveil add', () => {
     expect(printed(log)).not.toContain('docker compose');
   });
 
+  it('explains the queue next steps after adding it', async () => {
+    await makeProject({ redis: true });
+
+    await run('queue');
+
+    const output = printed(log);
+    expect(output).toContain('Added queue.');
+    expect(output).toContain('npm install');
+    expect(output).toContain('registerQueue');
+    expect(await exists('src/infrastructure/queue/queue.module.ts')).toBe(true);
+  });
+
+  it('refuses to add the queue to a project without Redis, pointing at `add redis`', async () => {
+    await makeProject({ redis: false });
+
+    await run('queue');
+
+    expect(process.exitCode).toBe(1);
+    expect(printed(error)).toMatch(/requires Redis.*ironveil add redis/s);
+    expect(await exists('src/infrastructure/queue/queue.module.ts')).toBe(false);
+  });
+
   it('points at the Swagger UI after adding swagger', async () => {
     await makeProject({ swagger: false });
 

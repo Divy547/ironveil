@@ -19,6 +19,7 @@ export interface IronveilConfig {
   readonly database: Database;
   readonly orm: Orm;
   readonly redis: boolean;
+  readonly queue: boolean;
   readonly auth: Auth;
   readonly swagger: boolean;
   readonly docker: boolean;

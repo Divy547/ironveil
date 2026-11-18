@@ -23,6 +23,7 @@ describe('generator ordering', () => {
       'health',
       'prisma',
       'redis',
+      'queue',
       'auth',
       'swagger',
       'testing',

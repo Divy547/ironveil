@@ -222,6 +222,24 @@ describe('PackageValidator', () => {
       expect(result.issues.some((i) => i.code === 'MISSING_DEPENDENCY' && i.path === 'dependencies.ioredis')).toBe(true);
     });
 
+    it('flags missing queue dependencies when the queue is enabled', () => {
+      const config = resolveConfig({ projectName: 'test-api', redis: true, queue: true });
+      const manifest = buildValidManifest('test-api', {
+        dependencies: {
+          ...IRONVEIL_VERSIONS.dependencies.base,
+          ...IRONVEIL_VERSIONS.dependencies.prisma,
+          ...IRONVEIL_VERSIONS.dependencies.redis,
+          ...IRONVEIL_VERSIONS.dependencies.swagger,
+        },
+      });
+
+      const result = validator.validate(manifest, config);
+      const missing = result.issues
+        .filter((i) => i.code === 'MISSING_DEPENDENCY')
+        .map((i) => i.path);
+      expect(missing).toEqual(['dependencies.@nestjs/bullmq', 'dependencies.bullmq']);
+    });
+
     it('flags version declaration drift for dependencies', () => {
       const config = resolveConfig({ projectName: 'test-api' });
       const manifest = buildValidManifest('test-api');
@@ -262,6 +280,25 @@ describe('PackageValidator', () => {
   });
 
   describe('feature leakage validation', () => {
+    it('flags leaked queue dependencies when the queue is disabled', () => {
+      const config = resolveConfig({ projectName: 'test-api', redis: true });
+      const manifest = buildValidManifest('test-api', {
+        dependencies: {
+          ...IRONVEIL_VERSIONS.dependencies.base,
+          ...IRONVEIL_VERSIONS.dependencies.prisma,
+          ...IRONVEIL_VERSIONS.dependencies.redis,
+          ...IRONVEIL_VERSIONS.dependencies.swagger,
+          ...IRONVEIL_VERSIONS.dependencies.queue,
+        },
+      });
+
+      const result = validator.validate(manifest, config);
+      const leaked = result.issues
+        .filter((i) => i.code === 'FEATURE_DEPENDENCY_LEAKAGE')
+        .map((i) => i.path);
+      expect(leaked).toEqual(['dependencies.@nestjs/bullmq', 'dependencies.bullmq']);
+    });
+
     it('flags leaked dependency for disabled redis', () => {
       const config = resolveConfig({ projectName: 'test-api', redis: false });
       const manifest = buildValidManifest('test-api', {

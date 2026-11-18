@@ -58,6 +58,9 @@ const ManifestSchema = z.object({
   orm: shape.orm.removeDefault(),
   features: z.object({
     redis: shape.redis.removeDefault(),
+    // Added after manifests already existed, so a manifest without it is
+    // valid and means "off" (the feature could not have been enabled).
+    queue: shape.queue.removeDefault().default(false),
     auth: shape.auth.removeDefault(),
     swagger: shape.swagger.removeDefault(),
     docker: shape.docker.removeDefault(),
@@ -84,6 +87,7 @@ export function buildManifest(
     orm: config.orm,
     features: {
       redis: config.redis,
+      queue: config.queue,
       auth: config.auth,
       swagger: config.swagger,
       docker: config.docker,
@@ -174,7 +178,9 @@ export function setFeatureInManifest(
 
   const raw = JSON.parse(text) as { features: Record<string, unknown> };
 
-  if (!Object.hasOwn(raw.features, feature)) {
+  // Check the schema, not the file: a manifest written before a feature
+  // existed has no key for it yet, and adding that feature must still work.
+  if (!Object.hasOwn(ManifestSchema.shape.features.shape, feature)) {
     throw new ManifestError(`Unknown feature "${feature}" in ${MANIFEST_FILE_NAME}.`);
   }
 

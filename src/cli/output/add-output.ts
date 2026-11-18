@@ -47,6 +47,12 @@ function nextSteps(plan: AddPlan): string[] {
         steps.push('docker compose up -d redis   # or point REDIS_URL at an existing Redis');
       }
       break;
+    case 'queue':
+      steps.push(
+        'Register a queue in the module that owns it with BullModule.registerQueue({ name }) and write a @Processor class; the README has a "Background Jobs (BullMQ)" section.',
+        'In tests, override both the queue (getQueueToken) and its processor, or they will try to reach Redis.',
+      );
+      break;
     case 'auth':
       steps.push(
         'Copy JWT_SECRET, JWT_ACCESS_TTL_SECONDS and JWT_REFRESH_TTL_DAYS from .env.example into your own .env, ' +

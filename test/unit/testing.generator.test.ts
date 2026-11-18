@@ -156,6 +156,21 @@ describe('TestingGenerator', () => {
     expect(e2eContent).toContain("const { AppModule } = await import('../src/app.module');");
   });
 
+  it('closes the compiled module in app.module.spec.ts, so a connection opened while compiling (a BullMQ queue) cannot keep Jest running', async () => {
+    const { fs, context } = await createContext({ testing: true });
+
+    await new TestingGenerator().generate(context);
+
+    const specContent = await fs.readFile(
+      path.join(temporaryDirectory, 'src', 'app.module.spec.ts'),
+    );
+    const compile = specContent.indexOf('.compile()');
+    const close = specContent.indexOf('await moduleRef.close()');
+
+    expect(compile).toBeGreaterThan(-1);
+    expect(close).toBeGreaterThan(compile);
+  });
+
   it('generates test environment with all variables when database, redis, and auth are enabled', async () => {
     const { fs, context } = await createContext({
       testing: true,

@@ -4,6 +4,7 @@ import { LoggingModule } from './logging/logging.module';
 import { SecurityModule } from './security/security.module';
 import { PrismaModule } from './prisma/prisma.module';
 {{redisModuleImport}}
+{{queueModuleImport}}
 import { loadConfiguration } from './config/configuration';
 import { validateEnvironment } from './config/environment';
 
@@ -18,6 +19,7 @@ import { validateEnvironment } from './config/environment';
     SecurityModule,
     PrismaModule,
     {{redisModule}}
+    {{queueModule}}
   ],
 })
 export class InfrastructureModule {}

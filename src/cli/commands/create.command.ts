@@ -22,6 +22,7 @@ export function registerCreateCommand(program: Command): void {
       'Package manager: npm, pnpm, or yarn',
     )
     .option('--redis', 'Enable Redis')
+    .option('--queue', 'Enable the BullMQ job queue (requires --redis)')
     .option('--auth <type>', 'Authentication type: none or jwt')
     .option(
       '--ai <mode>',
@@ -40,6 +41,7 @@ export function registerCreateCommand(program: Command): void {
         const featureOptions: CreateCommandOptions = {
           packageManager: options.packageManager,
           redis: options.redis,
+          queue: options.queue,
           auth: options.auth,
           ai: options.ai,
           swagger: options.swagger,

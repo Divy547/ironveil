@@ -44,6 +44,7 @@ describe('buildManifest', () => {
       orm: 'prisma',
       features: {
         redis: true,
+        queue: false,
         auth: 'jwt',
         swagger: true,
         docker: true,
@@ -68,6 +69,7 @@ describe('buildManifest', () => {
 
     expect(manifest.features).toEqual({
       redis: false,
+      queue: false,
       auth: 'none',
       swagger: false,
       docker: false,
@@ -114,6 +116,7 @@ describe('round trip', () => {
     {},
     { auth: 'jwt' },
     { redis: true },
+    { redis: true, queue: true },
     { auth: 'jwt', redis: true, packageManager: 'yarn' },
     {
       swagger: false,
@@ -334,5 +337,43 @@ describe('setFeatureInManifest', () => {
 
   it('refuses a feature that does not exist', () => {
     expect(() => setFeatureInManifest(text, 'banana' as never, true)).toThrow(ManifestError);
+  });
+
+  it('can set a feature the manifest predates, such as queue in a v0.3.0 manifest', () => {
+    const old = JSON.parse(text) as { features: Record<string, unknown> };
+    delete old.features.queue;
+    const oldText = `${JSON.stringify(old, null, 2)}\n`;
+
+    const result = setFeatureInManifest(oldText, 'queue', true);
+
+    expect(parseManifest(result).features.queue).toBe(true);
+  });
+});
+
+describe('a manifest written before the queue existed', () => {
+  const old = () => {
+    const raw = JSON.parse(
+      serializeManifest(buildManifest(config({ redis: true }), '0.3.0')),
+    ) as { features: Record<string, unknown> };
+    delete raw.features.queue;
+    return JSON.stringify(raw);
+  };
+
+  it('still parses, with the queue off', () => {
+    expect(parseManifest(old()).features.queue).toBe(false);
+  });
+
+  it('gives back a config with the queue off', () => {
+    expect(manifestToConfig(parseManifest(old())).queue).toBe(false);
+  });
+
+  it('refuses a manifest that turns the queue on without Redis', () => {
+    const bad = JSON.parse(old()) as { features: Record<string, unknown> };
+    bad.features.redis = false;
+    bad.features.queue = true;
+
+    expect(() => manifestToConfig(parseManifest(JSON.stringify(bad)))).toThrow(
+      ManifestError,
+    );
   });
 });

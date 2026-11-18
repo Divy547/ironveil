@@ -71,6 +71,12 @@ export function createTemplateRenderer(): TemplateRenderer {
           ? 'RedisModule,'
           : '';
 
+      const queueModuleImport = config.queue
+        ? "import { QueueModule } from './queue/queue.module';"
+        : '';
+
+      const queueModule = config.queue ? 'QueueModule,' : '';
+
       const redisEnvExample =
         config.redis
           ? 'REDIS_URL="redis://localhost:6379"'
@@ -458,6 +464,12 @@ export function createTemplateRenderer(): TemplateRenderer {
         );
       }
 
+      if (config.queue) {
+        featureList.push(
+          '- **Background jobs**: BullMQ queues on Redis with retries and backoff via `@nestjs/bullmq`',
+        );
+      }
+
       if (config.docker) {
         featureList.push(
           '- **Docker**: Multi-stage Dockerfile and Docker Compose service orchestration',
@@ -735,6 +747,18 @@ export function createTemplateRenderer(): TemplateRenderer {
           ].join('\n')
         : '';
 
+      // ── README: Queue ───────────────────────────────────────────
+      const readmeQueue = config.queue
+        ? [
+            '## Background Jobs (BullMQ)\n',
+            'Background jobs run on [BullMQ](https://docs.bullmq.io/), backed by the same Redis as `REDIS_URL`. `QueueModule` (`src/infrastructure/queue/`) holds the shared connection and the default job options: 3 attempts with exponential backoff, and finished jobs trimmed.\n',
+            '- Register a queue in the module that owns it with `BullModule.registerQueue({ name: \'emails\' })`.',
+            '- Put the work in a `@Processor(\'emails\')` class that extends `WorkerHost`, and enqueue with `@InjectQueue(\'emails\')`.',
+            '- In tests, a registered queue opens a Redis connection and a processor starts a worker, so override both: `overrideProvider(getQueueToken(\'emails\')).useValue({ add: jest.fn() })` and `overrideProvider(EmailsProcessor).useValue({})`. Every spec that boots `AppModule` needs them once a queue exists, including `test/app.e2e-spec.ts`.',
+            '- Workers finish their current job and close on SIGTERM.\n',
+          ].join('\n')
+        : '';
+
       // ── README: Docker ──────────────────────────────────────────
       const dockerServicesList: string[] = [
         '- `api`: NestJS application container (exposed on port `3000`)',
@@ -906,6 +930,14 @@ export function createTemplateRenderer(): TemplateRenderer {
           redisModule,
         )
         .replace(
+          /\{\{\s*queueModuleImport\s*\}\}/g,
+          queueModuleImport,
+        )
+        .replace(
+          /\{\{\s*queueModule\s*\}\}/g,
+          queueModule,
+        )
+        .replace(
           /\{\{\s*redisEnvExample\s*\}\}/g,
           redisEnvExample,
         )
@@ -1060,6 +1092,10 @@ export function createTemplateRenderer(): TemplateRenderer {
         .replace(
           /\{\{\s*readmeRedis\s*\}\}/g,
           readmeRedis,
+        )
+        .replace(
+          /\{\{\s*readmeQueue\s*\}\}/g,
+          readmeQueue,
         )
         .replace(
           /\{\{\s*readmeDocker\s*\}\}/g,

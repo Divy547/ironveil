@@ -3,6 +3,7 @@ import type { Command } from 'commander';
 const CREATE_OPTION_NAMES = [
   'packageManager',
   'redis',
+  'queue',
   'auth',
   'ai',
   'swagger',

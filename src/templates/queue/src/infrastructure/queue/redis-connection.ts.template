@@ -1,0 +1,35 @@
+import type { ConnectionOptions } from 'bullmq';
+
+/**
+ * Turns `REDIS_URL` into the connection options BullMQ expects.
+ *
+ * BullMQ opens its own connections (a worker needs a blocking one), so it takes
+ * options rather than the shared `RedisService` client.
+ */
+export function toBullConnection(url: string): ConnectionOptions {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error('REDIS_URL is not a valid URL.');
+  }
+
+  if (parsed.protocol !== 'redis:' && parsed.protocol !== 'rediss:') {
+    throw new Error('REDIS_URL must start with redis:// or rediss://');
+  }
+
+  const database = parsed.pathname.replace(/^\//, '');
+
+  return {
+    host: parsed.hostname.replace(/^\[(.*)\]$/, '$1'),
+    port: parsed.port ? Number(parsed.port) : 6379,
+    ...(parsed.username
+      ? { username: decodeURIComponent(parsed.username) }
+      : {}),
+    ...(parsed.password
+      ? { password: decodeURIComponent(parsed.password) }
+      : {}),
+    ...(database ? { db: Number(database) } : {}),
+    ...(parsed.protocol === 'rediss:' ? { tls: {} } : {}),
+  };
+}

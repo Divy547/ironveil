@@ -167,6 +167,13 @@ export function createPackageValidator(): PackageValidator {
         );
       }
 
+      if (config.queue) {
+        Object.assign(
+          requiredDependencies,
+          IRONVEIL_VERSIONS.dependencies.queue,
+        );
+      }
+
       if (config.swagger) {
         Object.assign(
           requiredDependencies,
@@ -224,6 +231,18 @@ export function createPackageValidator(): PackageValidator {
             issues.push({
               code: 'FEATURE_DEPENDENCY_LEAKAGE',
               message: `Leaked dependency "${pkg}": feature "redis" is disabled`,
+              path: `dependencies.${pkg}`,
+            });
+          }
+        }
+      }
+
+      if (!config.queue) {
+        for (const pkg of Object.keys(IRONVEIL_VERSIONS.dependencies.queue)) {
+          if (manifestDependencies[pkg] !== undefined) {
+            issues.push({
+              code: 'FEATURE_DEPENDENCY_LEAKAGE',
+              message: `Leaked dependency "${pkg}": feature "queue" is disabled`,
               path: `dependencies.${pkg}`,
             });
           }

@@ -22,6 +22,10 @@ export function getFeatureSummaries(config: GenerationResult['config']): string[
     features.push('Redis Infrastructure');
   }
 
+  if (config.queue) {
+    features.push('Background job queue (BullMQ)');
+  }
+
   if (config.docker) {
     features.push('Docker & Docker Compose');
   }

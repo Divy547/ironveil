@@ -84,4 +84,63 @@ describe('promptCreateOptions', () => {
 
     exit.mockRestore();
   });
+
+  describe('job queue', () => {
+    const isQueuePrompt = (o: PromptOptions) => /queue/i.test(o.message);
+    const isRedisPrompt = (o: PromptOptions) => /redis/i.test(o.message) && !isQueuePrompt(o);
+
+    function answer(redis: boolean, queue: boolean): void {
+      select.mockImplementation((o: PromptOptions) => Promise.resolve(o.initialValue));
+      confirm.mockImplementation((o: PromptOptions) => {
+        if (isRedisPrompt(o)) return Promise.resolve(redis);
+        if (isQueuePrompt(o)) return Promise.resolve(queue);
+        return Promise.resolve(o.initialValue);
+      });
+    }
+
+    it('asks about the queue, defaulting to no, when Redis is enabled', async () => {
+      answer(true, false);
+
+      const result = await promptCreateOptions();
+
+      const prompt = confirm.mock.calls
+        .map((call) => call[0] as PromptOptions)
+        .find(isQueuePrompt);
+      expect(prompt).toBeDefined();
+      expect(prompt?.initialValue).toBe(false);
+      expect(result.queue).toBe(false);
+    });
+
+    it('returns the queue choice the user made', async () => {
+      answer(true, true);
+
+      expect((await promptCreateOptions()).queue).toBe(true);
+    });
+
+    it('does not ask about the queue, and turns it off, when Redis is not enabled', async () => {
+      answer(false, true);
+
+      const result = await promptCreateOptions();
+
+      expect(confirm.mock.calls.map((call) => call[0] as PromptOptions).some(isQueuePrompt)).toBe(false);
+      expect(result.queue).toBe(false);
+    });
+
+    it('exits when the queue prompt is cancelled', async () => {
+      answer(true, false);
+      confirm.mockImplementation((o: PromptOptions) => {
+        if (isRedisPrompt(o)) return Promise.resolve(true);
+        if (isQueuePrompt(o)) return Promise.resolve(Symbol.for('cancel'));
+        return Promise.resolve(o.initialValue);
+      });
+      const exit = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as never);
+
+      await expect(promptCreateOptions()).rejects.toThrow('exit');
+      expect(exit).toHaveBeenCalledWith(130);
+
+      exit.mockRestore();
+    });
+  });
 });

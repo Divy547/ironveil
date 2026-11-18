@@ -24,6 +24,7 @@ export function buildAgentsMd(config: IronveilConfig): string {
     conventions(config),
     ...(jwt ? [authSection()] : []),
     ...(config.redis ? [redisSection()] : []),
+    ...(config.queue ? [queueSection()] : []),
     ...(config.swagger ? [swaggerSection()] : []),
     testingSection(config),
     doNot(config),
@@ -50,6 +51,9 @@ function architecture(config: IronveilConfig): string {
     ['prisma/', 'global PrismaModule / PrismaService'],
     ...(config.redis
       ? [['redis/', 'global RedisModule / RedisService']]
+      : []),
+    ...(config.queue
+      ? [['queue/', 'global BullMQ connection (QueueModule)']]
       : []),
     ...(config.swagger ? [['swagger/', '']] : []),
   ];
@@ -270,6 +274,18 @@ function redisSection(): string {
     '- Inject the global `RedisService` (`src/infrastructure/redis/redis.service.ts`) instead of creating `ioredis` clients. It disconnects cleanly on shutdown; a second client would not.',
     '- Namespace keys by feature (`products:<id>`) and always set a TTL on cache entries.',
     '- Readiness (`/health/ready`) pings Redis; keep that wiring when changing the service.',
+  ].join('\n');
+}
+
+function queueSection(): string {
+  return [
+    '## Job queue (BullMQ)',
+    '',
+    '- `QueueModule` (`src/infrastructure/queue/`) holds the shared BullMQ connection, built from `REDIS_URL`, and the default job options (3 attempts, exponential backoff, finished jobs trimmed). Do not call `BullModule.forRoot` again or create `Queue` / `Worker` objects by hand.',
+    '- Register a queue in the feature module that owns it with `BullModule.registerQueue({ name: QUEUE_NAME })`, keeping the name in one exported constant. Put the work in a `@Processor(QUEUE_NAME)` class that extends `WorkerHost` and implements `process(job)`, and enqueue from a service with `@InjectQueue(QUEUE_NAME)`.',
+    '- Jobs can run more than once because of retries, so make processors idempotent. Put plain JSON in the job data (ids, not entities) and load fresh data in the processor.',
+    '- **In tests, override both the queue and its processor**: a registered queue opens a Redis connection and a `@Processor` starts a worker. Use `overrideProvider(getQueueToken(QUEUE_NAME)).useValue({ add: jest.fn() })` and `overrideProvider(MyProcessor).useValue({})`. Overriding only the queue makes the worker fail at startup with `Worker requires a connection`. Every spec that boots `AppModule` needs these overrides once a queue exists, including `test/app.e2e-spec.ts`, `src/app.module.spec.ts` and the specs `ironveil generate resource` wrote.',
+    '- Workers finish their current job and close on SIGTERM through the shutdown hooks in `main.ts`; keep `enableShutdownHooks()`.',
   ].join('\n');
 }
 

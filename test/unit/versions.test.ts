@@ -39,6 +39,15 @@ describe('IRONVEIL_VERSIONS centralized version registry', () => {
     });
   });
 
+  describe('queue', () => {
+    it('pins @nestjs/bullmq and bullmq as production dependencies', () => {
+      expect(IRONVEIL_VERSIONS.dependencies.queue).toEqual({
+        '@nestjs/bullmq': '11.0.5',
+        bullmq: '5.81.5',
+      });
+    });
+  });
+
   describe('coupled-version invariants', () => {
     it('enforces Prisma Client and Prisma CLI exact version coupling', () => {
       const clientVersion = IRONVEIL_VERSIONS.dependencies.prisma['@prisma/client'];

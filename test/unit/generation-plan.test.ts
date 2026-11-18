@@ -96,6 +96,31 @@ describe('GenerationPlan', () => {
     ]);
   });
 
+  it('includes queue, right after redis, when queue is enabled', () => {
+    const config = resolveConfig({
+      projectName: 'test-api',
+      redis: true,
+      queue: true,
+    });
+
+    const names = createGenerationPlan(config).generators.map(
+      (generator) => generator.name,
+    );
+
+    expect(names.slice(names.indexOf('redis'), names.indexOf('redis') + 2)).toEqual([
+      'redis',
+      'queue',
+    ]);
+  });
+
+  it('leaves queue out when queue is disabled', () => {
+    const config = resolveConfig({ projectName: 'test-api', redis: true });
+
+    expect(
+      createGenerationPlan(config).generators.map((generator) => generator.name),
+    ).not.toContain('queue');
+  });
+
   it('includes testing when testing is enabled', () => {
     const config = resolveConfig({
       projectName: 'test-api',

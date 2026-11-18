@@ -10,6 +10,7 @@ export const ADDABLE_FEATURES = [
   'swagger',
   'redis',
   'auth',
+  'queue',
 ] as const;
 
 export type AddableFeature = (typeof ADDABLE_FEATURES)[number];
@@ -62,6 +63,13 @@ export function describeFeatureChange(
 
   if (mode !== undefined) {
     throw new AddError(`"${feature}" takes no mode, but "${mode}" was given.`);
+  }
+
+  if (feature === 'queue' && !before.redis) {
+    throw new AddError(
+      'The queue requires Redis (BullMQ stores its jobs there), and this project does not have it. ' +
+        'Run `ironveil add redis` first, then `ironveil add queue`.',
+    );
   }
 
   if (feature === 'auth') {

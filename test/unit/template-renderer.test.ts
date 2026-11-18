@@ -1,8 +1,11 @@
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { resolveConfig } from '../../src/config/index.js';
 import {
   createTemplateRenderer,
 } from '../../src/rendering/template-renderer.js';
+import { getTemplatesDirectory } from '../../src/rendering/template-path.js';
 
 describe('TemplateRenderer', () => {
   it('renders projectName placeholders', () => {
@@ -639,6 +642,7 @@ describe('TemplateRenderer', () => {
       '{{readmeAuth}}',
       '{{readmeSwagger}}',
       '{{readmeRedis}}',
+      '{{readmeQueue}}',
       '{{readmeDocker}}',
       '{{readmeTesting}}',
       '{{readmeCi}}',
@@ -692,6 +696,46 @@ describe('TemplateRenderer', () => {
       expect(result).toContain('REDIS_URL');
       expect(result).toContain('RedisService');
       expect(result).not.toContain('caching system');
+    });
+
+    it('renders the Background Jobs section only when the queue is enabled', () => {
+      const withQueue = createTemplateRenderer().render(
+        readmeTemplate,
+        resolveConfig({ projectName: 'queue-app', redis: true, queue: true }),
+      );
+
+      expect(withQueue).toContain('## Background Jobs (BullMQ)');
+      expect(withQueue).toContain('BullModule.registerQueue');
+      expect(withQueue).toContain('REDIS_URL');
+      expect(withQueue).toContain('getQueueToken');
+      expect(withQueue).toMatch(/every spec that boots `AppModule`/i);
+      expect(withQueue).not.toContain('{{readmeQueue}}');
+
+      const withoutQueue = createTemplateRenderer().render(
+        readmeTemplate,
+        resolveConfig({ projectName: 'plain-app', redis: true }),
+      );
+
+      expect(withoutQueue).not.toContain('Background Jobs');
+      expect(withoutQueue).not.toContain('BullMQ');
+    });
+
+    it('lists the queue in the feature bullets when enabled', () => {
+      const result = createTemplateRenderer().render(
+        '{{readmeFeatures}}',
+        resolveConfig({ projectName: 'queue-app', redis: true, queue: true }),
+      );
+
+      expect(result).toContain('- **Background jobs**');
+    });
+
+    it('is wired into the real generated README template', async () => {
+      const real = await readFile(
+        path.join(getTemplatesDirectory(), 'base', 'README.md.template'),
+        'utf8',
+      );
+
+      expect(real).toContain('{{readmeQueue}}');
     });
 
     it('renders Auth section when JWT is enabled', () => {

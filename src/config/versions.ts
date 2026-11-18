@@ -29,6 +29,10 @@ export const IRONVEIL_VERSIONS = {
     prisma: {
       '@prisma/client': '6.19.3',
     },
+    queue: {
+      '@nestjs/bullmq': '11.0.5',
+      bullmq: '5.81.5',
+    },
     redis: {
       ioredis: '5.6.0',
     },

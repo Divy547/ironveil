@@ -10,5 +10,9 @@ describe('AppModule', () => {
     }).compile();
 
     expect(moduleRef).toBeDefined();
+
+    // Release anything opened while compiling (e.g. a job queue connection),
+    // or Jest never exits.
+    await moduleRef.close();
   });
 });

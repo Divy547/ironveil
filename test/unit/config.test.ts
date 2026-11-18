@@ -15,6 +15,7 @@ describe('Ironveil configuration', () => {
       database: 'postgres',
       orm: 'prisma',
       redis: false,
+      queue: false,
       auth: 'none',
       swagger: true,
       docker: true,
@@ -39,6 +40,28 @@ describe('Ironveil configuration', () => {
     expect(config.redis).toBe(true);
     expect(config.auth).toBe('jwt');
     expect(config.docker).toBe(false);
+  });
+
+  it('accepts the queue when Redis is enabled', () => {
+    const config = resolveConfig({
+      projectName: 'bonfire-api',
+      redis: true,
+      queue: true,
+    });
+
+    expect(config.queue).toBe(true);
+  });
+
+  it('rejects the queue without Redis, because BullMQ stores its jobs there', () => {
+    expect(() =>
+      resolveConfig({ projectName: 'bonfire-api', queue: true }),
+    ).toThrow(/queue requires Redis/i);
+  });
+
+  it('rejects the queue when Redis is explicitly off', () => {
+    expect(() =>
+      resolveConfig({ projectName: 'bonfire-api', redis: false, queue: true }),
+    ).toThrow(ConfigError);
   });
 
   it('rejects an empty project name', () => {

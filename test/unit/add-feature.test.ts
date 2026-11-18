@@ -71,6 +71,7 @@ describe('planAdd', () => {
       'swagger',
       'redis',
       'auth',
+      'queue',
     ]);
   });
 
@@ -128,6 +129,113 @@ describe('planAdd', () => {
         });
       }
     }
+  });
+
+  describe('queue', () => {
+    // BullMQ stores its jobs in Redis, so every project here already has it.
+    const bases: ReadonlyArray<readonly [string, Overrides]> = [
+      ['redis only', { redis: true }],
+      ['jwt + redis', { auth: 'jwt', redis: true }],
+      ['no swagger, pnpm, no docker', { redis: true, swagger: false, packageManager: 'pnpm', docker: false }],
+      ['yarn, everything else off', {
+        redis: true,
+        packageManager: 'yarn',
+        swagger: false,
+        docker: false,
+        ci: false,
+        testing: false,
+        ai: 'none',
+      }],
+    ];
+
+    for (const [label, base] of bases) {
+      it(`gives the same project as creating with the queue (${label})`, async () => {
+        const added = await makeProject(base);
+        await add(added, 'queue');
+
+        const created = await makeProject({ ...base, queue: true });
+
+        const expected = await readTree(created);
+        const actual = await readTree(added);
+        expect([...actual.keys()].sort()).toEqual([...expected.keys()].sort());
+        for (const [file, text] of expected) {
+          expect(actual.get(file), file).toBe(text);
+        }
+      });
+    }
+
+    it('registers QueueModule in InfrastructureModule, after RedisModule, and adds both packages', async () => {
+      const root = await makeProject({ redis: true });
+      await add(root, 'queue');
+
+      const infrastructure = await read(root, 'src/infrastructure/infrastructure.module.ts');
+      expect(infrastructure).toContain("import { QueueModule } from './queue/queue.module';");
+      expect(infrastructure.indexOf('RedisModule,')).toBeLessThan(infrastructure.indexOf('QueueModule,'));
+
+      const pkg = JSON.parse(await read(root, 'package.json')) as {
+        dependencies: Record<string, string>;
+      };
+      expect(pkg.dependencies['@nestjs/bullmq']).toBe('11.0.5');
+      expect(pkg.dependencies.bullmq).toBe('5.81.5');
+    });
+
+    it('records the queue in ironveil.json', async () => {
+      const root = await makeProject({ redis: true });
+      await add(root, 'queue');
+
+      expect((await readManifest(root)).features.queue).toBe(true);
+    });
+
+    it('refuses a project without Redis and says to add Redis first', async () => {
+      const root = await makeProject({ redis: false });
+
+      const failure = planAdd({ root, feature: 'queue' });
+      await expect(failure).rejects.toThrow(AddError);
+      await expect(failure).rejects.toThrow(/requires Redis.*ironveil add redis/s);
+      expect(await readdir(path.join(root, 'src/infrastructure'))).not.toContain('queue');
+    });
+
+    it('works on a project made before the manifest had a queue entry', async () => {
+      const root = await makeProject({ redis: true });
+      const manifest = JSON.parse(await read(root, 'ironveil.json')) as {
+        features: Record<string, unknown>;
+      };
+      delete manifest.features.queue;
+      await write(root, 'ironveil.json', `${JSON.stringify(manifest, null, 2)}\n`);
+
+      await add(root, 'queue');
+
+      expect((await readManifest(root)).features.queue).toBe(true);
+    });
+
+    it('keeps a generated resource in AppModule and a dependency the user added', async () => {
+      const root = await makeProject({ redis: true });
+      const resource = await planResource({
+        root,
+        name: 'product',
+        fields: parseFields('name:string'),
+      });
+      await resource.changeSet.apply();
+      const pkg = JSON.parse(await read(root, 'package.json')) as {
+        dependencies: Record<string, string>;
+      };
+      pkg.dependencies['left-pad'] = '1.3.0';
+      await write(root, 'package.json', `${JSON.stringify(pkg, null, 2)}\n`);
+
+      await add(root, 'queue');
+
+      expect(await read(root, 'src/app.module.ts')).toContain('ProductsModule');
+      expect(JSON.parse(await read(root, 'package.json')).dependencies['left-pad']).toBe('1.3.0');
+    });
+
+    it('is a no-op the second time', async () => {
+      const root = await makeProject({ redis: true, queue: true });
+
+      const plan = await planAdd({ root, feature: 'queue' });
+
+      expect(plan.alreadyEnabled).toBe(true);
+      expect(plan.changeSet.changes).toHaveLength(0);
+    });
   });
 
   describe('what it plans', () => {
@@ -317,7 +425,7 @@ describe('planAdd', () => {
       const failure = planAdd({ root, feature: 'banana' });
 
       await expect(failure).rejects.toBeInstanceOf(AddError);
-      await expect(failure).rejects.toThrow(/Unknown feature "banana".*ci, ai, docker, testing, swagger, redis, auth/s);
+      await expect(failure).rejects.toThrow(/Unknown feature "banana".*ci, ai, docker, testing, swagger, redis, auth, queue/s);
     });
 
     it('rejects a mode for a feature that has none', async () => {

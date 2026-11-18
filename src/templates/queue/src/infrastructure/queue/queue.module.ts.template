@@ -1,0 +1,37 @@
+import { BullModule } from '@nestjs/bullmq';
+import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { toBullConnection } from './redis-connection';
+
+/**
+ * Shared BullMQ setup: one Redis connection config and default job options for
+ * every queue. Register individual queues in the feature module that owns them
+ * with `BullModule.registerQueue({ name })`; do not call `forRoot` again.
+ */
+@Module({
+  imports: [
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const url = configService.get<string>('redis.url');
+
+        if (!url) {
+          throw new Error(
+            'REDIS_URL is required when the queue is enabled.',
+          );
+        }
+
+        return {
+          connection: toBullConnection(url),
+          defaultJobOptions: {
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 1000 },
+            removeOnComplete: { age: 3600, count: 1000 },
+            removeOnFail: { age: 7 * 24 * 3600 },
+          },
+        };
+      },
+    }),
+  ],
+})
+export class QueueModule {}
