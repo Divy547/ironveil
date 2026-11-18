@@ -230,6 +230,87 @@ export class AppModule {}
     expect(result).toMatch(/@Module\(\{[\s\S]*imports: \[[\s\S]*OrdersModule/);
   });
 
+  describe('creating a missing array', () => {
+    const add = (source: string) =>
+      registerInModule(source, {
+        property: 'controllers',
+        name: 'BillingController',
+        importPath: './billing.controller',
+      });
+
+    it('writes it on one line, with a trailing comma, in a bare @Module({})', () => {
+      const result = add(`import { Module } from '@nestjs/common';
+
+@Module({})
+export class BillingModule {}
+`);
+
+      expect(result).toBe(`import { Module } from '@nestjs/common';
+import { BillingController } from './billing.controller';
+
+@Module({
+  controllers: [BillingController],
+})
+export class BillingModule {}
+`);
+    });
+
+    it('writes it in a bare @Module()', () => {
+      const result = add(`import { Module } from '@nestjs/common';
+
+@Module()
+export class BillingModule {}
+`);
+
+      expect(result).toContain('  controllers: [BillingController],\n})');
+    });
+
+    it('follows the object: a trailing comma stays, and none is added when the file uses none', () => {
+      const withComma = add(`import { Module } from '@nestjs/common';
+
+@Module({
+  providers: [],
+})
+export class BillingModule {}
+`);
+      expect(withComma).toContain('  providers: [],\n  controllers: [BillingController],\n})');
+
+      const withoutComma = add(`import { Module } from '@nestjs/common';
+
+@Module({
+  providers: []
+})
+export class BillingModule {}
+`);
+      expect(withoutComma).toContain('  providers: [],\n  controllers: [BillingController]\n})');
+    });
+
+    it('stays idempotent', () => {
+      const once = add(`import { Module } from '@nestjs/common';
+
+@Module({})
+export class BillingModule {}
+`);
+
+      expect(add(once)).toBe(once);
+    });
+
+    it('appends to the one-line array it created', () => {
+      const once = add(`import { Module } from '@nestjs/common';
+
+@Module({})
+export class BillingModule {}
+`);
+      const twice = registerInModule(once, {
+        property: 'controllers',
+        name: 'TaxController',
+        importPath: './tax.controller',
+      });
+
+      expect(twice).toMatch(/controllers: \[BillingController, TaxController\],/);
+    });
+  });
+
   it('targets the named class when a file declares several modules', () => {
     const source = `import { Module } from '@nestjs/common';
 

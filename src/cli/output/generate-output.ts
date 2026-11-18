@@ -6,12 +6,13 @@ import {
   DEFAULT_AUTH_POLICY,
   GenerateError,
   routeAccess,
+  type ComponentPlan,
   type ResourcePlan,
   type RouteKind,
 } from '../../scaffolding/index.js';
 import { getPackageManagerSpec } from '../../utils/package-manager.js';
 
-function fileLines(plan: ResourcePlan, labels: { create: string; modify: string }): string[] {
+function fileLines(plan: { changeSet: ResourcePlan['changeSet'] }, labels: { create: string; modify: string }): string[] {
   return plan.changeSet.changes.map(
     (change) => `  ${labels[change.kind]}  ${change.path}`,
   );
@@ -83,6 +84,54 @@ export function formatResourceDryRun(
 
   return [
     `Dry run: resource ${plan.names.pascal} would change ${result.files.length} file(s).`,
+    '',
+    ...fileLines(plan, { create: 'create', modify: 'modify' }),
+    '',
+    result.diff.trimEnd(),
+    '',
+    'No files were written.',
+  ].join('\n');
+}
+
+const COMPONENT_HINTS: Partial<Record<ComponentPlan['kind'], string>> = {
+  guard:
+    'It rejects every request until you write its rule. Apply it with @UseGuards(...) on a controller or route.',
+  dto: 'Import it where you need it; add --fields to generate its properties.',
+};
+
+export function formatComponentResult(
+  plan: ComponentPlan,
+  result: ApplyResult,
+): string {
+  const label = `${plan.kind} ${plan.names.pascal}`;
+
+  if (result.files.length === 0) {
+    return `The ${label} is already generated; nothing to do.`;
+  }
+
+  const hint = COMPONENT_HINTS[plan.kind];
+
+  return [
+    `Generated ${label}.`,
+    '',
+    'Files:',
+    ...fileLines(plan, { create: 'created', modify: 'updated' }),
+    ...(hint === undefined ? [] : ['', hint]),
+  ].join('\n');
+}
+
+export function formatComponentDryRun(
+  plan: ComponentPlan,
+  result: ApplyResult,
+): string {
+  const label = `${plan.kind} ${plan.names.pascal}`;
+
+  if (result.files.length === 0) {
+    return `Dry run: the ${label} is already generated; nothing would change.`;
+  }
+
+  return [
+    `Dry run: ${label} would change ${result.files.length} file(s).`,
     '',
     ...fileLines(plan, { create: 'create', modify: 'modify' }),
     '',

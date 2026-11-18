@@ -131,6 +131,28 @@ Give the **singular** name (`product`, `blog-post`); the module, route and table
 
 Safety: it refuses to run on a dirty git tree unless `--force` is given, never overwrites a file you changed, refuses a name whose Prisma model already exists, and is a no-op when the resource is already generated. Afterwards run `db:generate` and `db:migrate`.
 
+### `ironveil generate module|controller|service|guard|dto <name> [options]`
+
+The smaller building blocks, for when you need one file and not a whole CRUD resource. Same rules as `generate resource` (run from anywhere in the project, `--dry-run` and `--force`, never overwrites your code, a no-op when already generated), but the name is used **as typed** and is never pluralised.
+
+```bash
+ironveil generate service billing                          # src/modules/billing/billing.service.ts (+ the module, if missing)
+ironveil generate controller billing                       # registered in BillingModule
+ironveil generate service tax-calculator --module billing  # into an existing feature module
+ironveil generate guard api-key                            # src/common/guards/api-key.guard.ts
+ironveil generate dto create-invoice --fields "number:string total:decimal note:text?"
+```
+
+| Command | Writes | Registers it in |
+| --- | --- | --- |
+| `module <name>` | `src/modules/<name>/<name>.module.ts`, an empty `@Module({})` | `AppModule` |
+| `controller <name>` | `<feature>/<name>.controller.ts`, routed at `/<name>` (Swagger tags when enabled) | the feature's module `controllers` |
+| `service <name>` | `<feature>/<name>.service.ts` | the feature's module `providers` |
+| `guard <name>` | `src/common/guards/<name>.guard.ts`; it **rejects every request** until you write its rule | nothing: apply it with `@UseGuards()` |
+| `dto <name>` | `src/common/dto/<name>.dto.ts`; `--fields` adds validated properties | nothing: import it where needed |
+
+`<feature>` is the name itself, and its module is created and added to `AppModule` when it does not exist. `--module <name>` puts a controller, service, guard or DTO into an existing feature instead (`src/modules/<name>/`, with guards and DTOs under `guards/` and `dto/`); it fails with a pointer to `generate module` when that module is missing. `--fields` only applies to `dto` and takes the same syntax as `generate resource`. A unit test is written for controllers, services and guards when testing is enabled.
+
 ---
 
 ## Generated Features
@@ -287,7 +309,7 @@ Ironveil contains a comprehensive test suite covering unit behavior, template re
 # Run TypeScript typecheck
 pnpm run typecheck
 
-# Run unit tests (64 test files, 717 tests)
+# Run unit tests (67 test files, 811 tests)
 pnpm test
 
 # Run build

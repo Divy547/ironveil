@@ -109,6 +109,11 @@ export function registerInModule(
       namedImports: [spec.name],
     });
 
+    // Read the object's style before creating anything in it.
+    const options = getModuleOptions(moduleClass);
+    const createsProperty = options?.getProperty(spec.property) === undefined;
+    const trailingComma = options === undefined || usesTrailingCommas(options);
+
     const array = getOrCreateModuleArray(moduleClass, spec.property);
     const alreadyRegistered = array
       .getElements()
@@ -117,7 +122,58 @@ export function registerInModule(
     if (!alreadyRegistered) {
       appendElement(sourceFile, array, spec.name);
     }
+
+    if (createsProperty && trailingComma) {
+      addTrailingCommaToCreatedProperty(sourceFile, spec);
+    }
   });
+}
+
+function getModuleOptions(
+  moduleClass: ClassDeclaration,
+): ObjectLiteralExpression | undefined {
+  const argument = moduleClass.getDecoratorOrThrow('Module').getArguments()[0];
+
+  return argument !== undefined && Node.isObjectLiteralExpression(argument)
+    ? argument
+    : undefined;
+}
+
+/** True for an empty object, or one whose last property ends in a comma. */
+function usesTrailingCommas(options: ObjectLiteralExpression): boolean {
+  const properties = options.getProperties();
+  const last = properties[properties.length - 1];
+
+  if (last === undefined) {
+    return true;
+  }
+
+  return /^\s*,/.test(options.getSourceFile().getFullText().slice(last.getEnd()));
+}
+
+/**
+ * A property ts-morph just created is the last one and has no comma after it.
+ * Add one when the object spans lines and already follows that style (the
+ * generated Prettier config uses `trailingComma: all`).
+ */
+function addTrailingCommaToCreatedProperty(
+  sourceFile: SourceFile,
+  spec: RegisterInModuleSpec,
+): void {
+  // Inserting text forgets earlier nodes, so look the property up again.
+  const options = getModuleOptions(findModuleClass(sourceFile, spec.targetClass));
+  const property = options?.getProperty(spec.property);
+
+  if (
+    options === undefined ||
+    property === undefined ||
+    !options.getText().includes('\n') ||
+    /^\s*,/.test(sourceFile.getFullText().slice(property.getEnd()))
+  ) {
+    return;
+  }
+
+  sourceFile.insertText(property.getEnd(), ',');
 }
 
 /**
@@ -352,6 +408,7 @@ function getOrCreateArrayProperty(
   );
 }
 
+// An empty `[]` stays on one line: `[Name]` is how a person would write it.
 function spansLines(array: ArrayLiteralExpression): boolean {
-  return array.getElements().length === 0 || array.getText().includes('\n');
+  return array.getText().includes('\n');
 }

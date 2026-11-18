@@ -93,12 +93,19 @@ export function pluralize(word: string): string {
   return `${word}s`;
 }
 
-export function deriveResourceNames(input: string): ResourceNames {
+/**
+ * `label` only words the error messages ("Invalid service name"), so the
+ * smaller generators can reuse the same naming rules as `generate resource`.
+ */
+export function deriveResourceNames(
+  input: string,
+  label = 'resource',
+): ResourceNames {
   const trimmed = input.trim();
 
   if (!NAME_PATTERN.test(trimmed)) {
     throw new GenerateError(
-      `Invalid resource name "${input}". Use letters and digits, starting with a letter, ` +
+      `Invalid ${label} name "${input}". Use letters and digits, starting with a letter, ` +
         'optionally joined by - or _ (for example "product" or "blog-post").',
     );
   }

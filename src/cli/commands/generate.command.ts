@@ -2,14 +2,19 @@ import type { Command } from 'commander';
 import { findProjectRoot } from '../../manifest/index.js';
 import { addSafetyOptions, applyChanges, type SafetyOptions } from '../../safety/index.js';
 import {
+  COMPONENT_KINDS,
   deriveResourceNames,
   parseAuthPolicy,
   parseFields,
+  planComponent,
   planResource,
   RESOURCE_AUTH_POLICIES,
+  type ComponentKind,
   type FieldSpec,
 } from '../../scaffolding/index.js';
 import {
+  formatComponentDryRun,
+  formatComponentResult,
   formatEditFailure,
   formatResourceDryRun,
   formatResourceResult,
@@ -21,6 +26,22 @@ interface GenerateResourceOptions extends SafetyOptions {
   readonly auth?: string;
   readonly yes?: boolean;
 }
+
+interface GenerateComponentOptions extends SafetyOptions {
+  readonly module?: string;
+  readonly fields?: string[];
+}
+
+const COMPONENT_DESCRIPTIONS: Record<ComponentKind, string> = {
+  module: 'Generate an empty feature module and import it in AppModule',
+  controller:
+    'Generate a controller and register it in its feature module (the module is created when missing)',
+  service:
+    'Generate a service and register it as a provider in its feature module (the module is created when missing)',
+  guard:
+    'Generate a guard (src/common/guards, or <module>/guards); it rejects every request until you write its rule',
+  dto: 'Generate a DTO class (src/common/dto, or <module>/dto), optionally with --fields',
+};
 
 const collect = (value: string, previous: string[]): string[] => [
   ...previous,
@@ -51,6 +72,10 @@ export function registerGenerateCommand(program: Command): void {
 
   addSafetyOptions(resource);
 
+  for (const kind of COMPONENT_KINDS) {
+    registerComponentCommand(generate, kind);
+  }
+
   resource.action(async (name: string, options: GenerateResourceOptions) => {
     try {
       // Cheap checks first, so a typo does not cost the user a round of prompts.
@@ -70,6 +95,58 @@ export function registerGenerateCommand(program: Command): void {
         options.dryRun === true
           ? formatResourceDryRun(plan, result)
           : formatResourceResult(plan, result),
+      );
+    } catch (error) {
+      process.exitCode = 1;
+      console.error(formatEditFailure(error));
+    }
+  });
+}
+
+function registerComponentCommand(generate: Command, kind: ComponentKind): void {
+  const command = generate
+    .command(`${kind} <name>`)
+    .description(COMPONENT_DESCRIPTIONS[kind]);
+
+  if (kind !== 'module') {
+    command.option(
+      '--module <name>',
+      kind === 'controller' || kind === 'service'
+        ? 'put it in this existing feature module instead of one named after it'
+        : 'put it in this existing feature module instead of src/common',
+    );
+  }
+
+  if (kind === 'dto') {
+    command.option(
+      '--fields <spec>',
+      'properties as "name:type"; a trailing ? makes one optional, e.g. "name:string total:decimal?". Repeatable',
+      collect,
+      [] as string[],
+    );
+  }
+
+  addSafetyOptions(command);
+
+  command.action(async (name: string, options: GenerateComponentOptions) => {
+    try {
+      const root = await findProjectRoot(process.cwd());
+      const plan = await planComponent({
+        root,
+        kind,
+        name,
+        module: options.module,
+        fields: parseFields(options.fields ?? []),
+      });
+      const result = await applyChanges(plan.changeSet, {
+        dryRun: options.dryRun,
+        force: options.force,
+      });
+
+      console.log(
+        options.dryRun === true
+          ? formatComponentDryRun(plan, result)
+          : formatComponentResult(plan, result),
       );
     } catch (error) {
       process.exitCode = 1;

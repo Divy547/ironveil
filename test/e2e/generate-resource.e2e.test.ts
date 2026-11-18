@@ -6,7 +6,9 @@ import { resolveConfig } from '../../src/config/index.js';
 import { applyChanges } from '../../src/safety/index.js';
 import {
   parseFields,
+  planComponent,
   planResource,
+  type ComponentKind,
   type ResourceAuthPolicy,
 } from '../../src/scaffolding/index.js';
 import { createGeneratedProject } from './helpers/generated-project.js';
@@ -43,7 +45,7 @@ describe('Ironveil generate resource E2E', () => {
   });
 
   it(
-    'generates three resources that migrate, lint, build, pass their own tests and serve real CRUD',
+    'generates three resources and the smaller components that migrate, lint, build, pass their own tests and serve real CRUD',
     async () => {
       project = await createGeneratedProject(
         resolveConfig({
@@ -71,6 +73,33 @@ describe('Ironveil generate resource E2E', () => {
           name,
           fields: parseFields(fields),
           auth,
+        });
+        await applyChanges(plan.changeSet);
+      }
+
+      // The smaller generators, applied in the order a user would: a service
+      // that creates its module, a controller and more files in the same
+      // module, a guard and a DTO. Lint, typecheck, build, the specs they write
+      // and the boot below prove the wiring (AppModule, providers) is valid.
+      const components: ReadonlyArray<
+        readonly [ComponentKind, string, { module?: string; fields?: string }?]
+      > = [
+        ['service', 'billing'],
+        ['controller', 'billing'],
+        ['module', 'reporting'],
+        ['service', 'tax-calculator', { module: 'billing' }],
+        ['guard', 'api-key'],
+        ['guard', 'owner', { module: 'billing' }],
+        ['dto', 'create-invoice', { fields: 'number:string total:decimal note:text?' }],
+        ['dto', 'invoice-summary', { module: 'billing' }],
+      ];
+      for (const [kind, name, extra] of components) {
+        const plan = await planComponent({
+          root,
+          kind,
+          name,
+          module: extra?.module,
+          fields: parseFields(extra?.fields ?? ''),
         });
         await applyChanges(plan.changeSet);
       }

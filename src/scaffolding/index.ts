@@ -25,3 +25,10 @@ export {
   type PlanResourceOptions,
   type ResourcePlan,
 } from './plan-resource.js';
+export {
+  COMPONENT_KINDS,
+  planComponent,
+  type ComponentKind,
+  type ComponentPlan,
+  type PlanComponentOptions,
+} from './plan-component.js';

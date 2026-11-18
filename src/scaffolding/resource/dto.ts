@@ -79,6 +79,15 @@ function renderField(field: FieldSpec, mode: Mode, swagger: boolean): RenderedFi
   return { lines, validators: imports, swagger: swaggerName };
 }
 
+/** A create-style DTO class with any class name, shared with `generate dto`. */
+export function buildDtoClass(
+  className: string,
+  fields: readonly FieldSpec[],
+  swagger: boolean,
+): string {
+  return buildDto(className, fields, 'create', swagger);
+}
+
 function buildDto(
   className: string,
   fields: readonly FieldSpec[],
