@@ -107,6 +107,30 @@ describe('ChangeSet', () => {
     );
   });
 
+  describe('read', () => {
+    it('returns the disk content, or null when the file does not exist', async () => {
+      await writeFile(path.join(root, 'a.txt'), 'disk\n');
+      const changes = createChangeSet(root);
+
+      expect(await changes.read('a.txt')).toBe('disk\n');
+      expect(await changes.read('missing.txt')).toBeNull();
+    });
+
+    it('sees planned content, so callers can check what an earlier step will leave', async () => {
+      const changes = createChangeSet(root);
+
+      await changes.write('new.txt', 'planned\n');
+
+      expect(await changes.read('new.txt')).toBe('planned\n');
+    });
+
+    it('applies the same path rules as write', async () => {
+      await expect(createChangeSet(root).read('../x')).rejects.toBeInstanceOf(
+        SafetyError,
+      );
+    });
+  });
+
   describe('edit', () => {
     it('transforms the current file content', async () => {
       await writeFile(path.join(root, 'a.txt'), 'hello\n');

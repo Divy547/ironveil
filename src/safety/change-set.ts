@@ -32,6 +32,8 @@ export interface ChangeSet {
   /** Files whose planned content differs from disk, in the order first planned. */
   readonly changes: readonly PlannedChange[];
   readonly isEmpty: boolean;
+  /** The file's current content (planned if planned, else on disk); `null` if it does not exist. */
+  read(relativePath: string): Promise<string | null>;
   /** Plans the full content of a file (creating it, or replacing it). */
   write(relativePath: string, content: string): Promise<void>;
   /** Plans a transformation of the file's current (possibly planned) content. */
@@ -107,6 +109,10 @@ export function createChangeSet(root: string): ChangeSet {
     },
 
     write,
+
+    async read(relativePath) {
+      return current(normalizeRelativePath(relativePath));
+    },
 
     async edit(relativePath, transform) {
       const normalized = normalizeRelativePath(relativePath);

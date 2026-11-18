@@ -1,0 +1,51 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsBoolean,
+  IsDateString,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateIf,
+} from 'class-validator';
+
+export class UpdateBlogPostDto {
+  @ApiPropertyOptional()
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  name?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional()
+  @ValidateIf((_, value) => value !== undefined)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  price?: number;
+
+  @ApiPropertyOptional()
+  @ValidateIf((_, value) => value !== undefined)
+  @IsInt()
+  stock?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  rating?: number;
+
+  @ApiPropertyOptional()
+  @ValidateIf((_, value) => value !== undefined)
+  @IsBoolean()
+  active?: boolean;
+
+  @ApiPropertyOptional({ format: 'date-time' })
+  @IsOptional()
+  @IsDateString()
+  publishedAt?: string;
+}

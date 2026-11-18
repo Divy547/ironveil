@@ -1,0 +1,25 @@
+export interface Paginated<T> {
+  readonly data: T[];
+  readonly meta: {
+    readonly total: number;
+    readonly page: number;
+    readonly limit: number;
+    readonly totalPages: number;
+  };
+}
+
+export function paginate<T>(
+  data: T[],
+  total: number,
+  query: { readonly page: number; readonly limit: number },
+): Paginated<T> {
+  return {
+    data,
+    meta: {
+      total,
+      page: query.page,
+      limit: query.limit,
+      totalPages: Math.ceil(total / query.limit),
+    },
+  };
+}

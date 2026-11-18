@@ -1,0 +1,12 @@
+--- a/prisma/schema.prisma
++++ b/prisma/schema.prisma
+@@ -16,3 +16,9 @@
+   createdAt    DateTime @default(now())
+   updatedAt    DateTime @updatedAt
+ }
++
++model BlogPost {
++  id        String   @id @default(cuid())
++  createdAt DateTime @default(now())
++  updatedAt DateTime @updatedAt
++}

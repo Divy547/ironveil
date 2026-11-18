@@ -1,0 +1,47 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
+import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
+import { CreateBlogPostDto } from './dto/create-blog-post.dto';
+import { UpdateBlogPostDto } from './dto/update-blog-post.dto';
+import { BlogPostsService } from './blog-posts.service';
+
+@Controller('blog-posts')
+export class BlogPostsController {
+  constructor(private readonly blogPostsService: BlogPostsService) {}
+
+  @Post()
+  create(@Body() dto: CreateBlogPostDto) {
+    return this.blogPostsService.create(dto);
+  }
+
+  @Get()
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.blogPostsService.findAll(query);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.blogPostsService.findOne(id);
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateBlogPostDto) {
+    return this.blogPostsService.update(id, dto);
+  }
+
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Delete(':id')
+  async remove(@Param('id') id: string): Promise<void> {
+    await this.blogPostsService.remove(id);
+  }
+}

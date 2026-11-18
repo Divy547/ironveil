@@ -1,0 +1,19 @@
+--- a/prisma/schema.prisma
++++ b/prisma/schema.prisma
+@@ -16,3 +16,16 @@
+   createdAt    DateTime @default(now())
+   updatedAt    DateTime @updatedAt
+ }
++
++model BlogPost {
++  id          String    @id @default(cuid())
++  name        String
++  description String?
++  price       Decimal   @db.Decimal(12, 2)
++  stock       Int
++  rating      Float?
++  active      Boolean
++  publishedAt DateTime?
++  createdAt   DateTime  @default(now())
++  updatedAt   DateTime  @updatedAt
++}

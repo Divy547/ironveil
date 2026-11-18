@@ -154,3 +154,32 @@ export async function readManifest(
     throw error;
   }
 }
+
+
+/**
+ * Finds the Ironveil project that contains `startDirectory`: the nearest
+ * directory, going upwards, that holds `ironveil.json`. Lets commands work
+ * from `src/modules/...` as well as from the project root.
+ */
+export async function findProjectRoot(
+  startDirectory: string,
+  fs: FileSystem = createFileSystem(),
+): Promise<string> {
+  const start = path.resolve(startDirectory);
+  let directory = start;
+
+  for (;;) {
+    if (await fs.exists(path.join(directory, MANIFEST_FILE_NAME))) {
+      return directory;
+    }
+
+    const parent = path.dirname(directory);
+    if (parent === directory) {
+      throw new ManifestError(
+        `${start} is not inside an Ironveil project: no ${MANIFEST_FILE_NAME} found in it or any parent directory. ` +
+          'Run this command inside a project created with `ironveil create`.',
+      );
+    }
+    directory = parent;
+  }
+}

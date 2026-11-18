@@ -2,6 +2,7 @@ import { Command } from 'commander';
 
 import { IRONVEIL_VERSION } from '../version.js';
 import { registerCreateCommand } from './commands/create.command.js';
+import { registerGenerateCommand } from './commands/generate.command.js';
 
 
 export function createCli(): Command {
@@ -13,6 +14,7 @@ export function createCli(): Command {
     .version(IRONVEIL_VERSION);
 
   registerCreateCommand(program);
+  registerGenerateCommand(program);
 
   return program;
 }

@@ -111,6 +111,27 @@ ironveil --version    # Output installed version (0.3.0)
 
 ---
 
+### `ironveil generate resource <name> [options]`
+
+Run inside a project created with `ironveil create` (any subdirectory works; the project is found through `ironveil.json`). Generates a complete CRUD feature and registers it:
+
+```bash
+ironveil generate resource product --fields "name:string price:decimal stock:int description:text?"
+```
+
+| Option | Description |
+| --- | --- |
+| `--fields <spec>` | Fields as `name:type`, a trailing `?` makes one optional. Types: `string`, `text`, `int`, `float`, `decimal` (`DECIMAL(12,2)`), `boolean`, `datetime` (ISO 8601 string). Repeatable. Without it, an interactive terminal asks for fields one by one. |
+| `-y, --yes` | Do not prompt for fields. |
+| `--dry-run` | Print the planned files and a diff; write nothing. |
+| `--force` | Run even though the git working tree has uncommitted changes. |
+
+Give the **singular** name (`product`, `blog-post`); the module, route and table use the plural. It creates `src/modules/products/` (module, controller, service, create/update DTOs, a service unit test), `test/products.e2e-spec.ts`, a Prisma model plus a matching migration, shared `src/common/pagination/` helpers (`GET /products?page=1&limit=20` returns `{ data, meta }`), and adds `ProductsModule` to `AppModule`. Swagger decorators are added when Swagger is enabled, and the e2e test signs a real JWT when `--auth jwt` is on.
+
+Safety: it refuses to run on a dirty git tree unless `--force` is given, never overwrites a file you changed, refuses a name whose Prisma model already exists, and is a no-op when the resource is already generated. Afterwards run `db:generate` and `db:migrate`.
+
+---
+
 ## Generated Features
 
 Every generated project includes a tailored `package.json`, environment configuration, and clean modular structure.
@@ -265,7 +286,7 @@ Ironveil contains a comprehensive test suite covering unit behavior, template re
 # Run TypeScript typecheck
 pnpm run typecheck
 
-# Run unit tests (56 test files, 576 tests)
+# Run unit tests (64 test files, 717 tests)
 pnpm test
 
 # Run build

@@ -1,0 +1,50 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { paginate } from '../../common/pagination/paginated';
+import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
+import { PrismaService } from '../../infrastructure/prisma/prisma.service';
+import { CreateBlogPostDto } from './dto/create-blog-post.dto';
+import { UpdateBlogPostDto } from './dto/update-blog-post.dto';
+
+@Injectable()
+export class BlogPostsService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  create(dto: CreateBlogPostDto) {
+    return this.prisma.blogPost.create({ data: dto });
+  }
+
+  async findAll(query: PaginationQueryDto) {
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.blogPost.findMany({
+        skip: (query.page - 1) * query.limit,
+        take: query.limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.blogPost.count(),
+    ]);
+
+    return paginate(data, total, query);
+  }
+
+  async findOne(id: string) {
+    const blogPost = await this.prisma.blogPost.findUnique({
+      where: { id },
+    });
+
+    if (!blogPost) {
+      throw new NotFoundException(`BlogPost ${id} not found`);
+    }
+
+    return blogPost;
+  }
+
+  update(id: string, dto: UpdateBlogPostDto) {
+    // A missing row makes Prisma throw P2025, which the global exception
+    // filter already turns into a 404.
+    return this.prisma.blogPost.update({ where: { id }, data: dto });
+  }
+
+  async remove(id: string): Promise<void> {
+    await this.prisma.blogPost.delete({ where: { id } });
+  }
+}

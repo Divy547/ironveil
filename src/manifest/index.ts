@@ -3,6 +3,7 @@ export {
   MANIFEST_VERSION,
   ManifestError,
   buildManifest,
+  findProjectRoot,
   manifestToConfig,
   parseManifest,
   readManifest,
