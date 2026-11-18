@@ -3,8 +3,10 @@ import { findProjectRoot } from '../../manifest/index.js';
 import { addSafetyOptions, applyChanges, type SafetyOptions } from '../../safety/index.js';
 import {
   deriveResourceNames,
+  parseAuthPolicy,
   parseFields,
   planResource,
+  RESOURCE_AUTH_POLICIES,
   type FieldSpec,
 } from '../../scaffolding/index.js';
 import {
@@ -16,6 +18,7 @@ import { promptFields } from '../prompts/generate.prompts.js';
 
 interface GenerateResourceOptions extends SafetyOptions {
   readonly fields: string[];
+  readonly auth?: string;
   readonly yes?: boolean;
 }
 
@@ -40,6 +43,10 @@ export function registerGenerateCommand(program: Command): void {
       collect,
       [] as string[],
     )
+    .option(
+      '--auth <policy>',
+      `who may call the routes (needs JWT auth): ${RESOURCE_AUTH_POLICIES.join(' | ')}. user (default) = any valid token; admin-writes = admin to create, update and delete; public-read = anyone may read, admin to write; admin = admin only`,
+    )
     .option('-y, --yes', 'do not prompt for fields');
 
   addSafetyOptions(resource);
@@ -48,10 +55,12 @@ export function registerGenerateCommand(program: Command): void {
     try {
       // Cheap checks first, so a typo does not cost the user a round of prompts.
       deriveResourceNames(name);
+      const auth =
+        options.auth === undefined ? undefined : parseAuthPolicy(options.auth);
       const root = await findProjectRoot(process.cwd());
 
       const fields = await resolveFields(options);
-      const plan = await planResource({ root, name, fields });
+      const plan = await planResource({ root, name, fields, auth });
       const result = await applyChanges(plan.changeSet, {
         dryRun: options.dryRun,
         force: options.force,

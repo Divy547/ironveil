@@ -1,0 +1,11 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsNotEmpty, IsString, MaxLength, ValidateIf } from 'class-validator';
+
+export class UpdateBlogPostDto {
+  @ApiPropertyOptional()
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  title?: string;
+}

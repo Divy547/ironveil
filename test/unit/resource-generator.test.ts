@@ -65,13 +65,14 @@ describe('planResource', () => {
   }
 
   describe('what it plans', () => {
-    it('plans the module, its tests, the shared pagination files and the three edits', async () => {
+    it('plans the module, its tests, the shared pagination files and the four edits', async () => {
       const root = await makeProject();
 
       const resource = await plan(root);
 
       expect(paths(resource)).toEqual(
         [
+          'ironveil.json',
           'prisma/migrations/20261118093000_create_products/migration.sql',
           'prisma/schema.prisma',
           'src/app.module.ts',

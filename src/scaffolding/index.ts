@@ -1,4 +1,13 @@
 export {
+  DEFAULT_AUTH_POLICY,
+  RESOURCE_AUTH_POLICIES,
+  parseAuthPolicy,
+  routeAccess,
+  type ResourceAuthPolicy,
+  type RouteAccess,
+  type RouteKind,
+} from './auth-policy.js';
+export {
   FIELD_TYPES,
   parseFields,
   type FieldSpec,

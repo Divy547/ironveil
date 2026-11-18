@@ -11,6 +11,7 @@ import {
   manifestToConfig,
   parseManifest,
   readManifest,
+  recordResourceInManifest,
   serializeManifest,
 } from '../../src/manifest/index.js';
 
@@ -239,5 +240,57 @@ describe('readManifest', () => {
     await expect(readManifest(dir)).rejects.toThrow(
       path.join(dir, MANIFEST_FILE_NAME),
     );
+  });
+});
+
+describe('resources in the manifest', () => {
+  const base = () => serializeManifest(buildManifest(config({ auth: 'jwt' }), '1.0.0'));
+
+  it('is optional: a manifest without resources stays valid and has none', () => {
+    expect(parseManifest(base()).resources).toBeUndefined();
+  });
+
+  it('records a resource and its auth policy', () => {
+    const text = recordResourceInManifest(base(), 'product', { auth: 'admin-writes' });
+
+    expect(parseManifest(text).resources).toEqual({
+      product: { auth: 'admin-writes' },
+    });
+  });
+
+  it('adds resources side by side and replaces a resource of the same name', () => {
+    let text = recordResourceInManifest(base(), 'product', { auth: 'user' });
+    text = recordResourceInManifest(text, 'blog-post', { auth: 'admin' });
+    text = recordResourceInManifest(text, 'product', { auth: 'public-read' });
+
+    expect(parseManifest(text).resources).toEqual({
+      product: { auth: 'public-read' },
+      'blog-post': { auth: 'admin' },
+    });
+  });
+
+  it('keeps the existing layout and unknown keys, and ends with a newline', () => {
+    const original = JSON.parse(base()) as Record<string, unknown>;
+    original.somethingNew = { keep: true };
+    const text = recordResourceInManifest(JSON.stringify(original), 'product', {});
+
+    const parsed = JSON.parse(text) as Record<string, unknown>;
+    expect(parsed.somethingNew).toEqual({ keep: true });
+    expect(parsed.projectName).toBe('test-api');
+    expect(text.endsWith('\n')).toBe(true);
+    expect(Object.keys(parsed).at(-1)).toBe('resources');
+  });
+
+  it('rejects an unknown auth policy', () => {
+    const text = JSON.stringify({
+      ...JSON.parse(base()),
+      resources: { product: { auth: 'everyone' } },
+    });
+
+    expect(() => parseManifest(text)).toThrow(/resources\.product\.auth/);
+  });
+
+  it('refuses to edit a manifest that is not valid', () => {
+    expect(() => recordResourceInManifest('{', 'product', {})).toThrow(ManifestError);
   });
 });

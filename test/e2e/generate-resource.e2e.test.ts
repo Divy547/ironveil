@@ -1,9 +1,14 @@
 import { execFile } from 'node:child_process';
+import { createHmac } from 'node:crypto';
 import { promisify } from 'node:util';
 import { afterEach, describe, expect, it } from 'vitest';
 import { resolveConfig } from '../../src/config/index.js';
 import { applyChanges } from '../../src/safety/index.js';
-import { parseFields, planResource } from '../../src/scaffolding/index.js';
+import {
+  parseFields,
+  planResource,
+  type ResourceAuthPolicy,
+} from '../../src/scaffolding/index.js';
 import { createGeneratedProject } from './helpers/generated-project.js';
 import {
   assertBootsAndShutsDownCleanly,
@@ -18,6 +23,15 @@ const DATABASE_URL = `postgresql://postgres:postgres@localhost:5432/ironveil-res
 const REDIS_URL = 'redis://localhost:6379';
 const JWT_SECRET = 'ironveil-resource-e2e-super-secret-key-32chars';
 
+// A minimal HS256 token, so the test can act as an admin without a database row.
+function signJwt(payload: Record<string, unknown>, secret: string): string {
+  const encode = (value: unknown) =>
+    Buffer.from(JSON.stringify(value)).toString('base64url');
+  const body = `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode(payload)}`;
+  const signature = createHmac('sha256', secret).update(body).digest('base64url');
+  return `${body}.${signature}`;
+}
+
 describe('Ironveil generate resource E2E', () => {
   let project:
     | Awaited<ReturnType<typeof createGeneratedProject>>
@@ -29,7 +43,7 @@ describe('Ironveil generate resource E2E', () => {
   });
 
   it(
-    'generates two resources that migrate, lint, build, pass their own tests and serve real CRUD',
+    'generates three resources that migrate, lint, build, pass their own tests and serve real CRUD',
     async () => {
       project = await createGeneratedProject(
         resolveConfig({
@@ -41,17 +55,22 @@ describe('Ironveil generate resource E2E', () => {
       );
       const root = project.root;
 
-      for (const [name, fields] of [
+      const resources: ReadonlyArray<
+        readonly [string, string, ResourceAuthPolicy?]
+      > = [
         [
           'product',
           'name:string description:text? price:decimal stock:int rating:float? active:boolean publishedAt:datetime?',
         ],
         ['blog-post', 'title:string body:text?'],
-      ] as const) {
+        ['order', 'reference:string', 'admin-writes'],
+      ];
+      for (const [name, fields, auth] of resources) {
         const plan = await planResource({
           root,
           name,
           fields: parseFields(fields),
+          auth,
         });
         await applyChanges(plan.changeSet);
       }
@@ -236,6 +255,41 @@ describe('Ironveil generate resource E2E', () => {
             body: null,
           });
 
+          // `--auth admin-writes`, against the real guards: reading needs any
+          // token, writing needs the ADMIN role (registered users are USERs).
+          const adminToken = signJwt(
+            { sub: 'admin-1', email: 'admin@example.com', role: 'ADMIN' },
+            JWT_SECRET,
+          );
+          const admin = { ...json, Authorization: `Bearer ${adminToken}` };
+          const order = { reference: 'A-1' };
+
+          expect((await fetch(`${base}/orders`)).status).toBe(401);
+          expect((await fetch(`${base}/orders`, { headers: auth })).status).toBe(200);
+          const userWrite = await fetch(`${base}/orders`, {
+            method: 'POST',
+            headers: auth,
+            body: JSON.stringify(order),
+          });
+          expect(userWrite.status).toBe(403);
+          const adminWrite = await fetch(`${base}/orders`, {
+            method: 'POST',
+            headers: admin,
+            body: JSON.stringify(order),
+          });
+          expect(adminWrite.status).toBe(201);
+          const orderId = ((await adminWrite.json()) as { id: string }).id;
+          const userDelete = await fetch(`${base}/orders/${orderId}`, {
+            method: 'DELETE',
+            headers: auth,
+          });
+          expect(userDelete.status).toBe(403);
+          const adminDelete = await fetch(`${base}/orders/${orderId}`, {
+            method: 'DELETE',
+            headers: admin,
+          });
+          expect(adminDelete.status).toBe(204);
+
           // Swagger picked the routes and DTOs up.
           const docs = (await (await fetch(`${base}/api/docs-json`)).json()) as {
             paths: Record<string, unknown>;
@@ -250,7 +304,7 @@ describe('Ironveil generate resource E2E', () => {
             ]),
           );
           expect(Object.keys(docs.components.schemas)).toEqual(
-            expect.arrayContaining(['CreateProductDto', 'UpdateBlogPostDto']),
+            expect.arrayContaining(['CreateProductDto', 'UpdateBlogPostDto', 'CreateOrderDto']),
           );
         },
       });

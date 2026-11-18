@@ -1,0 +1,11 @@
+--- a/ironveil.json
++++ b/ironveil.json
+@@ -13,5 +13,8 @@
+     "ci": true,
+     "testing": false,
+     "ai": "agents"
++  },
++  "resources": {
++    "blog-post": {}
+   }
+ }

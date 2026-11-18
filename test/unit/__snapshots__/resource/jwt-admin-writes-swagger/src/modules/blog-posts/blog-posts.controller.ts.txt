@@ -1,0 +1,75 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { Role } from '../auth/types/role.type';
+import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
+import { CreateBlogPostDto } from './dto/create-blog-post.dto';
+import { UpdateBlogPostDto } from './dto/update-blog-post.dto';
+import { BlogPostsService } from './blog-posts.service';
+
+@ApiTags('blog-posts')
+@ApiBearerAuth()
+@Controller('blog-posts')
+export class BlogPostsController {
+  constructor(private readonly blogPostsService: BlogPostsService) {}
+
+  @ApiOperation({ summary: 'Create a blog post' })
+  @ApiForbiddenResponse({ description: 'Requires the admin role' })
+  @Roles(Role.ADMIN)
+  @Post()
+  create(@Body() dto: CreateBlogPostDto) {
+    return this.blogPostsService.create(dto);
+  }
+
+  @ApiOperation({ summary: 'List blog posts (paginated)' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
+  @Get()
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.blogPostsService.findAll(query);
+  }
+
+  @ApiOperation({ summary: 'Get a blog post by id' })
+  @ApiNotFoundResponse({ description: 'BlogPost not found' })
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.blogPostsService.findOne(id);
+  }
+
+  @ApiOperation({ summary: 'Update a blog post' })
+  @ApiNotFoundResponse({ description: 'BlogPost not found' })
+  @ApiForbiddenResponse({ description: 'Requires the admin role' })
+  @Roles(Role.ADMIN)
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateBlogPostDto) {
+    return this.blogPostsService.update(id, dto);
+  }
+
+  @ApiOperation({ summary: 'Delete a blog post' })
+  @ApiNotFoundResponse({ description: 'BlogPost not found' })
+  @ApiForbiddenResponse({ description: 'Requires the admin role' })
+  @Roles(Role.ADMIN)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Delete(':id')
+  async remove(@Param('id') id: string): Promise<void> {
+    await this.blogPostsService.remove(id);
+  }
+}

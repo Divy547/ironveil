@@ -86,7 +86,7 @@ describe('ironveil generate resource', () => {
     expect(generate).toBeDefined();
     expect(resource).toBeDefined();
     expect(resource?.options.map((option) => option.long)).toEqual(
-      expect.arrayContaining(['--fields', '--force', '--dry-run', '--yes']),
+      expect.arrayContaining(['--fields', '--auth', '--force', '--dry-run', '--yes']),
     );
   });
 
@@ -137,6 +137,66 @@ describe('ironveil generate resource', () => {
 
     expect(process.exitCode).toBeUndefined();
     expect(printed(log)).toMatch(/already/i);
+  });
+
+  describe('--auth', () => {
+    async function useJwtProject(): Promise<void> {
+      const jwtWorkspace = await mkdtemp(path.join(os.tmpdir(), 'ironveil-gen-auth-'));
+      const result = await generateProject(
+        resolveConfig({ projectName: 'shop-api', auth: 'jwt' }),
+        jwtWorkspace,
+      );
+      project = result.destination;
+      cwd.mockReturnValue(project);
+    }
+
+    it('generates a resource with the chosen policy', async () => {
+      await useJwtProject();
+
+      await run('product', '--fields', 'name:string', '--auth', 'admin-writes');
+
+      expect(process.exitCode).toBeUndefined();
+      expect(await read('src/modules/products/products.controller.ts')).toContain(
+        '@Roles(Role.ADMIN)',
+      );
+      expect(await read('ironveil.json')).toContain('"admin-writes"');
+    });
+
+    it('lists who may call each route', async () => {
+      await useJwtProject();
+
+      await run('product', '--fields', 'name:string', '--auth', 'public-read');
+
+      const output = printed(log);
+      expect(output).toMatch(/GET\s+\/products\?page=1&limit=20\s+public/);
+      expect(output).toMatch(/POST\s+\/products\s+admin/);
+    });
+
+    it('rejects an unknown policy without writing anything', async () => {
+      await useJwtProject();
+
+      await run('product', '--fields', 'name:string', '--auth', 'everyone');
+
+      expect(process.exitCode).toBe(1);
+      expect(printed(error)).toMatch(/user, admin-writes, public-read, admin/);
+      expect(await exists('src/modules/products/products.module.ts')).toBe(false);
+    });
+
+    it('explains that a non-default policy needs JWT auth, and writes nothing', async () => {
+      await run('product', '--fields', 'name:string', '--auth', 'admin');
+
+      expect(process.exitCode).toBe(1);
+      expect(printed(error)).toMatch(/JWT authentication/);
+      expect(printed(error)).toContain('No files were changed');
+      expect(await exists('src/modules/products/products.module.ts')).toBe(false);
+    });
+
+    it('accepts --auth user in a project without auth', async () => {
+      await run('product', '--fields', 'name:string', '--auth', 'user');
+
+      expect(process.exitCode).toBeUndefined();
+      expect(await exists('src/modules/products/products.module.ts')).toBe(true);
+    });
   });
 
   describe('fields', () => {

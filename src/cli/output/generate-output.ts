@@ -2,7 +2,13 @@ import { ConfigError } from '../../config/resolve.js';
 import { EditError } from '../../editing/index.js';
 import { ManifestError } from '../../manifest/index.js';
 import { SafetyError, type ApplyResult } from '../../safety/index.js';
-import { GenerateError, type ResourcePlan } from '../../scaffolding/index.js';
+import {
+  DEFAULT_AUTH_POLICY,
+  GenerateError,
+  routeAccess,
+  type ResourcePlan,
+  type RouteKind,
+} from '../../scaffolding/index.js';
 import { getPackageManagerSpec } from '../../utils/package-manager.js';
 
 function fileLines(plan: ResourcePlan, labels: { create: string; modify: string }): string[] {
@@ -11,15 +17,26 @@ function fileLines(plan: ResourcePlan, labels: { create: string; modify: string 
   );
 }
 
+const ACCESS_LABELS = { token: 'any valid token', public: 'public', admin: 'admin only' } as const;
+
 function routeLines(plan: ResourcePlan): string[] {
   const route = `/${plan.names.pluralKebab}`;
-  return [
-    `  POST   ${route}`,
-    `  GET    ${route}?page=1&limit=20`,
-    `  GET    ${route}/:id`,
-    `  PATCH  ${route}/:id`,
-    `  DELETE ${route}/:id`,
+  const routes: Array<[string, string, RouteKind]> = [
+    ['POST  ', route, 'write'],
+    ['GET   ', `${route}?page=1&limit=20`, 'read'],
+    ['GET   ', `${route}/:id`, 'read'],
+    ['PATCH ', `${route}/:id`, 'write'],
+    ['DELETE', `${route}/:id`, 'write'],
   ];
+  // The default policy is what every route does anyway: say nothing about it.
+  const annotate = plan.auth !== DEFAULT_AUTH_POLICY;
+  const width = Math.max(...routes.map(([, path]) => path.length));
+
+  return routes.map(([verb, path, kind]) =>
+    annotate
+      ? `  ${verb} ${path.padEnd(width)}  ${ACCESS_LABELS[routeAccess(plan.auth, kind)]}`
+      : `  ${verb} ${path}`,
+  );
 }
 
 export function formatResourceResult(

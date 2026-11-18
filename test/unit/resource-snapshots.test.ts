@@ -23,6 +23,24 @@ const COMBINATIONS = [
     fields: 'title:string body:text?',
   },
   {
+    name: 'jwt-public-read',
+    overrides: { auth: 'jwt' },
+    fields: 'title:string body:text?',
+    auth: 'public-read',
+  },
+  {
+    name: 'jwt-admin-writes-swagger',
+    overrides: { auth: 'jwt', swagger: true },
+    fields: 'title:string',
+    auth: 'admin-writes',
+  },
+  {
+    name: 'jwt-admin',
+    overrides: { auth: 'jwt' },
+    fields: 'title:string',
+    auth: 'admin',
+  },
+  {
     name: 'minimal',
     overrides: { swagger: false, testing: false },
     fields: '',
@@ -40,7 +58,7 @@ describe('generated resource snapshots', () => {
     await rm(workspace, { recursive: true, force: true });
   });
 
-  it.each(COMBINATIONS)('$name', async ({ name, overrides, fields }) => {
+  it.each(COMBINATIONS)('$name', async ({ name, overrides, fields, ...rest }) => {
     const project = await generateProject(
       resolveConfig({ projectName: 'snapshot-api', ...overrides }),
       workspace,
@@ -49,6 +67,7 @@ describe('generated resource snapshots', () => {
       root: project.destination,
       name: 'blog-post',
       fields: parseFields(fields),
+      auth: 'auth' in rest ? rest.auth : undefined,
       now: new Date('2026-11-18T09:30:00Z'),
     });
 

@@ -16,6 +16,27 @@ export const MANIFEST_FILE_NAME = 'ironveil.json';
  */
 export const MANIFEST_VERSION = 1;
 
+/**
+ * Who may call a generated resource's routes (`ironveil generate resource
+ * --auth`). Defined here because the manifest records it; the generator
+ * imports it from this module.
+ */
+export const RESOURCE_AUTH_POLICIES = [
+  'user',
+  'admin-writes',
+  'public-read',
+  'admin',
+] as const;
+
+export type ResourceAuthPolicy = (typeof RESOURCE_AUTH_POLICIES)[number];
+
+const ResourceEntrySchema = z.object({
+  // Absent when the project has no JWT auth: there is nothing to choose then.
+  auth: z.enum(RESOURCE_AUTH_POLICIES).optional(),
+});
+
+export type ManifestResource = z.output<typeof ResourceEntrySchema>;
+
 export class ManifestError extends Error {
   constructor(message: string) {
     super(message);
@@ -44,6 +65,8 @@ const ManifestSchema = z.object({
     testing: shape.testing.removeDefault(),
     ai: shape.ai.removeDefault(),
   }),
+  // Added by `generate resource`, keyed by the singular kebab-case name.
+  resources: z.record(z.string(), ResourceEntrySchema).optional(),
 });
 
 export type IronveilManifest = z.output<typeof ManifestSchema>;
@@ -111,6 +134,27 @@ export function parseManifest(text: string): IronveilManifest {
   }
 
   return result.data;
+}
+
+/**
+ * Returns `text` (the contents of `ironveil.json`) with `entry` recorded under
+ * `resources[name]`, replacing an earlier entry of the same name.
+ *
+ * Works on the raw JSON rather than the parsed manifest so keys this version
+ * does not know about (written by a newer Ironveil) survive the rewrite.
+ */
+export function recordResourceInManifest(
+  text: string,
+  name: string,
+  entry: ManifestResource,
+): string {
+  parseManifest(text);
+
+  const raw = JSON.parse(text) as Record<string, unknown>;
+  const resources = (raw.resources ?? {}) as Record<string, unknown>;
+  raw.resources = { ...resources, [name]: entry };
+
+  return `${JSON.stringify(raw, null, 2)}\n`;
 }
 
 export function manifestToConfig(manifest: IronveilManifest): IronveilConfig {

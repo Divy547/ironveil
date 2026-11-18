@@ -1,0 +1,99 @@
+import { NotFoundException } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import { PrismaService } from '../../infrastructure/prisma/prisma.service';
+import { CreateBlogPostDto } from './dto/create-blog-post.dto';
+import { UpdateBlogPostDto } from './dto/update-blog-post.dto';
+import { BlogPostsService } from './blog-posts.service';
+
+describe('BlogPostsService', () => {
+  let service: BlogPostsService;
+
+  const delegate = {
+    create: jest.fn(),
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    count: jest.fn(),
+  };
+  const prisma = {
+    blogPost: delegate,
+    $transaction: jest.fn((operations: unknown[]) => Promise.all(operations)),
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+
+    const moduleRef = await Test.createTestingModule({
+      providers: [BlogPostsService, { provide: PrismaService, useValue: prisma }],
+    }).compile();
+
+    service = moduleRef.get(BlogPostsService);
+  });
+
+  it('creates a record from the DTO', async () => {
+    const dto: CreateBlogPostDto = {
+      title: 'Example title',
+    };
+    delegate.create.mockResolvedValue({ id: 'id-1', ...dto });
+
+    const result = await service.create(dto);
+
+    expect(delegate.create).toHaveBeenCalledWith({ data: dto });
+    expect(result).toMatchObject({ id: 'id-1' });
+  });
+
+  it('lists one page and reports the totals', async () => {
+    delegate.findMany.mockResolvedValue([{ id: 'id-3' }]);
+    delegate.count.mockResolvedValue(45);
+
+    const result = await service.findAll({ page: 3, limit: 20 });
+
+    expect(delegate.findMany).toHaveBeenCalledWith({
+      skip: 40,
+      take: 20,
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(result).toEqual({
+      data: [{ id: 'id-3' }],
+      meta: { total: 45, page: 3, limit: 20, totalPages: 3 },
+    });
+  });
+
+  it('returns a record by id', async () => {
+    delegate.findUnique.mockResolvedValue({ id: 'id-1' });
+
+    await expect(service.findOne('id-1')).resolves.toEqual({ id: 'id-1' });
+    expect(delegate.findUnique).toHaveBeenCalledWith({ where: { id: 'id-1' } });
+  });
+
+  it('throws NotFoundException when the record does not exist', async () => {
+    delegate.findUnique.mockResolvedValue(null);
+
+    await expect(service.findOne('missing')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('updates a record', async () => {
+    const dto: UpdateBlogPostDto = {
+      title: 'Updated title',
+    };
+    delegate.update.mockResolvedValue({ id: 'id-1', ...dto });
+
+    await service.update('id-1', dto);
+
+    expect(delegate.update).toHaveBeenCalledWith({
+      where: { id: 'id-1' },
+      data: dto,
+    });
+  });
+
+  it('deletes a record', async () => {
+    delegate.delete.mockResolvedValue({ id: 'id-1' });
+
+    await service.remove('id-1');
+
+    expect(delegate.delete).toHaveBeenCalledWith({ where: { id: 'id-1' } });
+  });
+});

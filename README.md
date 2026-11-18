@@ -122,6 +122,7 @@ ironveil generate resource product --fields "name:string price:decimal stock:int
 | Option | Description |
 | --- | --- |
 | `--fields <spec>` | Fields as `name:type`, a trailing `?` makes one optional. Types: `string`, `text`, `int`, `float`, `decimal` (`DECIMAL(12,2)`), `boolean`, `datetime` (ISO 8601 string). Repeatable. Without it, an interactive terminal asks for fields one by one. |
+| `--auth <policy>` | Who may call the routes; needs a project with JWT auth. `user` (default): any valid token. `admin-writes`: any token to read, `@Roles(Role.ADMIN)` to create, update and delete. `public-read`: reads are `@Public()`, writes are admin only. `admin`: every route admin only. The decorators go on each route, and the generated e2e test checks the policy (401 without a token, 403 for a normal user). The choice is recorded in `ironveil.json`. |
 | `-y, --yes` | Do not prompt for fields. |
 | `--dry-run` | Print the planned files and a diff; write nothing. |
 | `--force` | Run even though the git working tree has uncommitted changes. |

@@ -1,5 +1,6 @@
 import type { IronveilConfig } from '../../config/index.js';
 import { createTemplateRenderer } from '../../rendering/template-renderer.js';
+import { routeAccess, type ResourceAuthPolicy } from '../auth-policy.js';
 import type { FieldSpec, FieldType } from '../fields.js';
 import type { ResourceNames } from '../names.js';
 import { file } from './code.js';
@@ -165,10 +166,24 @@ export function buildE2eSpec(
   names: ResourceNames,
   fields: readonly FieldSpec[],
   config: IronveilConfig,
+  policy: ResourceAuthPolicy = 'user',
 ): string {
   const { camel, pluralKebab } = names;
   const route = `/${pluralKebab}`;
   const jwt = config.auth === 'jwt';
+
+  // With the default policy one token does everything (`authorize`). Any other
+  // policy needs separate callers: a normal user, an admin, or no token.
+  const split = jwt && policy !== 'user';
+  const readAccess = routeAccess(policy, 'read');
+  const W = split ? 'asAdmin' : 'authorize';
+  const R = !split
+    ? 'authorize'
+    : readAccess === 'admin'
+      ? 'asAdmin'
+      : readAccess === 'public'
+        ? 'asAnonymous'
+        : 'asUser';
 
   // Reuse the project's own test environment setup (DATABASE_URL, JWT_SECRET, ...).
   const testEnv = createTemplateRenderer().render('{{testingTestEnv}}', config);
@@ -246,7 +261,12 @@ export function buildE2eSpec(
     '',
     `describe('${names.pluralPascal} (e2e)', () => {`,
     '  let app: INestApplication;',
-    '  let authorize: (test: request.Test) => request.Test;',
+    ...(split
+      ? [
+          '  let asUser: (test: request.Test) => request.Test;',
+          '  let asAdmin: (test: request.Test) => request.Test;',
+        ]
+      : ['  let authorize: (test: request.Test) => request.Test;']),
     '',
     '  beforeEach(async () => {',
     "    const { AppModule } = await import('../src/app.module');",
@@ -290,16 +310,30 @@ export function buildE2eSpec(
     '    );',
     '    await app.init();',
     '',
-    ...(jwt
+    ...(split
       ? [
-          '    const token = app.get(JwtService, { strict: false }).sign({',
-          "      sub: 'user-1',",
-          "      email: 'user@example.com',",
-          "      role: 'USER',",
-          '    });',
-          "    authorize = (test) => test.set('Authorization', `Bearer ${token}`);",
+          '    const jwtService = app.get(JwtService, { strict: false });',
+          '    const tokenFor = (role: string) =>',
+          '      jwtService.sign({',
+          '        sub: `${role.toLowerCase()}-1`,',
+          '        email: `${role.toLowerCase()}@example.com`,',
+          '        role,',
+          '      });',
+          "    const userToken = tokenFor('USER');",
+          "    const adminToken = tokenFor('ADMIN');",
+          "    asUser = (test) => test.set('Authorization', `Bearer ${userToken}`);",
+          "    asAdmin = (test) => test.set('Authorization', `Bearer ${adminToken}`);",
         ]
-      : ['    authorize = (test) => test;']),
+      : jwt
+        ? [
+            '    const token = app.get(JwtService, { strict: false }).sign({',
+            "      sub: 'user-1',",
+            "      email: 'user@example.com',",
+            "      role: 'USER',",
+            '    });',
+            "    authorize = (test) => test.set('Authorization', `Bearer ${token}`);",
+          ]
+        : ['    authorize = (test) => test;']),
     '  });',
     '',
     '  afterEach(async () => {',
@@ -307,19 +341,14 @@ export function buildE2eSpec(
     '  });',
     '',
     '  const server = () => app.getHttpServer();',
+    ...(R === 'asAnonymous'
+      ? ['  const asAnonymous = (test: request.Test) => test;']
+      : []),
     `  const payload = ${payload};`,
     '',
-    ...(jwt
-      ? [
-          "  it('rejects requests without a token', async () => {",
-          `    await request(server()).get('${route}').expect(401);`,
-          `    await request(server()).post('${route}').send(payload).expect(401);`,
-          '  });',
-          '',
-        ]
-      : []),
+    ...policyTests(route, policy, jwt),
     "  it('creates a record', async () => {",
-    '    const response = await authorize(',
+    `    const response = await ${W}(`,
     `      request(server()).post('${route}').send(payload),`,
     '    ).expect(201);',
     '',
@@ -328,7 +357,7 @@ export function buildE2eSpec(
     '  });',
     '',
     "  it('rejects unknown properties', async () => {",
-    '    await authorize(',
+    `    await ${W}(`,
     `      request(server()).post('${route}').send({ ...payload, unexpected: true }),`,
     '    ).expect(400);',
     '  });',
@@ -336,17 +365,17 @@ export function buildE2eSpec(
     ...(hasRequired
       ? [
           "  it('rejects a body that is missing required fields', async () => {",
-          `    await authorize(request(server()).post('${route}').send({})).expect(400);`,
+          `    await ${W}(request(server()).post('${route}').send({})).expect(400);`,
           '  });',
           '',
         ]
       : []),
     "  it('lists records page by page', async () => {",
     '    for (let index = 0; index < 3; index += 1) {',
-    `      await authorize(request(server()).post('${route}').send(payload)).expect(201);`,
+    `      await ${W}(request(server()).post('${route}').send(payload)).expect(201);`,
     '    }',
     '',
-    '    const response = await authorize(',
+    `    const response = await ${R}(`,
     `      request(server()).get('${route}?page=2&limit=2'),`,
     '    ).expect(200);',
     '',
@@ -360,52 +389,144 @@ export function buildE2eSpec(
     '  });',
     '',
     "  it('rejects an out-of-range page size', async () => {",
-    `    await authorize(request(server()).get('${route}?limit=1000')).expect(400);`,
+    `    await ${R}(request(server()).get('${route}?limit=1000')).expect(400);`,
     '  });',
     '',
     "  it('gets a record by id and returns 404 for an unknown id', async () => {",
-    '    const created = await authorize(',
+    `    const created = await ${W}(`,
     `      request(server()).post('${route}').send(payload),`,
     '    ).expect(201);',
     '',
-    '    await authorize(',
+    `    await ${R}(`,
     `      request(server()).get(\`${route}/\${created.body.id}\`),`,
     '    ).expect(200);',
     '',
-    '    const missing = await authorize(',
+    `    const missing = await ${R}(`,
     `      request(server()).get('${route}/does-not-exist'),`,
     '    ).expect(404);',
     '    expect(missing.body.statusCode).toBe(404);',
     '  });',
     '',
     "  it('updates a record, and returns 404 when it does not exist', async () => {",
-    '    const created = await authorize(',
+    `    const created = await ${W}(`,
     `      request(server()).post('${route}').send(payload),`,
     '    ).expect(201);',
     `    const patch = ${patch};`,
     '',
-    '    const updated = await authorize(',
+    `    const updated = await ${W}(`,
     `      request(server()).patch(\`${route}/\${created.body.id}\`).send(patch),`,
     '    ).expect(200);',
     '    expect(updated.body).toMatchObject(patch);',
     '',
-    '    await authorize(',
+    `    await ${W}(`,
     `      request(server()).patch('${route}/does-not-exist').send(patch),`,
     '    ).expect(404);',
     '  });',
     '',
     "  it('deletes a record', async () => {",
-    '    const created = await authorize(',
+    `    const created = await ${W}(`,
     `      request(server()).post('${route}').send(payload),`,
     '    ).expect(201);',
     '',
-    '    await authorize(',
+    `    await ${W}(`,
     `      request(server()).delete(\`${route}/\${created.body.id}\`),`,
     '    ).expect(204);',
-    '    await authorize(',
+    `    await ${R}(`,
     `      request(server()).get(\`${route}/\${created.body.id}\`),`,
     '    ).expect(404);',
     '  });',
     '});',
   ]);
+}
+
+/**
+ * The access-control tests: what each caller may and may not do. They exercise
+ * the real guards, so a policy that is not enforced fails here.
+ */
+function policyTests(
+  route: string,
+  policy: ResourceAuthPolicy,
+  jwt: boolean,
+): string[] {
+  if (!jwt) {
+    return [];
+  }
+
+  const rejectsAnonymous = [
+    "  it('rejects requests without a token', async () => {",
+    `    await request(server()).get('${route}').expect(401);`,
+    `    await request(server()).post('${route}').send(payload).expect(401);`,
+    '  });',
+    '',
+  ];
+
+  // Creates a record as an admin and returns its URL.
+  const createdAsAdmin = [
+    '    const created = await asAdmin(',
+    `      request(server()).post('${route}').send(payload),`,
+    '    ).expect(201);',
+    `    const url = \`${route}/\${created.body.id}\`;`,
+  ];
+
+  const writesAreForbidden = [
+    `    await asUser(request(server()).post('${route}').send(payload)).expect(403);`,
+    '    await asUser(request(server()).patch(url).send({})).expect(403);',
+    '    await asUser(request(server()).delete(url)).expect(403);',
+  ];
+
+  switch (policy) {
+    case 'user':
+      return rejectsAnonymous;
+
+    case 'admin-writes':
+      return [
+        ...rejectsAnonymous,
+        "  it('lets a normal user read, but a normal user cannot write', async () => {",
+        ...createdAsAdmin,
+        '',
+        `    await asUser(request(server()).get('${route}')).expect(200);`,
+        '    await asUser(request(server()).get(url)).expect(200);',
+        ...writesAreForbidden,
+        '  });',
+        '',
+      ];
+
+    case 'public-read':
+      return [
+        "  it('serves reads without a token', async () => {",
+        ...createdAsAdmin,
+        '',
+        `    await request(server()).get('${route}').expect(200);`,
+        '    await request(server()).get(url).expect(200);',
+        '  });',
+        '',
+        "  it('rejects writes without a token', async () => {",
+        ...createdAsAdmin,
+        '',
+        `    await request(server()).post('${route}').send(payload).expect(401);`,
+        '    await request(server()).patch(url).send({}).expect(401);',
+        '    await request(server()).delete(url).expect(401);',
+        '  });',
+        '',
+        "  it('forbids a normal user from writing', async () => {",
+        ...createdAsAdmin,
+        '',
+        ...writesAreForbidden,
+        '  });',
+        '',
+      ];
+
+    case 'admin':
+      return [
+        ...rejectsAnonymous,
+        "  it('keeps every route admin-only, so a normal user cannot read or write', async () => {",
+        ...createdAsAdmin,
+        '',
+        `    await asUser(request(server()).get('${route}')).expect(403);`,
+        '    await asUser(request(server()).get(url)).expect(403);',
+        ...writesAreForbidden,
+        '  });',
+        '',
+      ];
+  }
 }

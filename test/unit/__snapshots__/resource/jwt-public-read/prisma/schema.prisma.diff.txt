@@ -1,0 +1,17 @@
+--- a/prisma/schema.prisma
++++ b/prisma/schema.prisma
+@@ -36,4 +36,12 @@
+ 
+   @@index([userId])
+   @@index([familyId])
+-}
+\ No newline at end of file
++}
++
++model BlogPost {
++  id        String   @id @default(cuid())
++  title     String
++  body      String?
++  createdAt DateTime @default(now())
++  updatedAt DateTime @updatedAt
++}

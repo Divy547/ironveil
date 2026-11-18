@@ -6,10 +6,13 @@ import {
   hasPrismaDefinition,
 } from '../editing/index.js';
 import {
+  MANIFEST_FILE_NAME,
   manifestToConfig,
   readManifest,
+  recordResourceInManifest,
 } from '../manifest/index.js';
 import { createChangeSet, type ChangeSet } from '../safety/index.js';
+import { DEFAULT_AUTH_POLICY, type ResourceAuthPolicy } from './auth-policy.js';
 import type { FieldSpec } from './fields.js';
 import { GenerateError } from './generate-error.js';
 import { deriveResourceNames, type ResourceNames } from './names.js';
@@ -35,6 +38,8 @@ export interface PlanResourceOptions {
   /** The resource name as typed: `product`, `blog-post`, `BlogPost`. Singular. */
   readonly name: string;
   readonly fields: readonly FieldSpec[];
+  /** Who may call the routes; defaults to `user` (any valid token). */
+  readonly auth?: ResourceAuthPolicy;
   /** Clock for the migration timestamp; tests pass a fixed date. */
   readonly now?: Date;
 }
@@ -45,6 +50,7 @@ export interface ResourcePlan {
   readonly config: IronveilConfig;
   readonly names: ResourceNames;
   readonly fields: readonly FieldSpec[];
+  readonly auth: ResourceAuthPolicy;
   /** Name of the new migration folder, or `null` when none is needed. */
   readonly migration: string | null;
   /** True when the resource's files already exist exactly as generated. */
@@ -73,6 +79,15 @@ export async function planResource(
   const root = path.resolve(options.root);
   const config = manifestToConfig(await readManifest(root));
   const { fields } = options;
+  const auth = options.auth ?? DEFAULT_AUTH_POLICY;
+
+  if (auth !== DEFAULT_AUTH_POLICY && config.auth !== 'jwt') {
+    throw new GenerateError(
+      `Cannot use --auth ${auth}: this project has no JWT authentication, so there are no roles or tokens to check. ` +
+        'Generate the resource without --auth, or add authentication to the project first.',
+    );
+  }
+
   const changeSet = createChangeSet(root);
 
   const moduleDirectory = `src/modules/${names.pluralKebab}`;
@@ -83,7 +98,7 @@ export async function planResource(
     },
     {
       path: `${moduleDirectory}/${names.pluralKebab}.controller.ts`,
-      content: buildController(names, config),
+      content: buildController(names, config, auth),
     },
     {
       path: `${moduleDirectory}/${names.pluralKebab}.service.ts`,
@@ -105,7 +120,7 @@ export async function planResource(
           },
           {
             path: `test/${names.pluralKebab}.e2e-spec.ts`,
-            content: buildE2eSpec(names, fields, config),
+            content: buildE2eSpec(names, fields, config, auth),
           },
         ]
       : []),
@@ -165,6 +180,14 @@ export async function planResource(
       appendPrismaModel(text, buildPrismaModel(names, fields)),
     );
 
+    await changeSet.edit(MANIFEST_FILE_NAME, (text) =>
+      recordResourceInManifest(
+        text,
+        names.kebab,
+        config.auth === 'jwt' ? { auth } : {},
+      ),
+    );
+
     migration = `${timestamp(options.now ?? new Date())}_create_${names.pluralSnake}`;
     await changeSet.write(
       `prisma/migrations/${migration}/migration.sql`,
@@ -196,6 +219,7 @@ export async function planResource(
     config,
     names,
     fields,
+    auth,
     migration,
     alreadyGenerated: !firstRun,
   };
