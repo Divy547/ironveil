@@ -153,6 +153,21 @@ ironveil generate dto create-invoice --fields "number:string total:decimal note:
 
 `<feature>` is the name itself, and its module is created and added to `AppModule` when it does not exist. `--module <name>` puts a controller, service, guard or DTO into an existing feature instead (`src/modules/<name>/`, with guards and DTOs under `guards/` and `dto/`); it fails with a pointer to `generate module` when that module is missing. `--fields` only applies to `dto` and takes the same syntax as `generate resource`. A unit test is written for controllers, services and guards when testing is enabled.
 
+### `ironveil add <feature> [mode]`
+
+Adds a feature to a project you already created, by generating what `create` would have generated and merging the difference into your files. `ironveil add testing` gives the same project as `ironveil create --testing` would have.
+
+```bash
+ironveil add testing          # jest config, specs, test scripts and dev dependencies
+ironveil add docker           # Dockerfile, .dockerignore, docker-compose.yml, docker:up / docker:down
+ironveil add ci               # .github/workflows/ci.yml
+ironveil add ai               # AGENTS.md + CLAUDE.md   (ironveil add ai all: + Cursor and Copilot files)
+```
+
+Available now: `ci`, `ai`, `docker`, `testing`. `redis`, `swagger` and `auth` are coming. It accepts `--dry-run` and `--force` like `generate`.
+
+How your own changes are treated: a file you never touched is replaced; a file you edited is three-way merged, so your edits stay; `package.json` is merged as JSON (your dependencies and scripts stay); `ironveil.json` keeps your recorded resources. If an edit of yours overlaps with what the feature needs, or a file it wants to create already exists with different content, `add` stops, lists the files and writes **nothing**. A `README.md` or `AGENTS.md` you rewrote is left as it is, with a note. It never installs anything: it prints the install command, and warns when the project was created by a different Ironveil version. Adding a feature that is already enabled does nothing, and features are never removed.
+
 ---
 
 ## Generated Features
@@ -309,7 +324,7 @@ Ironveil contains a comprehensive test suite covering unit behavior, template re
 # Run TypeScript typecheck
 pnpm run typecheck
 
-# Run unit tests (67 test files, 811 tests)
+# Run unit tests (71 test files, 899 tests)
 pnpm test
 
 # Run build

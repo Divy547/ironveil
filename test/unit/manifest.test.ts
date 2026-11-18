@@ -13,6 +13,7 @@ import {
   readManifest,
   recordResourceInManifest,
   serializeManifest,
+  setFeatureInManifest,
 } from '../../src/manifest/index.js';
 
 type Overrides = Parameters<typeof resolveConfig>[0];
@@ -292,5 +293,46 @@ describe('resources in the manifest', () => {
 
   it('refuses to edit a manifest that is not valid', () => {
     expect(() => recordResourceInManifest('{', 'product', {})).toThrow(ManifestError);
+  });
+});
+
+describe('setFeatureInManifest', () => {
+  const text = serializeManifest(buildManifest(config({ ci: false, ai: 'none' }), '1.2.3'));
+
+  it('flips one feature and leaves every other byte alone', () => {
+    const result = setFeatureInManifest(text, 'ci', true);
+
+    expect(result).toBe(text.replace('"ci": false', '"ci": true'));
+  });
+
+  it('sets the ai mode', () => {
+    expect(parseManifest(setFeatureInManifest(text, 'ai', 'all')).features.ai).toBe('all');
+  });
+
+  it('keeps the recorded resources and keys from a newer Ironveil', () => {
+    const raw = JSON.parse(text) as Record<string, unknown>;
+    raw.resources = { product: { auth: 'admin' } };
+    raw.somethingNew = { keep: true };
+
+    const result = JSON.parse(
+      setFeatureInManifest(`${JSON.stringify(raw, null, 2)}\n`, 'docker', false),
+    ) as Record<string, unknown>;
+
+    expect(result.resources).toEqual({ product: { auth: 'admin' } });
+    expect(result.somethingNew).toEqual({ keep: true });
+    expect((result.features as Record<string, unknown>).docker).toBe(false);
+  });
+
+  it('does not touch ironveilVersion: it records what created the project', () => {
+    expect(parseManifest(setFeatureInManifest(text, 'ci', true)).ironveilVersion).toBe('1.2.3');
+  });
+
+  it('refuses a value the manifest would reject', () => {
+    expect(() => setFeatureInManifest(text, 'ai', 'everything')).toThrow(ManifestError);
+    expect(() => setFeatureInManifest(text, 'ci', 'yes')).toThrow(ManifestError);
+  });
+
+  it('refuses a feature that does not exist', () => {
+    expect(() => setFeatureInManifest(text, 'banana' as never, true)).toThrow(ManifestError);
   });
 });

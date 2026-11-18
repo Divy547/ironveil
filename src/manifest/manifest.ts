@@ -157,6 +157,36 @@ export function recordResourceInManifest(
   return `${JSON.stringify(raw, null, 2)}\n`;
 }
 
+export type ManifestFeature = keyof IronveilManifest['features'];
+
+/**
+ * Returns `text` (the contents of `ironveil.json`) with one feature set to
+ * `value`. Like `recordResourceInManifest` it edits the raw JSON, so the
+ * recorded resources and keys from a newer Ironveil survive, and it leaves
+ * `ironveilVersion` alone: that records what created the project.
+ */
+export function setFeatureInManifest(
+  text: string,
+  feature: ManifestFeature,
+  value: boolean | string,
+): string {
+  parseManifest(text);
+
+  const raw = JSON.parse(text) as { features: Record<string, unknown> };
+
+  if (!Object.hasOwn(raw.features, feature)) {
+    throw new ManifestError(`Unknown feature "${feature}" in ${MANIFEST_FILE_NAME}.`);
+  }
+
+  raw.features[feature] = value;
+  const result = `${JSON.stringify(raw, null, 2)}\n`;
+
+  // Rejects a value the schema would not accept, e.g. ai: "everything".
+  parseManifest(result);
+
+  return result;
+}
+
 export function manifestToConfig(manifest: IronveilManifest): IronveilConfig {
   try {
     return resolveConfig({

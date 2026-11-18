@@ -1,3 +1,4 @@
+import { AddError } from '../../adding/index.js';
 import { ConfigError } from '../../config/resolve.js';
 import { EditError } from '../../editing/index.js';
 import { ManifestError } from '../../manifest/index.js';
@@ -149,6 +150,7 @@ export function formatEditFailure(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
 
   if (
+    error instanceof AddError ||
     error instanceof GenerateError ||
     error instanceof SafetyError ||
     error instanceof ManifestError ||

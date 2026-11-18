@@ -10,7 +10,9 @@ export {
   readManifest,
   recordResourceInManifest,
   serializeManifest,
+  setFeatureInManifest,
   type IronveilManifest,
+  type ManifestFeature,
   type ManifestResource,
   type ResourceAuthPolicy,
 } from './manifest.js';
