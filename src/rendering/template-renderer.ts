@@ -1,6 +1,14 @@
 import type { IronveilConfig } from '../config/index.js';
 import { IRONVEIL_VERSIONS } from '../config/versions.js';
 import { getPackageManagerSpec } from '../utils/package-manager.js';
+import {
+  MIGRATION_AUTH_ENUM,
+  MIGRATION_AUTH_TABLES,
+  MIGRATION_AUTH_USER_COLUMN,
+  PRISMA_AUTH_ENUM,
+  PRISMA_AUTH_REFRESH_TOKEN_MODEL,
+  PRISMA_AUTH_USER_FIELD_LINES,
+} from './auth-schema.js';
 
 export interface TemplateRenderer {
   render(
@@ -114,70 +122,23 @@ export function createTemplateRenderer(): TemplateRenderer {
       const isJwtAuth = config.auth === 'jwt';
 
       const prismaAuthUserFields = isJwtAuth
-        ? '\n  role         Role     @default(USER)\n  refreshTokens RefreshToken[]'
+        ? `\n${PRISMA_AUTH_USER_FIELD_LINES.join('\n')}`
         : '';
 
       const prismaAuthModels = isJwtAuth
-        ? [
-            '',
-            'enum Role {',
-            '  USER',
-            '  ADMIN',
-            '}',
-            '',
-            'model RefreshToken {',
-            '  id        String    @id @default(cuid())',
-            '  tokenHash String    @unique',
-            '  familyId  String',
-            '  userId    String',
-            '  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)',
-            '  expiresAt DateTime',
-            '  revokedAt DateTime?',
-            '  createdAt DateTime  @default(now())',
-            '',
-            '  @@index([userId])',
-            '  @@index([familyId])',
-            '}',
-          ].join('\n')
+        ? ['', PRISMA_AUTH_ENUM, '', PRISMA_AUTH_REFRESH_TOKEN_MODEL].join('\n')
         : '';
 
       const migrationAuthEnum = isJwtAuth
-        ? '-- CreateEnum\nCREATE TYPE "Role" AS ENUM (\'USER\', \'ADMIN\');\n\n'
+        ? `${MIGRATION_AUTH_ENUM}\n\n`
         : '';
 
       const migrationAuthUserColumn = isJwtAuth
-        ? '\n    "role" "Role" NOT NULL DEFAULT \'USER\','
+        ? `\n${MIGRATION_AUTH_USER_COLUMN}`
         : '';
 
       const migrationAuthTables = isJwtAuth
-        ? [
-            '',
-            '',
-            '-- CreateTable',
-            'CREATE TABLE "RefreshToken" (',
-            '    "id" TEXT NOT NULL,',
-            '    "tokenHash" TEXT NOT NULL,',
-            '    "familyId" TEXT NOT NULL,',
-            '    "userId" TEXT NOT NULL,',
-            '    "expiresAt" TIMESTAMP(3) NOT NULL,',
-            '    "revokedAt" TIMESTAMP(3),',
-            '    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,',
-            '',
-            '    CONSTRAINT "RefreshToken_pkey" PRIMARY KEY ("id")',
-            ');',
-            '',
-            '-- CreateIndex',
-            'CREATE UNIQUE INDEX "RefreshToken_tokenHash_key" ON "RefreshToken"("tokenHash");',
-            '',
-            '-- CreateIndex',
-            'CREATE INDEX "RefreshToken_userId_idx" ON "RefreshToken"("userId");',
-            '',
-            '-- CreateIndex',
-            'CREATE INDEX "RefreshToken_familyId_idx" ON "RefreshToken"("familyId");',
-            '',
-            '-- AddForeignKey',
-            'ALTER TABLE "RefreshToken" ADD CONSTRAINT "RefreshToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;',
-          ].join('\n')
+        ? `\n\n${MIGRATION_AUTH_TABLES}`
         : '';
 
       const healthPublicImport = isJwtAuth

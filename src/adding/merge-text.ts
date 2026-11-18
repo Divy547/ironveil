@@ -6,6 +6,14 @@ export type TextMerge =
 
 const LINE_BREAK = /\r?\n/;
 
+/** True when two texts differ only in their line endings. */
+export const sameText = (a: string, b: string): boolean =>
+  a.replace(/\r\n/g, '\n') === b.replace(/\r\n/g, '\n');
+
+/** `text` with the line endings `like` uses. */
+export const inLineEndingOf = (text: string, like: string): string =>
+  like.includes('\r\n') ? text.replace(/\r?\n/g, '\r\n') : text;
+
 /**
  * Three-way merge of a text file: `ours` is what is on disk, `base` is what
  * Ironveil generated before, `theirs` is what it generates now. Edits on

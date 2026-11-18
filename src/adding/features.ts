@@ -1,13 +1,18 @@
-import { resolveConfig, type Ai, type IronveilConfig } from '../config/index.js';
+import { resolveConfig, type Ai, type Auth, type IronveilConfig } from '../config/index.js';
 import { AddError } from './add-error.js';
 
 /** Features `ironveil add` can apply in this version. */
-export const ADDABLE_FEATURES = ['ci', 'ai', 'docker', 'testing', 'swagger', 'redis'] as const;
+export const ADDABLE_FEATURES = [
+  'ci',
+  'ai',
+  'docker',
+  'testing',
+  'swagger',
+  'redis',
+  'auth',
+] as const;
 
 export type AddableFeature = (typeof ADDABLE_FEATURES)[number];
-
-/** Real features that `add` will support, but not yet. */
-const COMING_FEATURES = ['auth'] as const;
 
 export const AI_MODES = ['agents', 'all'] as const;
 
@@ -16,8 +21,8 @@ const AI_RANK: Record<Ai, number> = { none: 0, agents: 1, all: 2 };
 
 export interface FeatureChange {
   readonly feature: AddableFeature;
-  /** The manifest value to record (`true`, or the ai mode). */
-  readonly value: boolean | Ai;
+  /** The manifest value to record (`true`, the ai mode, or `jwt`). */
+  readonly value: boolean | Ai | Auth;
   /** The project's config once the feature is added. */
   readonly after: IronveilConfig;
   /** True when the project already has the feature (or more of it). */
@@ -33,11 +38,6 @@ export function describeFeatureChange(
   mode: string | undefined,
 ): FeatureChange {
   if (!isAddable(feature)) {
-    if ((COMING_FEATURES as readonly string[]).includes(feature)) {
-      throw new AddError(
-        `"ironveil add ${feature}" is not available yet. Features you can add now: ${ADDABLE_FEATURES.join(', ')}.`,
-      );
-    }
     throw new AddError(
       `Unknown feature "${feature}". Features you can add: ${ADDABLE_FEATURES.join(', ')}.`,
     );
@@ -62,6 +62,15 @@ export function describeFeatureChange(
 
   if (mode !== undefined) {
     throw new AddError(`"${feature}" takes no mode, but "${mode}" was given.`);
+  }
+
+  if (feature === 'auth') {
+    return {
+      feature,
+      value: 'jwt',
+      after: resolveConfig({ ...before, auth: 'jwt' }),
+      alreadyEnabled: before.auth === 'jwt',
+    };
   }
 
   return {

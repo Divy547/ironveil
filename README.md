@@ -163,12 +163,15 @@ ironveil add docker           # Dockerfile, .dockerignore, docker-compose.yml, d
 ironveil add ci               # .github/workflows/ci.yml
 ironveil add swagger          # @nestjs/swagger, the /api/docs setup, main.ts and CSP wiring
 ironveil add redis            # ioredis service and module, readiness check, REDIS_URL, docker-compose service
+ironveil add auth             # JWT auth module, global guard, roles, and a new Prisma migration
 ironveil add ai               # AGENTS.md + CLAUDE.md   (ironveil add ai all: + Cursor and Copilot files)
 ```
 
-Available now: `ci`, `ai`, `docker`, `testing`, `swagger`, `redis`. `auth` is coming. It accepts `--dry-run` and `--force` like `generate`.
+Available: `ci`, `ai`, `docker`, `testing`, `swagger`, `redis`, `auth`. It accepts `--dry-run` and `--force` like `generate`.
 
 How your own changes are treated: a file you never touched is replaced; a file you edited is three-way merged, so your edits stay; `package.json` is merged as JSON (your dependencies and scripts stay); `ironveil.json` keeps your recorded resources. If an edit of yours overlaps with what the feature needs, or a file it wants to create already exists with different content, `add` stops, lists the files and writes **nothing**. `add` never edits your own `.env`: after `add redis`, copy `REDIS_URL` from `.env.example` into it (the app validates it at boot). Resources generated before `add swagger` keep working but have no Swagger decorators, and `add` says so. A `README.md` or `AGENTS.md` you rewrote is left as it is, with a note. It never installs anything: it prints the install command, and warns when the project was created by a different Ironveil version. Adding a feature that is already enabled does nothing, and features are never removed.
+
+**`add auth` and your database.** It never edits `prisma/migrations/0001_init` (it has probably run already): the `Role` enum, the `role` column on `User` (existing users become `USER`) and the `RefreshToken` table go into a **new** `prisma/migrations/<timestamp>_add_auth/migration.sql`, and `schema.prisma` gets the same changes. Before it writes anything it checks that `schema.prisma` has a `model User` without a `role` field, that no `Role` or `RefreshToken` exists yet, and that your migrations create the `User` table; otherwise it stops and lists what is wrong. Then run `db:generate`, `db:migrate` (`prisma migrate dev` also confirms the schema and migrations agree), copy the three `JWT_*` variables into your `.env` and set a `JWT_SECRET` of at least 32 characters. The global guard protects **every** route, so resources generated earlier now require a token: `add auth` updates their controller and e2e spec (the spec now signs in and checks the 401), and records the `user` policy for each in `ironveil.json`. A spec you changed in the same place is left as it is, with a note. Nobody is an admin yet: promote one with SQL (`UPDATE "User" SET role = 'ADMIN' WHERE email = '...'`).
 
 ---
 

@@ -134,6 +134,63 @@ describe('ironveil add', () => {
     expect(printed(log)).toContain('/api/docs');
   });
 
+  describe('auth', () => {
+    it('adds auth, and tells the user how to migrate, configure and install', async () => {
+      await makeProject({ packageManager: 'pnpm' });
+
+      await run('auth');
+
+      expect(process.exitCode).toBeUndefined();
+      const output = printed(log);
+      expect(output).toContain('Added auth');
+      expect(output).toMatch(/prisma\/migrations\/\d{14}_add_auth\/migration\.sql/);
+      expect(output).toContain('pnpm install');
+      expect(output).toContain('pnpm run db:generate');
+      expect(output).toMatch(/pnpm run db:migrate\b(?!:)/);
+      expect(output).toContain('db:migrate:deploy');
+      expect(output).toMatch(/JWT_SECRET.*\.env/);
+      expect(output).toMatch(/ADMIN/);
+      expect(await exists('src/modules/auth/auth.module.ts')).toBe(true);
+    });
+
+    it('does not suggest running tests when the project has none', async () => {
+      await makeProject({ testing: false });
+
+      await run('auth');
+
+      expect(printed(log)).not.toMatch(/run test\b/);
+    });
+
+    it('lists the migration it planned in a dry run and writes nothing', async () => {
+      await makeProject();
+
+      await run('auth', '--dry-run');
+
+      expect(printed(log)).toMatch(/_add_auth\/migration\.sql/);
+      expect(await exists('src/modules/auth/auth.module.ts')).toBe(false);
+    });
+
+    it('says when the project already has auth', async () => {
+      await makeProject({ auth: 'jwt' });
+
+      await run('auth');
+
+      expect(printed(log)).toContain('auth is already enabled');
+    });
+
+    it('exits 1 and names the problem when the schema has drifted', async () => {
+      await makeProject();
+      const schemaPath = path.join(project, 'prisma/schema.prisma');
+      await writeFile(schemaPath, (await readFile(schemaPath, 'utf8')).replace('model User {', 'model Account {'));
+
+      await run('auth');
+
+      expect(process.exitCode).toBe(1);
+      expect(printed(error)).toMatch(/model User/);
+      expect(await exists('src/modules/auth/auth.module.ts')).toBe(false);
+    });
+  });
+
   it('takes an ai mode', async () => {
     await makeProject({ ai: 'none' });
 

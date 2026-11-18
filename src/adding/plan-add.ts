@@ -8,10 +8,19 @@ import {
 } from '../manifest/index.js';
 import { createChangeSet, type ChangeSet } from '../safety/index.js';
 import { IRONVEIL_VERSION } from '../version.js';
+import {
+  INIT_MIGRATION_PATH,
+  SCHEMA_PATH,
+  applyAuthEdit,
+  buildAuthMigrationSql,
+  findAuthSchemaProblems,
+  nextMigrationName,
+  retrofitResources,
+} from './add-auth.js';
 import { AddError } from './add-error.js';
 import { describeFeatureChange, type AddableFeature } from './features.js';
 import { mergePackageJson } from './merge-package-json.js';
-import { mergeText } from './merge-text.js';
+import { inLineEndingOf, mergeText, sameText } from './merge-text.js';
 import { renderProject } from './render-project.js';
 
 const PACKAGE_JSON = 'package.json';
@@ -27,6 +36,8 @@ export interface PlanAddOptions {
   readonly feature: string;
   /** Only `ai` takes one: `agents` (default) or `all`. */
   readonly mode?: string;
+  /** Clock for the migration timestamp (`auth`); tests pass a fixed date. */
+  readonly now?: Date;
 }
 
 export interface AddPlan {
@@ -39,15 +50,11 @@ export interface AddPlan {
   readonly alreadyEnabled: boolean;
   /** True when `package.json` changes, so the user must install. */
   readonly dependenciesChanged: boolean;
+  /** Name of the migration folder the feature adds (`auth`), if any. */
+  readonly migration: string | null;
   /** Things the user should know: skipped files, a version mismatch. */
   readonly notes: readonly string[];
 }
-
-const sameText = (a: string, b: string): boolean =>
-  a.replace(/\r\n/g, '\n') === b.replace(/\r\n/g, '\n');
-
-const inLineEndingOf = (text: string, like: string): string =>
-  like.includes('\r\n') ? text.replace(/\r?\n/g, '\r\n') : text;
 
 /**
  * Plans `ironveil add <feature>`.
@@ -80,6 +87,7 @@ export async function planAdd(options: PlanAddOptions): Promise<AddPlan> {
     after: change.after,
     alreadyEnabled: false,
     dependenciesChanged: false,
+    migration: null,
     notes: [],
     ...extra,
   });
@@ -104,6 +112,22 @@ export async function planAdd(options: PlanAddOptions): Promise<AddPlan> {
     );
   }
 
+  const isAuth = change.feature === 'auth';
+  if (isAuth) {
+    const problems = await findAuthSchemaProblems(root, await changeSet.read(SCHEMA_PATH));
+    if (problems.length > 0) {
+      throw new AddError(
+        [
+          'Cannot add auth: the database setup is not what auth builds on.',
+          ...problems.map((problem) => `  - ${problem}`),
+          '',
+          'Ironveil never edits migrations that may already have run, so nothing was written. ' +
+            'Fix these first (or add auth by hand).',
+        ].join('\n'),
+      );
+    }
+  }
+
   const baseFiles = await renderProject(before);
   const targetFiles = await renderProject(change.after);
   const conflicts: string[] = [];
@@ -113,6 +137,9 @@ export async function planAdd(options: PlanAddOptions): Promise<AddPlan> {
 
     // ironveil.json is edited below; unchanged files are not this feature's.
     if (file === MANIFEST_FILE_NAME || wanted === original) continue;
+
+    // Auth's tables go into a new migration (below), never into the applied one.
+    if (isAuth && file === INIT_MIGRATION_PATH) continue;
 
     const current = await changeSet.read(file);
 
@@ -140,6 +167,18 @@ export async function planAdd(options: PlanAddOptions): Promise<AddPlan> {
     }
 
     if (sameText(current, wanted)) continue;
+
+    // Resources append to these in the same place auth does, which a line
+    // merge reports as a conflict, so auth edits them by name instead.
+    const edit = isAuth ? applyAuthEdit(file, current) : undefined;
+    if (edit !== undefined) {
+      if ('text' in edit) {
+        await changeSet.write(file, edit.text);
+      } else {
+        conflicts.push(`${file}  (${edit.problem})`);
+      }
+      continue;
+    }
 
     if (file === PACKAGE_JSON) {
       const merged = mergePackageJson(current, original, wanted);
@@ -177,11 +216,34 @@ export async function planAdd(options: PlanAddOptions): Promise<AddPlan> {
     );
   }
 
+  let migration: string | null = null;
+  if (isAuth) {
+    migration = await nextMigrationName(root, options.now ?? new Date());
+    await changeSet.write(
+      `prisma/migrations/${migration}/migration.sql`,
+      buildAuthMigrationSql(),
+    );
+
+    await retrofitResources(changeSet, manifest, before, change.after, notes);
+
+    notes.push(
+      'Auth protects every route unless it is marked @Public(), so controllers you wrote by hand now need a token too. ' +
+        'Existing users get the USER role; promote an admin with SQL (UPDATE "User" SET role = \'ADMIN\' WHERE email = \'...\').',
+    );
+    if (resources.length > 0) {
+      notes.push(
+        `Resources generated earlier (${resources.join(', ')}) now require a token on every route (the \`user\` policy), ` +
+          'and their e2e specs were updated to send one. Add @Public() or @Roles(Role.ADMIN) to a route to change who may call it.',
+      );
+    }
+  }
+
   await changeSet.edit(MANIFEST_FILE_NAME, (text) =>
     setFeatureInManifest(text, change.feature, change.value),
   );
 
   return plan({
+    migration,
     dependenciesChanged: changeSet.changes.some(
       (changed) => changed.path === PACKAGE_JSON,
     ),

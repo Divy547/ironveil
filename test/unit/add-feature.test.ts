@@ -70,6 +70,7 @@ describe('planAdd', () => {
       'testing',
       'swagger',
       'redis',
+      'auth',
     ]);
   });
 
@@ -316,13 +317,7 @@ describe('planAdd', () => {
       const failure = planAdd({ root, feature: 'banana' });
 
       await expect(failure).rejects.toBeInstanceOf(AddError);
-      await expect(failure).rejects.toThrow(/Unknown feature "banana".*ci, ai, docker, testing, swagger, redis/s);
-    });
-
-    it('says auth is known but not available yet', async () => {
-      const root = await makeProject();
-
-      await expect(planAdd({ root, feature: 'auth' })).rejects.toThrow(/not available yet/);
+      await expect(failure).rejects.toThrow(/Unknown feature "banana".*ci, ai, docker, testing, swagger, redis, auth/s);
     });
 
     it('rejects a mode for a feature that has none', async () => {
