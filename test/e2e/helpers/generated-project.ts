@@ -177,8 +177,24 @@ export async function createGeneratedProject(
     config,
     temporaryDirectory,
   );
-  const destination = result.destination;
 
+  return adoptGeneratedProject(
+    result.destination,
+    config,
+    temporaryDirectory,
+  );
+}
+
+/**
+ * Wraps a project that already exists on disk (for example one written by the
+ * real CLI) in the same install / build / test helpers. `cleanupDirectory` is
+ * removed by `cleanup()`.
+ */
+export function adoptGeneratedProject(
+  destination: string,
+  config: IronveilConfig,
+  cleanupDirectory: string,
+): GeneratedProject {
   const fs = createFileSystem();
 
   const port =
@@ -311,7 +327,7 @@ export async function createGeneratedProject(
       cleaned = true;
 
       await rm(
-        temporaryDirectory,
+        cleanupDirectory,
         {
           recursive: true,
           force: true,
