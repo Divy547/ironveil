@@ -221,6 +221,44 @@ describe('buildAgentsMd', () => {
       expect(withoutQueue).not.toContain('@Processor');
     });
 
+    it('includes email guidance only with --mail', () => {
+      const withMail = render({ mail: true });
+      expect(withMail).toContain('## Email (SMTP)');
+      expect(withMail).toContain('src/infrastructure/mail/');
+      expect(withMail).toContain('MailService');
+      expect(withMail).toContain('MAIL_FROM');
+      expect(withMail).toContain('overrideProvider(MailService)');
+      expect(withMail).toMatch(/not part of the readiness check/i);
+      expect(withMail).toContain('http://localhost:8025');
+      expect(withMail).toContain('docker compose up -d postgres mailpit');
+
+      const withoutMail = render({});
+      expect(withoutMail).not.toContain('## Email');
+      expect(withoutMail).not.toContain('MailService');
+      expect(withoutMail).not.toContain('nodemailer');
+      expect(withoutMail).not.toContain('mailpit');
+    });
+
+    it('leaves the Mailpit inbox out when there is no Docker', () => {
+      const result = render({ mail: true, docker: false });
+
+      expect(result).toContain('## Email (SMTP)');
+      expect(result).not.toContain('8025');
+      expect(result).not.toContain('mailpit');
+    });
+
+    it('suggests sending from a queue processor only when the queue exists', () => {
+      expect(render({ mail: true, redis: true, queue: true })).toMatch(/from a `@Processor`/);
+      expect(render({ mail: true })).not.toContain('@Processor');
+    });
+
+    it('lists the mail folder in the architecture tree', () => {
+      const lines = render({ mail: true }).split('\n');
+      const mail = lines.findIndex((line) => /mail\/\s+# global MailModule/.test(line));
+
+      expect(mail).toBeGreaterThan(-1);
+    });
+
     it('lists the queue folder in the architecture tree right after redis', () => {
       const lines = render({ redis: true, queue: true }).split('\n');
       const redis = lines.findIndex((line) => line.includes('redis/') && line.includes('RedisModule'));

@@ -10,6 +10,7 @@ export interface AppConfig {
     };
   };
   {{redisConfigType}}
+  {{mailConfigType}}
   {{authConfigType}}
 }
 
@@ -36,6 +37,8 @@ export function loadConfiguration(): AppConfig {
     },
 
     {{redisConfig}}
+
+    {{mailConfig}}
 
     {{authConfig}}
   };

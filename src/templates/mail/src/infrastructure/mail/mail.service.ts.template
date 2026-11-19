@@ -1,0 +1,40 @@
+import { Inject, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import type { Transporter } from 'nodemailer';
+import { toMailOptions, type MailMessage } from './mail-options';
+
+export const MAIL_TRANSPORT = Symbol('MAIL_TRANSPORT');
+export const MAIL_FROM = Symbol('MAIL_FROM');
+
+/**
+ * Sends email over SMTP. Inject it wherever mail is needed; do not create
+ * nodemailer transports elsewhere. A failed send rejects, so the caller decides
+ * whether to retry, log or surface it.
+ */
+@Injectable()
+export class MailService implements OnModuleDestroy {
+  private readonly logger = new Logger(MailService.name);
+
+  constructor(
+    @Inject(MAIL_TRANSPORT) private readonly transport: Transporter,
+    @Inject(MAIL_FROM) private readonly from: string,
+  ) {}
+
+  async send(message: MailMessage): Promise<void> {
+    const options = toMailOptions(message, this.from);
+
+    try {
+      await this.transport.sendMail(options);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send "${message.subject}": ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      throw error;
+    }
+  }
+
+  onModuleDestroy(): void {
+    this.transport.close();
+  }
+}

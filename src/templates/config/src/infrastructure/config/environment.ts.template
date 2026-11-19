@@ -65,6 +65,8 @@ const EnvironmentSchema = z.object({
 
   {{redisEnvSchema}}
 
+  {{mailEnvSchema}}
+
   {{authEnvSchema}}
 });
 

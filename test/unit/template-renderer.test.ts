@@ -643,6 +643,7 @@ describe('TemplateRenderer', () => {
       '{{readmeSwagger}}',
       '{{readmeRedis}}',
       '{{readmeQueue}}',
+      '{{readmeMail}}',
       '{{readmeDocker}}',
       '{{readmeTesting}}',
       '{{readmeCi}}',
@@ -720,6 +721,61 @@ describe('TemplateRenderer', () => {
       expect(withoutQueue).not.toContain('BullMQ');
     });
 
+    it('renders the Email section only when mail is enabled', () => {
+      const withMail = createTemplateRenderer().render(
+        readmeTemplate,
+        resolveConfig({ projectName: 'mail-app', mail: true }),
+      );
+
+      expect(withMail).toContain('## Email (SMTP)');
+      expect(withMail).toContain('MailService');
+      expect(withMail).toContain('MAIL_HOST');
+      expect(withMail).toContain('overrideProvider(MailService)');
+      expect(withMail).toContain('http://localhost:8025');
+      expect(withMail).not.toContain('{{readmeMail}}');
+
+      const withoutMail = createTemplateRenderer().render(
+        readmeTemplate,
+        resolveConfig({ projectName: 'plain-app' }),
+      );
+
+      expect(withoutMail).not.toContain('Email (SMTP)');
+      expect(withoutMail).not.toContain('MailService');
+      expect(withoutMail).not.toContain('MAIL_');
+    });
+
+    it('leaves out the Mailpit inbox when the project has no Docker', () => {
+      const result = createTemplateRenderer().render(
+        readmeTemplate,
+        resolveConfig({ projectName: 'mail-app', mail: true, docker: false }),
+      );
+
+      expect(result).toContain('## Email (SMTP)');
+      expect(result).not.toContain('8025');
+      expect(result).not.toContain('docker compose up -d mailpit');
+    });
+
+    it('documents the mail variables in the environment table and the docker command', () => {
+      const result = createTemplateRenderer().render(
+        readmeTemplate,
+        resolveConfig({ projectName: 'mail-app', mail: true }),
+      );
+
+      for (const key of ['MAIL_HOST', 'MAIL_PORT', 'MAIL_SECURE', 'MAIL_USER', 'MAIL_PASSWORD', 'MAIL_FROM']) {
+        expect(result).toContain(`| \`${key}\``);
+      }
+      expect(result).toContain('docker compose up -d postgres mailpit');
+    });
+
+    it('lists email in the feature bullets when enabled', () => {
+      const result = createTemplateRenderer().render(
+        '{{readmeFeatures}}',
+        resolveConfig({ projectName: 'mail-app', mail: true }),
+      );
+
+      expect(result).toContain('- **Email**');
+    });
+
     it('lists the queue in the feature bullets when enabled', () => {
       const result = createTemplateRenderer().render(
         '{{readmeFeatures}}',
@@ -736,6 +792,7 @@ describe('TemplateRenderer', () => {
       );
 
       expect(real).toContain('{{readmeQueue}}');
+      expect(real).toContain('{{readmeMail}}');
     });
 
     it('renders Auth section when JWT is enabled', () => {

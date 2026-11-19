@@ -8,6 +8,7 @@ import { HealthGenerator } from '../features/health/health.generator.js';
 import { PrismaGenerator } from '../features/prisma/prisma.generator.js';
 import { RedisGenerator } from '../features/redis/redis.generator.js';
 import { QueueGenerator } from '../features/queue/queue.generator.js';
+import { MailGenerator } from '../features/mail/mail.generator.js';
 import { AuthGenerator } from '../features/auth/auth.generator.js';
 import { SwaggerGenerator } from '../features/swagger/swagger.generator.js';
 import { TestingGenerator } from '../features/testing/testing.generator.js';
@@ -28,6 +29,7 @@ export function createGenerators(): readonly Generator[] {
     new PrismaGenerator(),
     new RedisGenerator(),
     new QueueGenerator(),
+    new MailGenerator(),
     new AuthGenerator(),
     new SwaggerGenerator(),
     new TestingGenerator(),

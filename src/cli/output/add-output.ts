@@ -53,6 +53,18 @@ function nextSteps(plan: AddPlan): string[] {
         'In tests, override both the queue (getQueueToken) and its processor, or they will try to reach Redis.',
       );
       break;
+    case 'mail':
+      steps.push(
+        'Copy MAIL_HOST, MAIL_PORT, MAIL_SECURE, MAIL_USER, MAIL_PASSWORD and MAIL_FROM from .env.example into your own .env (MAIL_HOST and MAIL_FROM are required, and .env is never edited by add).',
+      );
+      if (plan.after.docker) {
+        steps.push('docker compose up -d mailpit   # local SMTP catcher, inbox at http://localhost:8025');
+      }
+      steps.push(
+        'Inject MailService and call send({ to, subject, text }); the README has an "Email (SMTP)" section.',
+        'In tests, override MailService with overrideProvider(MailService).useValue({ send: jest.fn() }) so nothing connects to SMTP.',
+      );
+      break;
     case 'auth':
       steps.push(
         'Copy JWT_SECRET, JWT_ACCESS_TTL_SECONDS and JWT_REFRESH_TTL_DAYS from .env.example into your own .env, ' +

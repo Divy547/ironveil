@@ -48,6 +48,17 @@ describe('IRONVEIL_VERSIONS centralized version registry', () => {
     });
   });
 
+  describe('mail', () => {
+    it('pins nodemailer as a production dependency and its types as a devDependency', () => {
+      expect(IRONVEIL_VERSIONS.dependencies.mail).toEqual({
+        nodemailer: '10.6.0',
+      });
+      expect(IRONVEIL_VERSIONS.devDependencies.mail).toEqual({
+        '@types/nodemailer': '8.0.2',
+      });
+    });
+  });
+
   describe('coupled-version invariants', () => {
     it('enforces Prisma Client and Prisma CLI exact version coupling', () => {
       const clientVersion = IRONVEIL_VERSIONS.dependencies.prisma['@prisma/client'];

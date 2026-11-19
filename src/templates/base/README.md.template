@@ -25,7 +25,7 @@ A production-ready NestJS backend application.
 {{readmeRuntime}}
 {{readmeAuth}}
 {{readmeSwagger}}
-{{readmeRedis}}{{readmeQueue}}
+{{readmeRedis}}{{readmeQueue}}{{readmeMail}}
 {{readmeDocker}}
 {{readmeTesting}}
 {{readmeCi}}

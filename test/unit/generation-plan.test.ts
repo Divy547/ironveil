@@ -121,6 +121,37 @@ describe('GenerationPlan', () => {
     ).not.toContain('queue');
   });
 
+  it('includes mail, right after redis and queue, when mail is enabled', () => {
+    const config = resolveConfig({
+      projectName: 'test-api',
+      redis: true,
+      queue: true,
+      mail: true,
+    });
+
+    const names = createGenerationPlan(config).generators.map(
+      (generator) => generator.name,
+    );
+
+    expect(names.slice(names.indexOf('redis'), names.indexOf('redis') + 3)).toEqual([
+      'redis',
+      'queue',
+      'mail',
+    ]);
+  });
+
+  it('includes mail without redis, and leaves it out when disabled', () => {
+    const withMail = createGenerationPlan(
+      resolveConfig({ projectName: 'test-api', mail: true }),
+    ).generators.map((generator) => generator.name);
+    const without = createGenerationPlan(
+      resolveConfig({ projectName: 'test-api' }),
+    ).generators.map((generator) => generator.name);
+
+    expect(withMail).toContain('mail');
+    expect(without).not.toContain('mail');
+  });
+
   it('includes testing when testing is enabled', () => {
     const config = resolveConfig({
       projectName: 'test-api',

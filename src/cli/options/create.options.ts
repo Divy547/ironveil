@@ -4,6 +4,7 @@ export interface CreateCommandOptions {
   readonly packageManager?: PackageManager;
   readonly redis?: boolean;
   readonly queue?: boolean;
+  readonly mail?: boolean;
   readonly auth?: Auth;
   readonly ai?: Ai;
   readonly swagger?: boolean;

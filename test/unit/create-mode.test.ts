@@ -8,6 +8,7 @@ function createTestCommand(): Command {
   command
     .option('--redis', 'Enable Redis')
     .option('--queue', 'Enable the job queue')
+    .option('--mail', 'Enable email')
     .option('--auth <type>', 'Authentication type: none or jwt')
     .option('--ai <mode>', 'AI agent files: none, agents or all')
     .option('--no-swagger')
@@ -47,6 +48,14 @@ describe('create command mode detection', () => {
     const command = createTestCommand();
 
     command.parse(['node', 'ironveil', '--ai', 'all']);
+
+    expect(hasExplicitCreateOptions(command)).toBe(true);
+  });
+
+  it('detects non-interactive mode when --mail is provided', () => {
+    const command = createTestCommand();
+
+    command.parse(['node', 'ironveil', '--mail']);
 
     expect(hasExplicitCreateOptions(command)).toBe(true);
   });

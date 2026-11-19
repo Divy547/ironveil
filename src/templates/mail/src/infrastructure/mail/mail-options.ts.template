@@ -1,0 +1,96 @@
+import type { SendMailOptions } from 'nodemailer';
+import type SMTPTransport from 'nodemailer/lib/smtp-transport';
+
+/** SMTP settings, loaded from the `MAIL_*` environment variables. */
+export interface MailConfig {
+  readonly host: string;
+  readonly port: number;
+  readonly secure: boolean;
+  readonly user: string;
+  readonly password: string;
+  readonly from: string;
+}
+
+/** What callers pass to `MailService.send`. At least one of `text` / `html` is required. */
+export interface MailMessage {
+  readonly to: string | readonly string[];
+  readonly subject: string;
+  readonly text?: string;
+  readonly html?: string;
+  readonly cc?: string | readonly string[];
+  readonly bcc?: string | readonly string[];
+  readonly replyTo?: string;
+  /** Overrides `MAIL_FROM` for this message. */
+  readonly from?: string;
+}
+
+/**
+ * Turns the settings into nodemailer's SMTP options. Credentials are optional
+ * (a local catcher such as Mailpit needs none) but must come as a pair.
+ */
+export function toTransportOptions(config: MailConfig): SMTPTransport.Options {
+  const hasUser = config.user.length > 0;
+  const hasPassword = config.password.length > 0;
+
+  if (hasUser !== hasPassword) {
+    throw new Error('MAIL_USER and MAIL_PASSWORD must be set together.');
+  }
+
+  return {
+    host: config.host,
+    port: config.port,
+    secure: config.secure,
+    ...(hasUser ? { auth: { user: config.user, pass: config.password } } : {}),
+  };
+}
+
+function recipients(value: string | readonly string[] | undefined): string[] {
+  if (value === undefined) {
+    return [];
+  }
+
+  return (typeof value === 'string' ? [value] : [...value]).filter(
+    (address) => address.trim().length > 0,
+  );
+}
+
+/**
+ * Validates a message and turns it into nodemailer's send options, filling in
+ * the configured sender. Header injection is refused here, because a subject
+ * built from user input could otherwise add recipients with a line break.
+ */
+export function toMailOptions(
+  message: MailMessage,
+  defaultFrom: string,
+): SendMailOptions {
+  if (recipients(message.to).length === 0) {
+    throw new Error('A mail message needs at least one recipient.');
+  }
+
+  if (message.subject.trim().length === 0) {
+    throw new Error('A mail message needs a subject.');
+  }
+
+  if (/[\r\n]/.test(message.subject)) {
+    throw new Error('A mail subject must not contain a line break.');
+  }
+
+  if (message.text === undefined && message.html === undefined) {
+    throw new Error('A mail message needs a text or html body.');
+  }
+
+  return {
+    from: message.from ?? defaultFrom,
+    to: toAddressList(message.to),
+    subject: message.subject,
+    ...(message.cc !== undefined ? { cc: toAddressList(message.cc) } : {}),
+    ...(message.bcc !== undefined ? { bcc: toAddressList(message.bcc) } : {}),
+    ...(message.replyTo !== undefined ? { replyTo: message.replyTo } : {}),
+    ...(message.text !== undefined ? { text: message.text } : {}),
+    ...(message.html !== undefined ? { html: message.html } : {}),
+  };
+}
+
+function toAddressList(value: string | readonly string[]): string | string[] {
+  return typeof value === 'string' ? value : [...value];
+}

@@ -97,6 +97,7 @@ Create a new NestJS backend application in a directory matching `<project-name>`
 | `--ai <mode>` | | AI agent files: `none`, `agents` (`AGENTS.md` + `CLAUDE.md`) or `all` (also `.cursor/rules/*.mdc` and `.github/copilot-instructions.md`) | `agents` |
 | `--redis` | | Include Redis client module and infrastructure | `false` |
 | `--queue` | | Include a BullMQ job queue (`@nestjs/bullmq`); requires `--redis` | `false` |
+| `--mail` | | Include email sending over SMTP (`nodemailer`) | `false` |
 | `--no-swagger` | | Disable Swagger (OpenAPI) documentation setup (enabled by default) | Enabled (`true`) |
 | `--no-docker` | | Disable Dockerfile, `.dockerignore`, and `docker-compose.yml` (enabled by default) | Enabled (`true`) |
 | `--no-ci` | | Disable GitHub Actions CI workflow (enabled by default) | Enabled (`true`) |
@@ -165,11 +166,12 @@ ironveil add ci               # .github/workflows/ci.yml
 ironveil add swagger          # @nestjs/swagger, the /api/docs setup, main.ts and CSP wiring
 ironveil add redis            # ioredis service and module, readiness check, REDIS_URL, docker-compose service
 ironveil add queue            # BullMQ job queue on the project's Redis (needs redis; run `add redis` first)
+ironveil add mail             # SMTP email through an injectable MailService (nodemailer)
 ironveil add auth             # JWT auth module, global guard, roles, and a new Prisma migration
 ironveil add ai               # AGENTS.md + CLAUDE.md   (ironveil add ai all: + Cursor and Copilot files)
 ```
 
-Available: `ci`, `ai`, `docker`, `testing`, `swagger`, `redis`, `auth`, `queue`. It accepts `--dry-run` and `--force` like `generate`.
+Available: `ci`, `ai`, `docker`, `testing`, `swagger`, `redis`, `auth`, `queue`, `mail`. It accepts `--dry-run` and `--force` like `generate`.
 
 How your own changes are treated: a file you never touched is replaced; a file you edited is three-way merged, so your edits stay; `package.json` is merged as JSON (your dependencies and scripts stay); `ironveil.json` keeps your recorded resources. If an edit of yours overlaps with what the feature needs, or a file it wants to create already exists with different content, `add` stops, lists the files and writes **nothing**. `add` never edits your own `.env`: after `add redis`, copy `REDIS_URL` from `.env.example` into it (the app validates it at boot). Resources generated before `add swagger` keep working but have no Swagger decorators, and `add` says so. A `README.md` or `AGENTS.md` you rewrote is left as it is, with a note. It never installs anything: it prints the install command, and warns when the project was created by a different Ironveil version. Adding a feature that is already enabled does nothing, and features are never removed.
 
@@ -200,6 +202,7 @@ Every generated project includes a tailored `package.json`, environment configur
 - **JWT Authentication (`--auth jwt`)**: Passport JWT with short-lived access tokens and **rotating refresh tokens** (reuse of an old token revokes the whole session). Endpoints: `POST /auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout` and `GET /auth/me`. A global guard protects **every route unless it is marked `@Public()`**, with `@Roles()` + `RolesGuard` for `USER`/`ADMIN` access and a `@CurrentUser()` decorator. Passwords are hashed with `bcrypt`.
 - **Redis Infrastructure (`--redis`)**: Configured `ioredis` service and module, included in the readiness check.
 - **Job queue (`--queue`, needs `--redis`)**: BullMQ through `@nestjs/bullmq`. `QueueModule` holds the shared connection (built from `REDIS_URL`) and default job options (3 attempts, exponential backoff, finished jobs trimmed); you register a queue and a `@Processor` in the feature module that owns them. Workers finish their current job and close on SIGTERM. Because a registered queue connects to Redis, specs that boot `AppModule` must override the queue and its processor; the generated `AGENTS.md` and README explain how.
+- **Email (`--mail`)**: SMTP sending through nodemailer. `MailModule` is global and built from the `MAIL_*` variables (validated at boot); inject `MailService` and call `send({ to, subject, text | html })`. Messages are validated (recipient, subject without line breaks, a body), and a failed send rejects so the caller decides what to do. With Docker the compose file adds Mailpit, a local SMTP catcher with an inbox at `http://localhost:8025`. Mail is not part of the readiness check. Specs that call it override `MailService`; nothing else needs overriding.
 - **Swagger / OpenAPI Documentation**: Set up in `src/infrastructure/swagger/` and served at `/api/docs`. Enabled by default; disable with `--no-swagger`.
 - **Docker & Docker Compose**: Multi-stage `Dockerfile` with a health check, `.dockerignore`, and `docker-compose.yml` for the API, PostgreSQL and Redis. Enabled by default; disable with `--no-docker`.
 - **Jest Unit & E2E Testing**: `jest.config.ts`, a unit test (`app.module.spec.ts`), and an E2E harness (`test/app.e2e-spec.ts`). Enabled by default; disable with `--no-testing`.
@@ -245,6 +248,10 @@ my-api/
 │   │   │   └── environment.ts     # Environment schema validation
 │   │   ├── logging/
 │   │   │   └── logging.module.ts  # nestjs-pino, request IDs, redaction
+│   │   ├── mail/                  # SMTP email (optional)
+│   │   │   ├── mail.module.ts     # nodemailer transport from MAIL_* settings
+│   │   │   ├── mail.service.ts    # MailService.send()
+│   │   │   └── mail-options.ts    # settings -> SMTP options, message validation
 │   │   ├── prisma/
 │   │   │   ├── prisma.module.ts   # Prisma infrastructure module
 │   │   │   └── prisma.service.ts  # Database connection lifecycle
@@ -335,7 +342,7 @@ Ironveil contains a comprehensive test suite covering unit behavior, template re
 # Run TypeScript typecheck
 pnpm run typecheck
 
-# Run unit tests (73 test files, 1001 tests)
+# Run unit tests (74 test files, 1074 tests)
 pnpm test
 
 # Run build

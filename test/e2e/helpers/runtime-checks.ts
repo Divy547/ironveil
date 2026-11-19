@@ -27,6 +27,7 @@ export async function prepareProject(
     databaseUrl: string;
     redisUrl?: string;
     jwtSecret?: string;
+    extra?: Record<string, string>;
   },
 ): Promise<void> {
   await project.writeEnv(env);

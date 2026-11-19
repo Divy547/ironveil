@@ -171,6 +171,29 @@ describe('TestingGenerator', () => {
     expect(close).toBeGreaterThan(compile);
   });
 
+  it('sets the required MAIL_ variables for tests when mail is enabled, and only then', async () => {
+    const withMail = await createContext({ testing: true, mail: true });
+    await new TestingGenerator().generate(withMail.context);
+    const specContent = await withMail.fs.readFile(
+      path.join(temporaryDirectory, 'src', 'app.module.spec.ts'),
+    );
+    const e2eContent = await withMail.fs.readFile(
+      path.join(temporaryDirectory, 'test', 'app.e2e-spec.ts'),
+    );
+
+    for (const content of [specContent, e2eContent]) {
+      expect(content).toContain('process.env.MAIL_HOST =');
+      expect(content).toContain('process.env.MAIL_FROM =');
+    }
+
+    const without = await createContext({ testing: true });
+    await new TestingGenerator().generate(without.context);
+    const plain = await without.fs.readFile(
+      path.join(temporaryDirectory, 'test', 'app.e2e-spec.ts'),
+    );
+    expect(plain).not.toContain('MAIL_');
+  });
+
   it('generates test environment with all variables when database, redis, and auth are enabled', async () => {
     const { fs, context } = await createContext({
       testing: true,

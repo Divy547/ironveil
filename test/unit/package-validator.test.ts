@@ -240,6 +240,40 @@ describe('PackageValidator', () => {
       expect(missing).toEqual(['dependencies.@nestjs/bullmq', 'dependencies.bullmq']);
     });
 
+    it('flags missing mail dependencies and devDependencies when mail is enabled', () => {
+      const config = resolveConfig({ projectName: 'test-api', mail: true });
+      const manifest = buildValidManifest('test-api');
+
+      const result = validator.validate(manifest, config);
+
+      expect(
+        result.issues.filter((i) => i.code === 'MISSING_DEPENDENCY').map((i) => i.path),
+      ).toEqual(['dependencies.nodemailer']);
+      expect(
+        result.issues.filter((i) => i.code === 'MISSING_DEV_DEPENDENCY').map((i) => i.path),
+      ).toEqual(['devDependencies.@types/nodemailer']);
+    });
+
+    it('accepts a project with mail when both packages are present', () => {
+      const config = resolveConfig({ projectName: 'test-api', mail: true });
+      const manifest = buildValidManifest('test-api', {
+        dependencies: {
+          ...IRONVEIL_VERSIONS.dependencies.base,
+          ...IRONVEIL_VERSIONS.dependencies.prisma,
+          ...IRONVEIL_VERSIONS.dependencies.swagger,
+          ...IRONVEIL_VERSIONS.dependencies.mail,
+        },
+        devDependencies: {
+          ...IRONVEIL_VERSIONS.devDependencies.base,
+          ...IRONVEIL_VERSIONS.devDependencies.prisma,
+          ...IRONVEIL_VERSIONS.devDependencies.testing,
+          ...IRONVEIL_VERSIONS.devDependencies.mail,
+        },
+      });
+
+      expect(validator.validate(manifest, config).valid).toBe(true);
+    });
+
     it('flags version declaration drift for dependencies', () => {
       const config = resolveConfig({ projectName: 'test-api' });
       const manifest = buildValidManifest('test-api');
@@ -280,6 +314,33 @@ describe('PackageValidator', () => {
   });
 
   describe('feature leakage validation', () => {
+    it('flags leaked mail packages when mail is disabled', () => {
+      const config = resolveConfig({ projectName: 'test-api' });
+      const manifest = buildValidManifest('test-api', {
+        dependencies: {
+          ...IRONVEIL_VERSIONS.dependencies.base,
+          ...IRONVEIL_VERSIONS.dependencies.prisma,
+          ...IRONVEIL_VERSIONS.dependencies.swagger,
+          ...IRONVEIL_VERSIONS.dependencies.mail,
+        },
+        devDependencies: {
+          ...IRONVEIL_VERSIONS.devDependencies.base,
+          ...IRONVEIL_VERSIONS.devDependencies.prisma,
+          ...IRONVEIL_VERSIONS.devDependencies.testing,
+          ...IRONVEIL_VERSIONS.devDependencies.mail,
+        },
+      });
+
+      const result = validator.validate(manifest, config);
+
+      expect(
+        result.issues.filter((i) => i.code === 'FEATURE_DEPENDENCY_LEAKAGE').map((i) => i.path),
+      ).toEqual(['dependencies.nodemailer']);
+      expect(
+        result.issues.filter((i) => i.code === 'FEATURE_DEV_DEPENDENCY_LEAKAGE').map((i) => i.path),
+      ).toEqual(['devDependencies.@types/nodemailer']);
+    });
+
     it('flags leaked queue dependencies when the queue is disabled', () => {
       const config = resolveConfig({ projectName: 'test-api', redis: true });
       const manifest = buildValidManifest('test-api', {

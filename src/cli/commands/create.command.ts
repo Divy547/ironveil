@@ -23,6 +23,7 @@ export function registerCreateCommand(program: Command): void {
     )
     .option('--redis', 'Enable Redis')
     .option('--queue', 'Enable the BullMQ job queue (requires --redis)')
+    .option('--mail', 'Enable email sending over SMTP (nodemailer)')
     .option('--auth <type>', 'Authentication type: none or jwt')
     .option(
       '--ai <mode>',
@@ -42,6 +43,7 @@ export function registerCreateCommand(program: Command): void {
           packageManager: options.packageManager,
           redis: options.redis,
           queue: options.queue,
+          mail: options.mail,
           auth: options.auth,
           ai: options.ai,
           swagger: options.swagger,

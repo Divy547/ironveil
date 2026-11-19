@@ -85,6 +85,51 @@ describe('promptCreateOptions', () => {
     exit.mockRestore();
   });
 
+  describe('email', () => {
+    const isMailPrompt = (o: PromptOptions) => /email|mail/i.test(o.message);
+
+    function answer(mail: boolean): void {
+      select.mockImplementation((o: PromptOptions) => Promise.resolve(o.initialValue));
+      confirm.mockImplementation((o: PromptOptions) =>
+        Promise.resolve(isMailPrompt(o) ? mail : o.initialValue),
+      );
+    }
+
+    it('asks about email, defaulting to no, whether or not Redis is enabled', async () => {
+      answer(false);
+
+      const result = await promptCreateOptions();
+
+      const prompt = confirm.mock.calls
+        .map((call) => call[0] as PromptOptions)
+        .find(isMailPrompt);
+      expect(prompt).toBeDefined();
+      expect(prompt?.initialValue).toBe(false);
+      expect(result.mail).toBe(false);
+    });
+
+    it('returns the email choice the user made', async () => {
+      answer(true);
+
+      expect((await promptCreateOptions()).mail).toBe(true);
+    });
+
+    it('exits when the email prompt is cancelled', async () => {
+      confirm.mockImplementation((o: PromptOptions) =>
+        Promise.resolve(isMailPrompt(o) ? Symbol.for('cancel') : o.initialValue),
+      );
+      select.mockImplementation((o: PromptOptions) => Promise.resolve(o.initialValue));
+      const exit = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as never);
+
+      await expect(promptCreateOptions()).rejects.toThrow('exit');
+      expect(exit).toHaveBeenCalledWith(130);
+
+      exit.mockRestore();
+    });
+  });
+
   describe('job queue', () => {
     const isQueuePrompt = (o: PromptOptions) => /queue/i.test(o.message);
     const isRedisPrompt = (o: PromptOptions) => /redis/i.test(o.message) && !isQueuePrompt(o);

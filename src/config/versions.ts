@@ -26,6 +26,9 @@ export const IRONVEIL_VERSIONS = {
       pino: '^10.4.0',
       'pino-http': '^11.0.0',
     },
+    mail: {
+      nodemailer: '10.6.0',
+    },
     prisma: {
       '@prisma/client': '6.19.3',
     },
@@ -70,6 +73,9 @@ export const IRONVEIL_VERSIONS = {
     },
     logging: {
       'pino-pretty': '^13.2.0',
+    },
+    mail: {
+      '@types/nodemailer': '8.0.2',
     },
     prisma: {
       prisma: '6.19.3',

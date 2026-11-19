@@ -54,6 +54,16 @@ export async function promptCreateOptions(): Promise<CreateCommandOptions> {
     queue = answer;
   }
 
+  const mail = await p.confirm({
+    message: 'Enable email sending over SMTP?',
+    initialValue: false,
+  });
+
+  if (p.isCancel(mail)) {
+    p.cancel('Operation cancelled.');
+    process.exit(130);
+  }
+
   const auth = await p.select<Auth>({
     message: 'Authentication',
     options: [
@@ -142,6 +152,7 @@ export async function promptCreateOptions(): Promise<CreateCommandOptions> {
     packageManager,
     redis,
     queue,
+    mail,
     auth,
     swagger,
     docker,

@@ -23,6 +23,7 @@ const COMBINATIONS: ReadonlyArray<readonly [string, Overrides]> = [
   ['redis', { redis: true }],
   ['jwt-redis', { auth: 'jwt', redis: true }],
   ['jwt-redis-queue', { auth: 'jwt', redis: true, queue: true }],
+  ['jwt-mail', { auth: 'jwt', mail: true }],
   ['no-swagger', { swagger: false }],
   ['no-testing', { testing: false }],
   ['no-docker-no-ci', { docker: false, ci: false }],

@@ -27,6 +27,8 @@ export interface GeneratedProject {
     databaseUrl: string;
     redisUrl?: string;
     jwtSecret?: string;
+    /** Extra `NAME=value` lines, e.g. the MAIL_ variables. */
+    extra?: Record<string, string>;
   }): Promise<void>;
 
   install(): Promise<void>;
@@ -77,6 +79,15 @@ export async function assertProjectManifestMatchesVersions(
 
   if (config.redis) {
     Object.assign(expectedDependencies, IRONVEIL_VERSIONS.dependencies.redis);
+  }
+
+  if (config.queue) {
+    Object.assign(expectedDependencies, IRONVEIL_VERSIONS.dependencies.queue);
+  }
+
+  if (config.mail) {
+    Object.assign(expectedDependencies, IRONVEIL_VERSIONS.dependencies.mail);
+    Object.assign(expectedDevDependencies, IRONVEIL_VERSIONS.devDependencies.mail);
   }
 
   if (config.swagger) {
@@ -201,6 +212,9 @@ export async function createGeneratedProject(
           values.jwtSecret
             ? `JWT_SECRET="${values.jwtSecret}"`
             : undefined,
+          ...Object.entries(values.extra ?? {}).map(
+            ([name, value]) => `${name}="${value}"`,
+          ),
           '',
         ]
           .filter(

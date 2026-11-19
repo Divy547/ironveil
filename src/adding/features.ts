@@ -11,6 +11,7 @@ export const ADDABLE_FEATURES = [
   'redis',
   'auth',
   'queue',
+  'mail',
 ] as const;
 
 export type AddableFeature = (typeof ADDABLE_FEATURES)[number];

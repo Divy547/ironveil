@@ -16,6 +16,7 @@ describe('Ironveil configuration', () => {
       orm: 'prisma',
       redis: false,
       queue: false,
+      mail: false,
       auth: 'none',
       swagger: true,
       docker: true,
@@ -62,6 +63,14 @@ describe('Ironveil configuration', () => {
     expect(() =>
       resolveConfig({ projectName: 'bonfire-api', redis: false, queue: true }),
     ).toThrow(ConfigError);
+  });
+
+  it('accepts mail with or without Redis, since SMTP needs neither', () => {
+    expect(resolveConfig({ projectName: 'bonfire-api', mail: true }).mail).toBe(true);
+    expect(
+      resolveConfig({ projectName: 'bonfire-api', mail: true, redis: true }).mail,
+    ).toBe(true);
+    expect(resolveConfig({ projectName: 'bonfire-api' }).mail).toBe(false);
   });
 
   it('rejects an empty project name', () => {

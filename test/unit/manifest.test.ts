@@ -45,6 +45,7 @@ describe('buildManifest', () => {
       features: {
         redis: true,
         queue: false,
+        mail: false,
         auth: 'jwt',
         swagger: true,
         docker: true,
@@ -70,6 +71,7 @@ describe('buildManifest', () => {
     expect(manifest.features).toEqual({
       redis: false,
       queue: false,
+      mail: false,
       auth: 'none',
       swagger: false,
       docker: false,
@@ -117,6 +119,8 @@ describe('round trip', () => {
     { auth: 'jwt' },
     { redis: true },
     { redis: true, queue: true },
+    { mail: true },
+    { auth: 'jwt', redis: true, queue: true, mail: true },
     { auth: 'jwt', redis: true, packageManager: 'yarn' },
     {
       swagger: false,
@@ -347,6 +351,28 @@ describe('setFeatureInManifest', () => {
     const result = setFeatureInManifest(oldText, 'queue', true);
 
     expect(parseManifest(result).features.queue).toBe(true);
+  });
+});
+
+describe('a manifest written before mail existed', () => {
+  const old = () => {
+    const raw = JSON.parse(
+      serializeManifest(buildManifest(config({ redis: true, queue: true }), '0.3.0')),
+    ) as { features: Record<string, unknown> };
+    delete raw.features.mail;
+    return JSON.stringify(raw);
+  };
+
+  it('still parses, with mail off', () => {
+    expect(parseManifest(old()).features.mail).toBe(false);
+  });
+
+  it('gives back a config with mail off', () => {
+    expect(manifestToConfig(parseManifest(old())).mail).toBe(false);
+  });
+
+  it('can have mail switched on, without needing Redis', () => {
+    expect(parseManifest(setFeatureInManifest(old(), 'mail', true)).features.mail).toBe(true);
   });
 });
 

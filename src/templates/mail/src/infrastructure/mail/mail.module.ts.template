@@ -1,0 +1,37 @@
+import { Global, Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { createTransport } from 'nodemailer';
+import { toTransportOptions, type MailConfig } from './mail-options';
+import { MAIL_FROM, MAIL_TRANSPORT, MailService } from './mail.service';
+
+/**
+ * Global, so any module can inject `MailService` without importing this one.
+ * The SMTP settings come from `ConfigService` (the `MAIL_*` variables).
+ */
+@Global()
+@Module({
+  providers: [
+    {
+      provide: MAIL_TRANSPORT,
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const config = configService.get<MailConfig>('mail');
+
+        if (!config) {
+          throw new Error('Mail settings are missing: set the MAIL_* variables.');
+        }
+
+        return createTransport(toTransportOptions(config));
+      },
+    },
+    {
+      provide: MAIL_FROM,
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) =>
+        configService.getOrThrow<MailConfig>('mail').from,
+    },
+    MailService,
+  ],
+  exports: [MailService],
+})
+export class MailModule {}

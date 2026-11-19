@@ -24,6 +24,7 @@ describe('generator ordering', () => {
       'prisma',
       'redis',
       'queue',
+      'mail',
       'auth',
       'swagger',
       'testing',

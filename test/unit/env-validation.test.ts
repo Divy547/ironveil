@@ -27,10 +27,12 @@ const VALID_SECRET =
   'a-valid-secret-that-is-at-least-32-chars';
 
 const COMBINATIONS = [
-  { name: 'default', redis: false, auth: 'none' },
-  { name: 'redis', redis: true, auth: 'none' },
-  { name: 'jwt', redis: false, auth: 'jwt' },
-  { name: 'redis + jwt', redis: true, auth: 'jwt' },
+  { name: 'default', redis: false, auth: 'none', mail: false },
+  { name: 'redis', redis: true, auth: 'none', mail: false },
+  { name: 'jwt', redis: false, auth: 'jwt', mail: false },
+  { name: 'redis + jwt', redis: true, auth: 'jwt', mail: false },
+  { name: 'mail', redis: false, auth: 'none', mail: true },
+  { name: 'redis + jwt + mail', redis: true, auth: 'jwt', mail: true },
 ] as const;
 
 describe('generated environment validation', () => {
@@ -46,6 +48,7 @@ describe('generated environment validation', () => {
   async function generate(
     redis: boolean,
     auth: 'none' | 'jwt',
+    mail = false,
   ) {
     // Inside the repo so the generated file can resolve `zod`.
     dir = await mkdtemp(
@@ -57,6 +60,7 @@ describe('generated environment validation', () => {
       projectName: 'env-api',
       redis,
       auth,
+      mail,
     });
 
     await new ConfigGenerator().generate(
@@ -125,9 +129,9 @@ describe('generated environment validation', () => {
 
   describe.each(COMBINATIONS)(
     '$name',
-    ({ redis, auth }) => {
+    ({ redis, auth, mail }) => {
       it('accepts the shipped .env.example as-is', async () => {
-        const { envExample, validate } = await generate(redis, auth);
+        const { envExample, validate } = await generate(redis, auth, mail);
 
         expect(() =>
           validate(exampleValues(envExample)),
@@ -136,7 +140,7 @@ describe('generated environment validation', () => {
 
       it('keeps the schema and .env.example in sync', async () => {
         const { environmentSource, envExample } =
-          await generate(redis, auth);
+          await generate(redis, auth, mail);
 
         expect(
           Object.keys(exampleValues(envExample)).sort(),
@@ -210,6 +214,79 @@ describe('generated environment validation', () => {
     ).toThrowError(
       /- PORT:[\s\S]*- LOG_LEVEL:[\s\S]*- THROTTLE_LIMIT:/,
     );
+  });
+
+  describe('mail', () => {
+    const MAIL_KEYS = [
+      'MAIL_HOST',
+      'MAIL_PORT',
+      'MAIL_SECURE',
+      'MAIL_USER',
+      'MAIL_PASSWORD',
+      'MAIL_FROM',
+    ];
+
+    it('has the mail variables in the schema and .env.example only when mail is enabled', async () => {
+      const withMail = await generate(false, 'none', true);
+      const without = await generate(false, 'none', false);
+
+      for (const key of MAIL_KEYS) {
+        expect(schemaKeys(withMail.environmentSource)).toContain(key);
+        expect(exampleValues(withMail.envExample)).toHaveProperty(key);
+        expect(schemaKeys(without.environmentSource)).not.toContain(key);
+        expect(without.envExample).not.toContain(key);
+      }
+    });
+
+    it('requires MAIL_HOST and MAIL_FROM, reporting both at once', async () => {
+      const { validate, envExample } = await generate(false, 'none', true);
+      const {
+        MAIL_HOST: _host,
+        MAIL_FROM: _from,
+        ...rest
+      } = exampleValues(envExample);
+
+      expect(() => validate(rest)).toThrowError(
+        /- MAIL_HOST is required[\s\S]*- MAIL_FROM is required/,
+      );
+    });
+
+    it('rejects a bad port and a MAIL_SECURE that is not true or false', async () => {
+      const { validate, envExample } = await generate(false, 'none', true);
+
+      expect(() =>
+        validate({
+          ...exampleValues(envExample),
+          MAIL_PORT: '99999',
+          MAIL_SECURE: 'yes',
+        }),
+      ).toThrowError(/- MAIL_PORT:[\s\S]*- MAIL_SECURE:/);
+    });
+
+    it('applies defaults: port 587, no TLS wrapper, no credentials', async () => {
+      const { validate } = await generate(false, 'none', true);
+
+      expect(
+        validate({
+          DATABASE_URL: 'postgresql://u:p@localhost:5432/db',
+          MAIL_HOST: 'smtp.example.com',
+          MAIL_FROM: 'App <no-reply@example.com>',
+        }),
+      ).toMatchObject({
+        MAIL_PORT: 587,
+        MAIL_SECURE: 'false',
+        MAIL_USER: '',
+        MAIL_PASSWORD: '',
+      });
+    });
+
+    it('coerces MAIL_PORT to a number', async () => {
+      const { validate, envExample } = await generate(false, 'none', true);
+
+      expect(
+        validate({ ...exampleValues(envExample), MAIL_PORT: '465', MAIL_SECURE: 'true' }),
+      ).toMatchObject({ MAIL_PORT: 465, MAIL_SECURE: 'true' });
+    });
   });
 
   it('applies defaults and coerces numbers', async () => {

@@ -77,6 +77,26 @@ describe('create-output', () => {
     expect(output).toContain('• GitHub Actions CI');
   });
 
+  it('lists email when it is enabled, and not otherwise', () => {
+    const withMail = formatSuccessOutput({
+      projectName: 'm-api',
+      destination: '/path/to/m-api',
+      config: resolveConfig({ projectName: 'm-api', mail: true }),
+      generators: ['base', 'mail'],
+      files: ['package.json'],
+    });
+    const without = formatSuccessOutput({
+      projectName: 'm-api',
+      destination: '/path/to/m-api',
+      config: resolveConfig({ projectName: 'm-api' }),
+      generators: ['base'],
+      files: ['package.json'],
+    });
+
+    expect(withMail).toContain('• Email (SMTP via nodemailer)');
+    expect(without).not.toContain('Email');
+  });
+
   it('lists the job queue right after Redis when it is enabled', () => {
     const config = resolveConfig({ projectName: 'q-api', redis: true, queue: true });
 

@@ -50,6 +50,7 @@ describe('Ironveil CLI', () => {
     expect(optionNames).toContain('--package-manager');
     expect(optionNames).toContain('--redis');
     expect(optionNames).toContain('--queue');
+    expect(optionNames).toContain('--mail');
     expect(optionNames).toContain('--auth');
     expect(optionNames).toContain('--ai');
     expect(optionNames).toContain('--no-swagger');
@@ -199,6 +200,40 @@ describe('Ironveil CLI', () => {
       ).toBe(true);
       const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
       expect(output).toContain('• Background job queue (BullMQ)');
+    } finally {
+      cwdSpy.mockRestore();
+      logSpy.mockRestore();
+    }
+  });
+
+  it('creates a project with email when --mail is given, without needing Redis', async () => {
+    temporaryDirectory = await mkdtemp(
+      path.join(os.tmpdir(), 'ironveil-cli-mail-'),
+    );
+
+    const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(temporaryDirectory);
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    try {
+      await createCli().parseAsync([
+        'node',
+        'ironveil',
+        'create',
+        'mail-app',
+        '--mail',
+      ]);
+
+      const fs = createFileSystem();
+      const projectPath = path.join(temporaryDirectory, 'mail-app');
+
+      expect(
+        await fs.exists(path.join(projectPath, 'src/infrastructure/mail/mail.service.ts')),
+      ).toBe(true);
+      expect(
+        await fs.exists(path.join(projectPath, 'src/infrastructure/redis')),
+      ).toBe(false);
+      const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+      expect(output).toContain('• Email (SMTP via nodemailer)');
     } finally {
       cwdSpy.mockRestore();
       logSpy.mockRestore();

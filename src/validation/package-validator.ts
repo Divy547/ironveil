@@ -174,6 +174,13 @@ export function createPackageValidator(): PackageValidator {
         );
       }
 
+      if (config.mail) {
+        Object.assign(
+          requiredDependencies,
+          IRONVEIL_VERSIONS.dependencies.mail,
+        );
+      }
+
       if (config.swagger) {
         Object.assign(
           requiredDependencies,
@@ -249,6 +256,18 @@ export function createPackageValidator(): PackageValidator {
         }
       }
 
+      if (!config.mail) {
+        for (const pkg of Object.keys(IRONVEIL_VERSIONS.dependencies.mail)) {
+          if (manifestDependencies[pkg] !== undefined) {
+            issues.push({
+              code: 'FEATURE_DEPENDENCY_LEAKAGE',
+              message: `Leaked dependency "${pkg}": feature "mail" is disabled`,
+              path: `dependencies.${pkg}`,
+            });
+          }
+        }
+      }
+
       if (!config.swagger) {
         for (const pkg of Object.keys(IRONVEIL_VERSIONS.dependencies.swagger)) {
           if (manifestDependencies[pkg] !== undefined) {
@@ -284,6 +303,13 @@ export function createPackageValidator(): PackageValidator {
         Object.assign(
           requiredDevDependencies,
           IRONVEIL_VERSIONS.devDependencies.testing,
+        );
+      }
+
+      if (config.mail) {
+        Object.assign(
+          requiredDevDependencies,
+          IRONVEIL_VERSIONS.devDependencies.mail,
         );
       }
 
@@ -325,6 +351,18 @@ export function createPackageValidator(): PackageValidator {
             issues.push({
               code: 'FEATURE_DEV_DEPENDENCY_LEAKAGE',
               message: `Leaked devDependency "${pkg}": feature "prisma" is disabled`,
+              path: `devDependencies.${pkg}`,
+            });
+          }
+        }
+      }
+
+      if (!config.mail) {
+        for (const pkg of Object.keys(IRONVEIL_VERSIONS.devDependencies.mail)) {
+          if (manifestDevDependencies[pkg] !== undefined) {
+            issues.push({
+              code: 'FEATURE_DEV_DEPENDENCY_LEAKAGE',
+              message: `Leaked devDependency "${pkg}": feature "mail" is disabled`,
               path: `devDependencies.${pkg}`,
             });
           }

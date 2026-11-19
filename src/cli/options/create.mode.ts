@@ -4,6 +4,7 @@ const CREATE_OPTION_NAMES = [
   'packageManager',
   'redis',
   'queue',
+  'mail',
   'auth',
   'ai',
   'swagger',

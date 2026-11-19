@@ -148,6 +148,29 @@ describe('ironveil add', () => {
     expect(await exists('src/infrastructure/queue/queue.module.ts')).toBe(false);
   });
 
+  it('explains the mail next steps after adding it, naming the variables to copy', async () => {
+    await makeProject({});
+
+    await run('mail');
+
+    const output = printed(log);
+    expect(output).toContain('Added mail.');
+    expect(output).toContain('npm install');
+    expect(output).toMatch(/MAIL_HOST.*MAIL_FROM.*\.env/s);
+    expect(output).toContain('docker compose up -d mailpit');
+    expect(output).toContain('MailService');
+    expect(await exists('src/infrastructure/mail/mail.service.ts')).toBe(true);
+  });
+
+  it('does not suggest a mailpit container when the project has no docker setup', async () => {
+    await makeProject({ docker: false });
+
+    await run('mail');
+
+    expect(printed(log)).not.toContain('docker compose');
+    expect(printed(log)).not.toContain('mailpit');
+  });
+
   it('points at the Swagger UI after adding swagger', async () => {
     await makeProject({ swagger: false });
 

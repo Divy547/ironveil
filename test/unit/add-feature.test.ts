@@ -72,6 +72,7 @@ describe('planAdd', () => {
       'redis',
       'auth',
       'queue',
+      'mail',
     ]);
   });
 
@@ -232,6 +233,118 @@ describe('planAdd', () => {
       const root = await makeProject({ redis: true, queue: true });
 
       const plan = await planAdd({ root, feature: 'queue' });
+
+      expect(plan.alreadyEnabled).toBe(true);
+      expect(plan.changeSet.changes).toHaveLength(0);
+    });
+  });
+
+  describe('mail', () => {
+    const bases: ReadonlyArray<readonly [string, Overrides]> = [
+      ['defaults', {}],
+      ['jwt + redis + queue', { auth: 'jwt', redis: true, queue: true }],
+      ['no swagger, pnpm, no docker', { swagger: false, packageManager: 'pnpm', docker: false }],
+      ['yarn, everything else off', {
+        packageManager: 'yarn',
+        swagger: false,
+        docker: false,
+        ci: false,
+        testing: false,
+        ai: 'none',
+      }],
+    ];
+
+    for (const [label, base] of bases) {
+      it(`gives the same project as creating with mail (${label})`, async () => {
+        const added = await makeProject(base);
+        await add(added, 'mail');
+
+        const created = await makeProject({ ...base, mail: true });
+
+        const expected = await readTree(created);
+        const actual = await readTree(added);
+        expect([...actual.keys()].sort()).toEqual([...expected.keys()].sort());
+        for (const [file, text] of expected) {
+          expect(actual.get(file), file).toBe(text);
+        }
+      });
+    }
+
+    it('works without Redis: no Redis files appear', async () => {
+      const root = await makeProject({});
+      await add(root, 'mail');
+
+      expect(await readdir(path.join(root, 'src/infrastructure'))).not.toContain('redis');
+    });
+
+    it('registers MailModule in InfrastructureModule and adds the packages', async () => {
+      const root = await makeProject({});
+      await add(root, 'mail');
+
+      const infrastructure = await read(root, 'src/infrastructure/infrastructure.module.ts');
+      expect(infrastructure).toContain("import { MailModule } from './mail/mail.module';");
+      expect(infrastructure).toContain('MailModule,');
+
+      const pkg = JSON.parse(await read(root, 'package.json')) as {
+        dependencies: Record<string, string>;
+        devDependencies: Record<string, string>;
+      };
+      expect(pkg.dependencies.nodemailer).toBe('10.6.0');
+      expect(pkg.devDependencies['@types/nodemailer']).toBe('8.0.2');
+    });
+
+    it('adds the MAIL_ variables to .env.example and the mailpit service to docker-compose', async () => {
+      const root = await makeProject({});
+      await add(root, 'mail');
+
+      expect(await read(root, '.env.example')).toContain('MAIL_HOST=');
+      expect(await read(root, 'docker-compose.yml')).toContain('mailpit:');
+    });
+
+    it('records mail in ironveil.json', async () => {
+      const root = await makeProject({});
+      await add(root, 'mail');
+
+      expect((await readManifest(root)).features.mail).toBe(true);
+    });
+
+    it('works on a project made before the manifest had a mail entry', async () => {
+      const root = await makeProject({});
+      const manifest = JSON.parse(await read(root, 'ironveil.json')) as {
+        features: Record<string, unknown>;
+      };
+      delete manifest.features.mail;
+      await write(root, 'ironveil.json', `${JSON.stringify(manifest, null, 2)}\n`);
+
+      await add(root, 'mail');
+
+      expect((await readManifest(root)).features.mail).toBe(true);
+    });
+
+    it('keeps a generated resource in AppModule and a dependency the user added', async () => {
+      const root = await makeProject({});
+      const resource = await planResource({
+        root,
+        name: 'product',
+        fields: parseFields('name:string'),
+      });
+      await resource.changeSet.apply();
+      const pkg = JSON.parse(await read(root, 'package.json')) as {
+        dependencies: Record<string, string>;
+      };
+      pkg.dependencies['left-pad'] = '1.3.0';
+      await write(root, 'package.json', `${JSON.stringify(pkg, null, 2)}\n`);
+
+      await add(root, 'mail');
+
+      expect(await read(root, 'src/app.module.ts')).toContain('ProductsModule');
+      expect(JSON.parse(await read(root, 'package.json')).dependencies['left-pad']).toBe('1.3.0');
+    });
+
+    it('is a no-op the second time', async () => {
+      const root = await makeProject({ mail: true });
+
+      const plan = await planAdd({ root, feature: 'mail' });
 
       expect(plan.alreadyEnabled).toBe(true);
       expect(plan.changeSet.changes).toHaveLength(0);
@@ -425,7 +538,7 @@ describe('planAdd', () => {
       const failure = planAdd({ root, feature: 'banana' });
 
       await expect(failure).rejects.toBeInstanceOf(AddError);
-      await expect(failure).rejects.toThrow(/Unknown feature "banana".*ci, ai, docker, testing, swagger, redis, auth, queue/s);
+      await expect(failure).rejects.toThrow(/Unknown feature "banana".*ci, ai, docker, testing, swagger, redis, auth, queue, mail/s);
     });
 
     it('rejects a mode for a feature that has none', async () => {

@@ -5,6 +5,7 @@ import { SecurityModule } from './security/security.module';
 import { PrismaModule } from './prisma/prisma.module';
 {{redisModuleImport}}
 {{queueModuleImport}}
+{{mailModuleImport}}
 import { loadConfiguration } from './config/configuration';
 import { validateEnvironment } from './config/environment';
 
@@ -20,6 +21,7 @@ import { validateEnvironment } from './config/environment';
     PrismaModule,
     {{redisModule}}
     {{queueModule}}
+    {{mailModule}}
   ],
 })
 export class InfrastructureModule {}

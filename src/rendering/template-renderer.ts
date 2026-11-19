@@ -77,6 +77,61 @@ export function createTemplateRenderer(): TemplateRenderer {
 
       const queueModule = config.queue ? 'QueueModule,' : '';
 
+      const mailModuleImport = config.mail
+        ? "import { MailModule } from './mail/mail.module';"
+        : '';
+
+      const mailModule = config.mail ? 'MailModule,' : '';
+
+      const mailEnvExample = config.mail
+        ? [
+            'MAIL_HOST=localhost',
+            'MAIL_PORT=1025',
+            'MAIL_SECURE=false',
+            'MAIL_USER=',
+            'MAIL_PASSWORD=',
+            `MAIL_FROM="${config.projectName} <no-reply@localhost>"`,
+          ].join('\n')
+        : '';
+
+      const mailConfigType = config.mail
+        ? 'readonly mail: {\n    readonly host: string;\n    readonly port: number;\n    readonly secure: boolean;\n    readonly user: string;\n    readonly password: string;\n    readonly from: string;\n  };'
+        : '';
+
+      const mailConfig = config.mail
+        ? [
+            'mail: {',
+            "      host: process.env.MAIL_HOST ?? 'localhost',",
+            '      port: Number(process.env.MAIL_PORT ?? 587),',
+            "      secure: process.env.MAIL_SECURE === 'true',",
+            "      user: process.env.MAIL_USER ?? '',",
+            "      password: process.env.MAIL_PASSWORD ?? '',",
+            "      from: process.env.MAIL_FROM ?? '',",
+            '    },',
+          ].join('\n')
+        : '';
+
+      const mailEnvSchema = config.mail
+        ? [
+            "MAIL_HOST: requiredString('MAIL_HOST'),",
+            '',
+            '  MAIL_PORT: z.coerce',
+            '    .number()',
+            '    .int()',
+            '    .min(1)',
+            '    .max(65535)',
+            '    .default(587),',
+            '',
+            "  MAIL_SECURE: z.enum(['true', 'false']).default('false'),",
+            '',
+            "  MAIL_USER: z.string().default(''),",
+            '',
+            "  MAIL_PASSWORD: z.string().default(''),",
+            '',
+            "  MAIL_FROM: requiredString('MAIL_FROM'),",
+          ].join('\n')
+        : '';
+
       const redisEnvExample =
         config.redis
           ? 'REDIS_URL="redis://localhost:6379"'
@@ -194,6 +249,14 @@ export function createTemplateRenderer(): TemplateRenderer {
         );
       }
 
+      if (config.mail) {
+        dockerApiEnvLines.push(
+          '      MAIL_HOST: "mailpit"',
+          '      MAIL_PORT: "1025"',
+          `      MAIL_FROM: "${config.projectName} <no-reply@localhost>"`,
+        );
+      }
+
       if (config.auth === 'jwt') {
         dockerApiEnvLines.push(
           '      JWT_SECRET: "${JWT_SECRET}"',
@@ -266,6 +329,17 @@ export function createTemplateRenderer(): TemplateRenderer {
             `      interval: 5s`,
             `      timeout: 3s`,
             `      retries: 5`,
+          ].join('\n')
+        : '';
+
+      // ── Docker: mailpit service (local SMTP catcher) ────────────
+      const dockerComposeMailService = config.mail
+        ? [
+            `  mailpit:`,
+            `    image: axllent/mailpit:v1.34`,
+            `    ports:`,
+            `      - "1025:1025"`,
+            `      - "8025:8025"`,
           ].join('\n')
         : '';
 
@@ -400,6 +474,13 @@ export function createTemplateRenderer(): TemplateRenderer {
         );
       }
 
+      if (config.mail) {
+        testingTestEnvLines.push(
+          "process.env.MAIL_HOST = process.env.MAIL_HOST ?? 'localhost';",
+          "process.env.MAIL_FROM =\n  process.env.MAIL_FROM ?? 'Test <no-reply@localhost>';",
+        );
+      }
+
       if (config.auth === 'jwt') {
         testingTestEnvLines.push(
           "process.env.JWT_SECRET =\n  process.env.JWT_SECRET ?? 'test-secret-key-minimum-32-chars-long';",
@@ -470,6 +551,12 @@ export function createTemplateRenderer(): TemplateRenderer {
         );
       }
 
+      if (config.mail) {
+        featureList.push(
+          '- **Email**: SMTP mail sending through an injectable `MailService` built on `nodemailer`',
+        );
+      }
+
       if (config.docker) {
         featureList.push(
           '- **Docker**: Multi-stage Dockerfile and Docker Compose service orchestration',
@@ -523,7 +610,21 @@ export function createTemplateRenderer(): TemplateRenderer {
       if (config.redis) {
         infraServices.push('redis');
       }
+      if (config.mail) {
+        infraServices.push('mailpit');
+      }
       const infraServicesCmd = infraServices.join(' ');
+
+      // "PostgreSQL", "PostgreSQL & Redis" or "PostgreSQL, Redis & Mailpit".
+      const infraServiceNames = [
+        'PostgreSQL',
+        ...(config.redis ? ['Redis'] : []),
+        ...(config.mail ? ['Mailpit'] : []),
+      ];
+      const infraServicesLabel =
+        infraServiceNames.length > 2
+          ? `${infraServiceNames.slice(0, -1).join(', ')} & ${infraServiceNames.at(-1)}`
+          : infraServiceNames.join(' & ');
 
       const installSteps: string[] = [
         `1. **Clone the repository and install dependencies**:\n   \`\`\`bash\n   ${pmSpec.install}\n   \`\`\``,
@@ -532,7 +633,7 @@ export function createTemplateRenderer(): TemplateRenderer {
 
       if (config.docker && infraServices.length > 0) {
         installSteps.push(
-          `3. **Start local infrastructure services (PostgreSQL${config.redis ? ' & Redis' : ''}) in Docker**:\n   \`\`\`bash\n   docker compose up -d ${infraServicesCmd}\n   \`\`\``,
+          `3. **Start local infrastructure services (${infraServicesLabel}) in Docker**:\n   \`\`\`bash\n   docker compose up -d ${infraServicesCmd}\n   \`\`\``,
         );
       }
 
@@ -564,6 +665,17 @@ export function createTemplateRenderer(): TemplateRenderer {
       if (config.redis) {
         envRows.push(
           '| `REDIS_URL` | Redis connection URL | `redis://localhost:6379` |',
+        );
+      }
+
+      if (config.mail) {
+        envRows.push(
+          '| `MAIL_HOST` | SMTP server host | `localhost` |',
+          '| `MAIL_PORT` | SMTP server port (default `587`) | `1025` |',
+          '| `MAIL_SECURE` | `true` to use TLS from the first byte (port 465); `false` for STARTTLS or plain | `false` |',
+          '| `MAIL_USER` | SMTP username. Leave empty for a server without login; set together with `MAIL_PASSWORD` | `` |',
+          '| `MAIL_PASSWORD` | SMTP password | `` |',
+          `| \`MAIL_FROM\` | Default sender address | \`${config.projectName} <no-reply@localhost>\` |`,
         );
       }
 
@@ -759,6 +871,32 @@ export function createTemplateRenderer(): TemplateRenderer {
           ].join('\n')
         : '';
 
+      // ── README: Mail ────────────────────────────────────────────
+      const readmeMail = config.mail
+        ? [
+            '## Email (SMTP)\n',
+            'Mail is sent over SMTP with [nodemailer](https://nodemailer.com/). `MailModule` (`src/infrastructure/mail/`) is global and configured from the `MAIL_*` variables; inject `MailService` and call `send`:\n',
+            '```ts',
+            'await this.mail.send({',
+            "  to: 'user@example.com',",
+            "  subject: 'Welcome',",
+            "  text: 'Thanks for signing up.',",
+            '});',
+            '```\n',
+            '- `send` needs a `to`, a `subject` and a `text` or `html` body, and sends from `MAIL_FROM` unless the message sets `from`. A failed send rejects; handle or retry it in the caller.',
+            ...(config.docker
+              ? [
+                  '- In development, `docker compose up -d mailpit` starts [Mailpit](https://mailpit.axllent.org/): the app sends to `localhost:1025` and every message shows up in the inbox at http://localhost:8025, so nothing leaves your machine.',
+                ]
+              : [
+                  '- In development, point `MAIL_HOST` at a local SMTP catcher such as [Mailpit](https://mailpit.axllent.org/) so nothing leaves your machine.',
+                ]),
+            '- In production, set `MAIL_HOST`, `MAIL_PORT`, `MAIL_SECURE`, `MAIL_USER` and `MAIL_PASSWORD` from your provider (port 465 needs `MAIL_SECURE=true`).',
+            '- Mail is not part of the readiness check: an SMTP outage should not take the API out of rotation.',
+            '- In tests, override the service so nothing tries to connect: `overrideProvider(MailService).useValue({ send: jest.fn() })`.\n',
+          ].join('\n')
+        : '';
+
       // ── README: Docker ──────────────────────────────────────────
       const dockerServicesList: string[] = [
         '- `api`: NestJS application container (exposed on port `3000`)',
@@ -771,6 +909,12 @@ export function createTemplateRenderer(): TemplateRenderer {
       if (config.redis) {
         dockerServicesList.push(
           '- `redis`: Redis 7 Alpine container (published on host port `6379` with volume `redis_data`)',
+        );
+      }
+
+      if (config.mail) {
+        dockerServicesList.push(
+          '- `mailpit`: local SMTP catcher (SMTP on host port `1025`, inbox UI on `8025`)',
         );
       }
 
@@ -938,6 +1082,34 @@ export function createTemplateRenderer(): TemplateRenderer {
           queueModule,
         )
         .replace(
+          /\{\{\s*mailModuleImport\s*\}\}/g,
+          mailModuleImport,
+        )
+        .replace(
+          /\{\{\s*mailModule\s*\}\}/g,
+          mailModule,
+        )
+        .replace(
+          /\{\{\s*mailEnvExample\s*\}\}/g,
+          mailEnvExample,
+        )
+        .replace(
+          /\{\{\s*mailConfigType\s*\}\}/g,
+          mailConfigType,
+        )
+        .replace(
+          /\{\{\s*mailConfig\s*\}\}/g,
+          mailConfig,
+        )
+        .replace(
+          /\{\{\s*mailEnvSchema\s*\}\}/g,
+          mailEnvSchema,
+        )
+        .replace(
+          /\{\{\s*dockerComposeMailService\s*\}\}/g,
+          dockerComposeMailService,
+        )
+        .replace(
           /\{\{\s*redisEnvExample\s*\}\}/g,
           redisEnvExample,
         )
@@ -1096,6 +1268,10 @@ export function createTemplateRenderer(): TemplateRenderer {
         .replace(
           /\{\{\s*readmeQueue\s*\}\}/g,
           readmeQueue,
+        )
+        .replace(
+          /\{\{\s*readmeMail\s*\}\}/g,
+          readmeMail,
         )
         .replace(
           /\{\{\s*readmeDocker\s*\}\}/g,

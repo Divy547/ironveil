@@ -246,6 +246,40 @@ describe('DockerGenerator', () => {
     expect(compose).not.toContain('redis_data:');
   });
 
+  // ── 10b. Mailpit service: conditional on mail ────────────────────────────
+
+  it('includes a Mailpit SMTP catcher and points the api at it when mail is enabled', async () => {
+    const { fs, context } = await createContext({ mail: true });
+
+    await new DockerGenerator().generate(context);
+
+    const compose = await fs.readFile(
+      path.join(temporaryDirectory, 'docker-compose.yml'),
+    );
+
+    expect(compose).toContain('  mailpit:');
+    expect(compose).toContain('axllent/mailpit:v1.34');
+    expect(compose).toContain('"1025:1025"');
+    expect(compose).toContain('"8025:8025"');
+    expect(compose).toContain('MAIL_HOST: "mailpit"');
+    expect(compose).toContain('MAIL_PORT: "1025"');
+    expect(compose).toContain('MAIL_FROM:');
+    expect(compose).not.toContain('MAIL_PASSWORD');
+  });
+
+  it('has no mail service or MAIL_ variables when mail is disabled', async () => {
+    const { fs, context } = await createContext({ mail: false });
+
+    await new DockerGenerator().generate(context);
+
+    const compose = await fs.readFile(
+      path.join(temporaryDirectory, 'docker-compose.yml'),
+    );
+
+    expect(compose).not.toContain('mailpit');
+    expect(compose).not.toContain('MAIL_');
+  });
+
   // ── 11. DATABASE_URL uses postgres hostname ───────────────────────────────
 
   it('sets DATABASE_URL to postgres service hostname, not localhost', async () => {

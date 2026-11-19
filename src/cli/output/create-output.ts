@@ -26,6 +26,10 @@ export function getFeatureSummaries(config: GenerationResult['config']): string[
     features.push('Background job queue (BullMQ)');
   }
 
+  if (config.mail) {
+    features.push('Email (SMTP via nodemailer)');
+  }
+
   if (config.docker) {
     features.push('Docker & Docker Compose');
   }

@@ -61,6 +61,8 @@ const ManifestSchema = z.object({
     // Added after manifests already existed, so a manifest without it is
     // valid and means "off" (the feature could not have been enabled).
     queue: shape.queue.removeDefault().default(false),
+    // Same for mail: absent in older manifests, which means "off".
+    mail: shape.mail.removeDefault().default(false),
     auth: shape.auth.removeDefault(),
     swagger: shape.swagger.removeDefault(),
     docker: shape.docker.removeDefault(),
@@ -88,6 +90,7 @@ export function buildManifest(
     features: {
       redis: config.redis,
       queue: config.queue,
+      mail: config.mail,
       auth: config.auth,
       swagger: config.swagger,
       docker: config.docker,

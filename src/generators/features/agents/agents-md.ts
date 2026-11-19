@@ -25,6 +25,7 @@ export function buildAgentsMd(config: IronveilConfig): string {
     ...(jwt ? [authSection()] : []),
     ...(config.redis ? [redisSection()] : []),
     ...(config.queue ? [queueSection()] : []),
+    ...(config.mail ? [mailSection(config)] : []),
     ...(config.swagger ? [swaggerSection()] : []),
     testingSection(config),
     doNot(config),
@@ -54,6 +55,9 @@ function architecture(config: IronveilConfig): string {
       : []),
     ...(config.queue
       ? [['queue/', 'global BullMQ connection (QueueModule)']]
+      : []),
+    ...(config.mail
+      ? [['mail/', 'global MailModule / MailService (SMTP)']]
       : []),
     ...(config.swagger ? [['swagger/', '']] : []),
   ];
@@ -145,7 +149,7 @@ function commands(config: IronveilConfig): string {
     rows.push(
       [pm.run('docker:up'), 'run the whole stack in Docker'],
       [
-        `docker compose up -d postgres${config.redis ? ' redis' : ''}`,
+        `docker compose up -d postgres${config.redis ? ' redis' : ''}${config.mail ? ' mailpit' : ''}`,
         'only the backing services, to develop on the host',
       ],
     );
@@ -286,6 +290,28 @@ function queueSection(): string {
     '- Jobs can run more than once because of retries, so make processors idempotent. Put plain JSON in the job data (ids, not entities) and load fresh data in the processor.',
     '- **In tests, override both the queue and its processor**: a registered queue opens a Redis connection and a `@Processor` starts a worker. Use `overrideProvider(getQueueToken(QUEUE_NAME)).useValue({ add: jest.fn() })` and `overrideProvider(MyProcessor).useValue({})`. Overriding only the queue makes the worker fail at startup with `Worker requires a connection`. Every spec that boots `AppModule` needs these overrides once a queue exists, including `test/app.e2e-spec.ts`, `src/app.module.spec.ts` and the specs `ironveil generate resource` wrote.',
     '- Workers finish their current job and close on SIGTERM through the shutdown hooks in `main.ts`; keep `enableShutdownHooks()`.',
+  ].join('\n');
+}
+
+function mailSection(config: IronveilConfig): string {
+  return [
+    '## Email (SMTP)',
+    '',
+    '- `MailModule` (`src/infrastructure/mail/`) is global and builds one nodemailer transport from the `MAIL_*` variables (`MAIL_HOST`, `MAIL_PORT`, `MAIL_SECURE`, `MAIL_USER`, `MAIL_PASSWORD`, `MAIL_FROM`). Inject `MailService` and call `send({ to, subject, text | html })`; do not create nodemailer transports or read `MAIL_*` yourself.',
+    '- `send` validates the message (a recipient, a subject without line breaks, and a `text` or `html` body), sends from `MAIL_FROM` unless the message sets `from`, and rejects when SMTP fails. Decide in the caller whether to retry, log or fail the request.',
+    ...(config.queue
+      ? [
+          '- Prefer sending from a `@Processor` over inside a request handler: the queue retries failed sends and keeps SMTP latency out of the response.',
+        ]
+      : []),
+    '- Mail is not part of the readiness check on purpose: an SMTP outage should not take the API out of rotation.',
+    ...(config.docker
+      ? [
+          '- Local development uses Mailpit: `docker compose up -d mailpit`, SMTP on `localhost:1025`, inbox at http://localhost:8025. Nothing is delivered to real addresses.',
+        ]
+      : []),
+    '- In tests, override the service so nothing tries to connect: `overrideProvider(MailService).useValue({ send: jest.fn() })`. The test setup already sets `MAIL_HOST` and `MAIL_FROM`, which the environment validation requires.',
+    '- `MAIL_USER` and `MAIL_PASSWORD` must be set together (or both empty). Never log them.',
   ].join('\n');
 }
 
