@@ -97,6 +97,26 @@ describe('create-output', () => {
     expect(without).not.toContain('Email');
   });
 
+  it('lists OpenTelemetry tracing when it is enabled, and not otherwise', () => {
+    const withOtel = formatSuccessOutput({
+      projectName: 'o-api',
+      destination: '/path/to/o-api',
+      config: resolveConfig({ projectName: 'o-api', otel: true }),
+      generators: ['base', 'otel'],
+      files: ['package.json'],
+    });
+    const without = formatSuccessOutput({
+      projectName: 'o-api',
+      destination: '/path/to/o-api',
+      config: resolveConfig({ projectName: 'o-api' }),
+      generators: ['base'],
+      files: ['package.json'],
+    });
+
+    expect(withOtel).toContain('• OpenTelemetry tracing (OTLP)');
+    expect(without).not.toContain('OpenTelemetry');
+  });
+
   it('lists the job queue right after Redis when it is enabled', () => {
     const config = resolveConfig({ projectName: 'q-api', redis: true, queue: true });
 

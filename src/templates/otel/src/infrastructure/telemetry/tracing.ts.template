@@ -1,0 +1,16 @@
+import { startTelemetry } from './telemetry-sdk';
+
+// Imported first by main.ts: instrumentation can only patch libraries that
+// are loaded after it has started, so nothing may be imported above this.
+
+// ConfigModule reads .env much later, after Nest is already loaded, so read it
+// here for the OTEL_* variables. Variables already in the environment win.
+try {
+  process.loadEnvFile();
+} catch (error) {
+  if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+    throw error;
+  }
+}
+
+startTelemetry();

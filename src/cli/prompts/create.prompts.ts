@@ -64,6 +64,16 @@ export async function promptCreateOptions(): Promise<CreateCommandOptions> {
     process.exit(130);
   }
 
+  const otel = await p.confirm({
+    message: 'Enable OpenTelemetry tracing? (needs Node.js 22.15+)',
+    initialValue: false,
+  });
+
+  if (p.isCancel(otel)) {
+    p.cancel('Operation cancelled.');
+    process.exit(130);
+  }
+
   const auth = await p.select<Auth>({
     message: 'Authentication',
     options: [
@@ -153,6 +163,7 @@ export async function promptCreateOptions(): Promise<CreateCommandOptions> {
     redis,
     queue,
     mail,
+    otel,
     auth,
     swagger,
     docker,

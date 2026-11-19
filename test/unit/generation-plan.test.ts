@@ -152,6 +152,38 @@ describe('GenerationPlan', () => {
     expect(without).not.toContain('mail');
   });
 
+  it('includes otel, right after mail, when otel is enabled', () => {
+    const config = resolveConfig({
+      projectName: 'test-api',
+      redis: true,
+      queue: true,
+      mail: true,
+      otel: true,
+    });
+
+    const names = createGenerationPlan(config).generators.map(
+      (generator) => generator.name,
+    );
+
+    expect(names.slice(names.indexOf('queue'), names.indexOf('queue') + 3)).toEqual([
+      'queue',
+      'mail',
+      'otel',
+    ]);
+  });
+
+  it('includes otel without redis or auth, and leaves it out when disabled', () => {
+    const withOtel = createGenerationPlan(
+      resolveConfig({ projectName: 'test-api', otel: true }),
+    ).generators.map((generator) => generator.name);
+    const without = createGenerationPlan(
+      resolveConfig({ projectName: 'test-api' }),
+    ).generators.map((generator) => generator.name);
+
+    expect(withOtel).toContain('otel');
+    expect(without).not.toContain('otel');
+  });
+
   it('includes testing when testing is enabled', () => {
     const config = resolveConfig({
       projectName: 'test-api',

@@ -644,6 +644,7 @@ describe('TemplateRenderer', () => {
       '{{readmeRedis}}',
       '{{readmeQueue}}',
       '{{readmeMail}}',
+      '{{readmeOtel}}',
       '{{readmeDocker}}',
       '{{readmeTesting}}',
       '{{readmeCi}}',
@@ -776,6 +777,83 @@ describe('TemplateRenderer', () => {
       expect(result).toContain('- **Email**');
     });
 
+    it('renders the Tracing section only when otel is enabled', () => {
+      const withOtel = createTemplateRenderer().render(
+        readmeTemplate,
+        resolveConfig({ projectName: 'otel-app', otel: true }),
+      );
+
+      expect(withOtel).toContain('## Tracing (OpenTelemetry)');
+      expect(withOtel).toContain('OTEL_SERVICE_NAME');
+      expect(withOtel).toContain('startActiveSpan');
+      expect(withOtel).toContain('trace_id');
+      expect(withOtel).toContain('22.15');
+      expect(withOtel).toContain('http://localhost:16686');
+      expect(withOtel).not.toContain('{{readmeOtel}}');
+
+      const withoutOtel = createTemplateRenderer().render(
+        readmeTemplate,
+        resolveConfig({ projectName: 'plain-app' }),
+      );
+
+      expect(withoutOtel).not.toContain('Tracing (OpenTelemetry)');
+      expect(withoutOtel).not.toContain('OTEL_');
+      expect(withoutOtel).not.toContain('OpenTelemetry');
+    });
+
+    it('leaves out the Jaeger viewer when the project has no Docker', () => {
+      const result = createTemplateRenderer().render(
+        readmeTemplate,
+        resolveConfig({ projectName: 'otel-app', otel: true, docker: false }),
+      );
+
+      expect(result).toContain('## Tracing (OpenTelemetry)');
+      expect(result).not.toContain('16686');
+      expect(result).not.toContain('docker compose up -d jaeger');
+    });
+
+    it('documents the OTEL variables in the environment table and the docker command', () => {
+      const result = createTemplateRenderer().render(
+        readmeTemplate,
+        resolveConfig({ projectName: 'otel-app', otel: true }),
+      );
+
+      for (const key of ['OTEL_SDK_DISABLED', 'OTEL_SERVICE_NAME', 'OTEL_EXPORTER_OTLP_ENDPOINT']) {
+        expect(result).toContain(`| \`${key}\``);
+      }
+      expect(result).toContain('docker compose up -d postgres jaeger');
+    });
+
+    it('lists tracing in the feature bullets when enabled', () => {
+      const result = createTemplateRenderer().render(
+        '{{readmeFeatures}}',
+        resolveConfig({ projectName: 'otel-app', otel: true }),
+      );
+
+      expect(result).toContain('- **Tracing**');
+    });
+
+    it('puts the tracing import first in main.ts, with no blank line when otel is off', async () => {
+      const mainTemplate = await readFile(
+        path.join(getTemplatesDirectory(), 'base/src/main.ts.template'),
+        'utf8',
+      );
+
+      const withOtel = createTemplateRenderer().render(
+        mainTemplate,
+        resolveConfig({ projectName: 'otel-app', otel: true }),
+      );
+      expect(withOtel.split('\n')[0]).toBe("import './infrastructure/telemetry/tracing';");
+      expect(withOtel.indexOf('tracing')).toBeLessThan(withOtel.indexOf('@nestjs/common'));
+
+      const without = createTemplateRenderer().render(
+        mainTemplate,
+        resolveConfig({ projectName: 'plain-app' }),
+      );
+      expect(without.split('\n')[0]).toBe("import { ValidationPipe } from '@nestjs/common';");
+      expect(without).not.toContain('telemetry');
+    });
+
     it('lists the queue in the feature bullets when enabled', () => {
       const result = createTemplateRenderer().render(
         '{{readmeFeatures}}',
@@ -793,6 +871,7 @@ describe('TemplateRenderer', () => {
 
       expect(real).toContain('{{readmeQueue}}');
       expect(real).toContain('{{readmeMail}}');
+      expect(real).toContain('{{readmeOtel}}');
     });
 
     it('renders Auth section when JWT is enabled', () => {

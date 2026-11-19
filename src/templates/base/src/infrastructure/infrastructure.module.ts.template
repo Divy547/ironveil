@@ -6,6 +6,7 @@ import { PrismaModule } from './prisma/prisma.module';
 {{redisModuleImport}}
 {{queueModuleImport}}
 {{mailModuleImport}}
+{{otelModuleImport}}
 import { loadConfiguration } from './config/configuration';
 import { validateEnvironment } from './config/environment';
 
@@ -22,6 +23,7 @@ import { validateEnvironment } from './config/environment';
     {{redisModule}}
     {{queueModule}}
     {{mailModule}}
+    {{otelModule}}
   ],
 })
 export class InfrastructureModule {}

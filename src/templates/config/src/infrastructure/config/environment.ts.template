@@ -67,6 +67,8 @@ const EnvironmentSchema = z.object({
 
   {{mailEnvSchema}}
 
+  {{otelEnvSchema}}
+
   {{authEnvSchema}}
 });
 

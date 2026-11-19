@@ -90,6 +90,14 @@ export async function assertProjectManifestMatchesVersions(
     Object.assign(expectedDevDependencies, IRONVEIL_VERSIONS.devDependencies.mail);
   }
 
+  if (config.otel) {
+    Object.assign(expectedDependencies, IRONVEIL_VERSIONS.dependencies.otel);
+  }
+
+  if (config.otel && config.redis) {
+    Object.assign(expectedDependencies, IRONVEIL_VERSIONS.dependencies.otelRedis);
+  }
+
   if (config.swagger) {
     Object.assign(expectedDependencies, IRONVEIL_VERSIONS.dependencies.swagger);
   }

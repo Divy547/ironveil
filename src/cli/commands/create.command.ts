@@ -24,6 +24,7 @@ export function registerCreateCommand(program: Command): void {
     .option('--redis', 'Enable Redis')
     .option('--queue', 'Enable the BullMQ job queue (requires --redis)')
     .option('--mail', 'Enable email sending over SMTP (nodemailer)')
+    .option('--otel', 'Enable OpenTelemetry tracing (OTLP, needs Node.js 22.15+)')
     .option('--auth <type>', 'Authentication type: none or jwt')
     .option(
       '--ai <mode>',
@@ -44,6 +45,7 @@ export function registerCreateCommand(program: Command): void {
           redis: options.redis,
           queue: options.queue,
           mail: options.mail,
+          otel: options.otel,
           auth: options.auth,
           ai: options.ai,
           swagger: options.swagger,

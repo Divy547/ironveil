@@ -13,4 +13,5 @@ services:
 {{dockerComposePostgresService}}
 {{dockerComposeRedisService}}
 {{dockerComposeMailService}}
+{{dockerComposeJaegerService}}
 {{dockerComposeVolumes}}

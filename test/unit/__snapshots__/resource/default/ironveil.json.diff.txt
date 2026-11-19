@@ -1,6 +1,6 @@
 --- a/ironveil.json
 +++ b/ironveil.json
-@@ -15,5 +15,8 @@
+@@ -16,5 +16,8 @@
      "ci": true,
      "testing": true,
      "ai": "agents"

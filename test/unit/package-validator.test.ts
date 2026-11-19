@@ -274,6 +274,56 @@ describe('PackageValidator', () => {
       expect(validator.validate(manifest, config).valid).toBe(true);
     });
 
+    it('flags every missing otel dependency when otel is enabled, and none of them are dev-only', () => {
+      const config = resolveConfig({ projectName: 'test-api', otel: true });
+      const manifest = buildValidManifest('test-api');
+
+      const result = validator.validate(manifest, config);
+
+      expect(
+        result.issues.filter((i) => i.code === 'MISSING_DEPENDENCY').map((i) => i.path).sort(),
+      ).toEqual(
+        Object.keys(IRONVEIL_VERSIONS.dependencies.otel)
+          .map((name) => `dependencies.${name}`)
+          .sort(),
+      );
+      expect(result.issues.filter((i) => i.code === 'MISSING_DEV_DEPENDENCY')).toEqual([]);
+    });
+
+    it('accepts a project with otel when all its packages are present', () => {
+      const config = resolveConfig({ projectName: 'test-api', otel: true });
+      const manifest = buildValidManifest('test-api', {
+        dependencies: {
+          ...IRONVEIL_VERSIONS.dependencies.base,
+          ...IRONVEIL_VERSIONS.dependencies.prisma,
+          ...IRONVEIL_VERSIONS.dependencies.swagger,
+          ...IRONVEIL_VERSIONS.dependencies.otel,
+        },
+      });
+
+      expect(validator.validate(manifest, config).valid).toBe(true);
+    });
+
+    it('requires the ioredis instrumentation only when otel and Redis are both enabled', () => {
+      const dependencies = {
+        ...IRONVEIL_VERSIONS.dependencies.base,
+        ...IRONVEIL_VERSIONS.dependencies.prisma,
+        ...IRONVEIL_VERSIONS.dependencies.swagger,
+        ...IRONVEIL_VERSIONS.dependencies.redis,
+        ...IRONVEIL_VERSIONS.dependencies.otel,
+      };
+      const missingPaths = (config: ReturnType<typeof resolveConfig>) =>
+        validator
+          .validate(buildValidManifest('test-api', { dependencies }), config)
+          .issues.filter((i) => i.code === 'MISSING_DEPENDENCY')
+          .map((i) => i.path);
+
+      expect(
+        missingPaths(resolveConfig({ projectName: 'test-api', redis: true, otel: true })),
+      ).toEqual(['dependencies.@opentelemetry/instrumentation-ioredis']);
+      expect(missingPaths(resolveConfig({ projectName: 'test-api', redis: true }))).toEqual([]);
+    });
+
     it('flags version declaration drift for dependencies', () => {
       const config = resolveConfig({ projectName: 'test-api' });
       const manifest = buildValidManifest('test-api');
@@ -339,6 +389,54 @@ describe('PackageValidator', () => {
       expect(
         result.issues.filter((i) => i.code === 'FEATURE_DEV_DEPENDENCY_LEAKAGE').map((i) => i.path),
       ).toEqual(['devDependencies.@types/nodemailer']);
+    });
+
+    it('flags leaked otel packages when otel is disabled', () => {
+      const config = resolveConfig({ projectName: 'test-api' });
+      const manifest = buildValidManifest('test-api', {
+        dependencies: {
+          ...IRONVEIL_VERSIONS.dependencies.base,
+          ...IRONVEIL_VERSIONS.dependencies.prisma,
+          ...IRONVEIL_VERSIONS.dependencies.swagger,
+          ...IRONVEIL_VERSIONS.dependencies.otel,
+          ...IRONVEIL_VERSIONS.dependencies.otelRedis,
+        },
+      });
+
+      const result = validator.validate(manifest, config);
+
+      expect(
+        result.issues
+          .filter((i) => i.code === 'FEATURE_DEPENDENCY_LEAKAGE')
+          .map((i) => i.path)
+          .sort(),
+      ).toEqual(
+        [
+          ...Object.keys(IRONVEIL_VERSIONS.dependencies.otel),
+          ...Object.keys(IRONVEIL_VERSIONS.dependencies.otelRedis),
+        ]
+          .map((name) => `dependencies.${name}`)
+          .sort(),
+      );
+    });
+
+    it('flags the ioredis instrumentation as leaked when otel is on but Redis is off', () => {
+      const config = resolveConfig({ projectName: 'test-api', otel: true });
+      const manifest = buildValidManifest('test-api', {
+        dependencies: {
+          ...IRONVEIL_VERSIONS.dependencies.base,
+          ...IRONVEIL_VERSIONS.dependencies.prisma,
+          ...IRONVEIL_VERSIONS.dependencies.swagger,
+          ...IRONVEIL_VERSIONS.dependencies.otel,
+          ...IRONVEIL_VERSIONS.dependencies.otelRedis,
+        },
+      });
+
+      const result = validator.validate(manifest, config);
+
+      expect(
+        result.issues.filter((i) => i.code === 'FEATURE_DEPENDENCY_LEAKAGE').map((i) => i.path),
+      ).toEqual(['dependencies.@opentelemetry/instrumentation-ioredis']);
     });
 
     it('flags leaked queue dependencies when the queue is disabled', () => {

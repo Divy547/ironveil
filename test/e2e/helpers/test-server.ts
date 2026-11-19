@@ -36,6 +36,12 @@ export interface TestServer {
 export async function startTestServer(
   root: string,
   baseUrl: string,
+  /**
+   * Variables for this server only. They win over the generated `.env`, which
+   * never overrides what is already in the environment, so this is how a test
+   * picks `NODE_ENV` (vitest itself runs with `NODE_ENV=test`).
+   */
+  env: Record<string, string> = {},
 ): Promise<TestServer> {
   const serverProcess = spawn(
     'node',
@@ -44,6 +50,7 @@ export async function startTestServer(
       cwd: root,
       env: {
         ...process.env,
+        ...env,
         NODE_OPTIONS: [
           process.env.NODE_OPTIONS,
           `--require=${SIGTERM_PROBE}`,

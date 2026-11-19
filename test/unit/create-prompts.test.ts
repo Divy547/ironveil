@@ -130,6 +130,59 @@ describe('promptCreateOptions', () => {
     });
   });
 
+  describe('OpenTelemetry', () => {
+    const isOtelPrompt = (o: PromptOptions) => /opentelemetry|tracing/i.test(o.message);
+
+    function answer(otel: boolean): void {
+      select.mockImplementation((o: PromptOptions) => Promise.resolve(o.initialValue));
+      confirm.mockImplementation((o: PromptOptions) =>
+        Promise.resolve(isOtelPrompt(o) ? otel : o.initialValue),
+      );
+    }
+
+    it('asks about tracing, defaulting to no, whether or not Redis is enabled', async () => {
+      answer(false);
+
+      const result = await promptCreateOptions();
+
+      const prompt = confirm.mock.calls
+        .map((call) => call[0] as PromptOptions)
+        .find(isOtelPrompt);
+      expect(prompt).toBeDefined();
+      expect(prompt?.initialValue).toBe(false);
+      expect(result.otel).toBe(false);
+    });
+
+    it('returns the tracing choice the user made', async () => {
+      answer(true);
+
+      expect((await promptCreateOptions()).otel).toBe(true);
+    });
+
+    it('does not mistake the tracing question for the email, queue or Redis ones', () => {
+      const message = 'Enable OpenTelemetry tracing?';
+
+      expect(/email|mail/i.test(message)).toBe(false);
+      expect(/queue/i.test(message)).toBe(false);
+      expect(/redis/i.test(message)).toBe(false);
+    });
+
+    it('exits when the tracing prompt is cancelled', async () => {
+      confirm.mockImplementation((o: PromptOptions) =>
+        Promise.resolve(isOtelPrompt(o) ? Symbol.for('cancel') : o.initialValue),
+      );
+      select.mockImplementation((o: PromptOptions) => Promise.resolve(o.initialValue));
+      const exit = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as never);
+
+      await expect(promptCreateOptions()).rejects.toThrow('exit');
+      expect(exit).toHaveBeenCalledWith(130);
+
+      exit.mockRestore();
+    });
+  });
+
   describe('job queue', () => {
     const isQueuePrompt = (o: PromptOptions) => /queue/i.test(o.message);
     const isRedisPrompt = (o: PromptOptions) => /redis/i.test(o.message) && !isQueuePrompt(o);

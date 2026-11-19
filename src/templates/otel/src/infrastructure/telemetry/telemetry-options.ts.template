@@ -1,0 +1,52 @@
+/**
+ * Pure helpers for the OpenTelemetry bootstrap. This file imports nothing on
+ * purpose: tracing has to start before Nest, Express and pino are loaded, so
+ * everything the bootstrap needs to decide must not pull them in.
+ */
+
+export interface TelemetryOptions {
+  /** False when OTEL_SDK_DISABLED=true or NODE_ENV=test. */
+  readonly enabled: boolean;
+  readonly serviceName: string;
+  /**
+   * Where spans are sent, for the startup log line only: the exporter reads
+   * the OTEL_EXPORTER_OTLP_* variables itself.
+   */
+  readonly endpoint: string;
+}
+
+type Environment = Readonly<Record<string, string | undefined>>;
+
+const DEFAULT_ENDPOINT = 'http://localhost:4318';
+
+export function resolveTelemetryOptions(
+  env: Environment,
+  defaultServiceName: string,
+): TelemetryOptions {
+  const disabled =
+    env.OTEL_SDK_DISABLED?.trim().toLowerCase() === 'true' ||
+    env.NODE_ENV === 'test';
+
+  return {
+    enabled: !disabled,
+    serviceName: env.OTEL_SERVICE_NAME?.trim() || defaultServiceName,
+    endpoint:
+      env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT?.trim() ||
+      env.OTEL_EXPORTER_OTLP_ENDPOINT?.trim() ||
+      DEFAULT_ENDPOINT,
+  };
+}
+
+/**
+ * Orchestrators poll the health endpoints every few seconds; tracing them
+ * would bury real traffic. Matches /health and /health/..., not /healthy.
+ */
+export function isIgnoredRequestPath(url: string | undefined): boolean {
+  if (!url) {
+    return false;
+  }
+
+  const [path] = url.split('?');
+
+  return path === '/health' || path.startsWith('/health/');
+}

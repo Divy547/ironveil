@@ -181,6 +181,20 @@ export function createPackageValidator(): PackageValidator {
         );
       }
 
+      if (config.otel) {
+        Object.assign(
+          requiredDependencies,
+          IRONVEIL_VERSIONS.dependencies.otel,
+        );
+      }
+
+      if (config.otel && config.redis) {
+        Object.assign(
+          requiredDependencies,
+          IRONVEIL_VERSIONS.dependencies.otelRedis,
+        );
+      }
+
       if (config.swagger) {
         Object.assign(
           requiredDependencies,
@@ -262,6 +276,34 @@ export function createPackageValidator(): PackageValidator {
             issues.push({
               code: 'FEATURE_DEPENDENCY_LEAKAGE',
               message: `Leaked dependency "${pkg}": feature "mail" is disabled`,
+              path: `dependencies.${pkg}`,
+            });
+          }
+        }
+      }
+
+      if (!config.otel) {
+        for (const pkg of Object.keys(IRONVEIL_VERSIONS.dependencies.otel)) {
+          if (manifestDependencies[pkg] !== undefined) {
+            issues.push({
+              code: 'FEATURE_DEPENDENCY_LEAKAGE',
+              message: `Leaked dependency "${pkg}": feature "otel" is disabled`,
+              path: `dependencies.${pkg}`,
+            });
+          }
+        }
+      }
+
+      // The ioredis instrumentation needs both features: without Redis there
+      // is nothing to instrument, without otel there is nothing to load it.
+      if (!(config.otel && config.redis)) {
+        for (const pkg of Object.keys(IRONVEIL_VERSIONS.dependencies.otelRedis)) {
+          if (manifestDependencies[pkg] !== undefined) {
+            issues.push({
+              code: 'FEATURE_DEPENDENCY_LEAKAGE',
+              message: `Leaked dependency "${pkg}": ${
+                config.otel ? 'feature "redis"' : 'feature "otel"'
+              } is disabled`,
               path: `dependencies.${pkg}`,
             });
           }

@@ -26,6 +26,7 @@ export function buildAgentsMd(config: IronveilConfig): string {
     ...(config.redis ? [redisSection()] : []),
     ...(config.queue ? [queueSection()] : []),
     ...(config.mail ? [mailSection(config)] : []),
+    ...(config.otel ? [otelSection(config)] : []),
     ...(config.swagger ? [swaggerSection()] : []),
     testingSection(config),
     doNot(config),
@@ -58,6 +59,9 @@ function architecture(config: IronveilConfig): string {
       : []),
     ...(config.mail
       ? [['mail/', 'global MailModule / MailService (SMTP)']]
+      : []),
+    ...(config.otel
+      ? [['telemetry/', 'OpenTelemetry tracing (OTLP), started from main.ts']]
       : []),
     ...(config.swagger ? [['swagger/', '']] : []),
   ];
@@ -149,7 +153,7 @@ function commands(config: IronveilConfig): string {
     rows.push(
       [pm.run('docker:up'), 'run the whole stack in Docker'],
       [
-        `docker compose up -d postgres${config.redis ? ' redis' : ''}${config.mail ? ' mailpit' : ''}`,
+        `docker compose up -d postgres${config.redis ? ' redis' : ''}${config.mail ? ' mailpit' : ''}${config.otel ? ' jaeger' : ''}`,
         'only the backing services, to develop on the host',
       ],
     );
@@ -315,6 +319,24 @@ function mailSection(config: IronveilConfig): string {
   ].join('\n');
 }
 
+function otelSection(config: IronveilConfig): string {
+  return [
+    '## Tracing (OpenTelemetry)',
+    '',
+    '- Traces are exported over OTLP/HTTP by the SDK in `src/infrastructure/telemetry/`. `tracing.ts` starts it and **must stay the first import of `src/main.ts`**: instrumentation only patches libraries that are loaded after it, so an import above it silently loses spans. For the same reason `telemetry-sdk.ts`, `telemetry-state.ts` and `tracing.ts` must not import Nest, Express, pino or Prisma Client.',
+    `- HTTP, Express, NestJS, Prisma${config.redis ? ', Redis' : ''} and pino are already instrumented, and every log line written inside a request carries \`trace_id\` and \`span_id\`. Do not add instrumentation packages for them. Health probes (\`/health*\`) are deliberately not traced.`,
+    '- Configure it with `OTEL_SERVICE_NAME` (default: the project name), `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_SDK_DISABLED`. The SDK reads them from the environment before Nest starts, so they are the one exception to reading settings through `ConfigService`: they live in the zod schema (checked at boot) and `.env.example`, not in `configuration.ts`.',
+    "- Wrap work worth seeing in a span with `@opentelemetry/api`: `trace.getTracer('billing').startActiveSpan('charge-card', async (span) => { try { ... } finally { span.end(); } })`. Always end the span.",
+    '- Tracing is off under `NODE_ENV=test`, so specs never start the SDK: never start the SDK (`startTelemetry`) from a spec or application code, and do not import `telemetry-sdk.ts` anywhere but `tracing.ts`. `TelemetryModule` only flushes spans on shutdown.',
+    ...(config.docker
+      ? [
+          '- Local development uses Jaeger: `docker compose up -d jaeger`, spans go to `localhost:4318` and the UI is at http://localhost:16686.',
+        ]
+      : []),
+    '- OpenTelemetry needs Node.js 22.15 or newer.',
+  ].join('\n');
+}
+
 function swaggerSection(): string {
   return [
     '## API documentation',
@@ -348,7 +370,9 @@ function doNot(config: IronveilConfig): string {
 
   const rules = [
     'Do not put business logic in controllers or Prisma calls outside services.',
-    'Do not read `process.env` outside `src/infrastructure/config/`.',
+    config.otel
+      ? 'Do not read `process.env` outside `src/infrastructure/config/`, except in `src/infrastructure/telemetry/`, which has to run before Nest starts.'
+      : 'Do not read `process.env` outside `src/infrastructure/config/`.',
     'Do not bypass the `ValidationPipe`, the exception filter or the logger.',
     'Do not edit `src/generated/` or already-applied migrations.',
     'Do not commit `.env` or any real secret (`.env*` is git-ignored except `.env.example`, which holds placeholders only).',

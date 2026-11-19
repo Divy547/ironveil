@@ -65,6 +65,20 @@ function nextSteps(plan: AddPlan): string[] {
         'In tests, override MailService with overrideProvider(MailService).useValue({ send: jest.fn() }) so nothing connects to SMTP.',
       );
       break;
+    case 'otel':
+      steps.push(
+        'Copy OTEL_SDK_DISABLED, OTEL_SERVICE_NAME and OTEL_EXPORTER_OTLP_ENDPOINT from .env.example into your own .env (all have defaults, and .env is never edited by add).',
+      );
+      if (plan.after.docker) {
+        steps.push(
+          'docker compose up -d jaeger   # local trace viewer, UI at http://localhost:16686',
+        );
+      }
+      steps.push(
+        'Tracing needs Node.js 22.15 or newer. main.ts now imports ./infrastructure/telemetry/tracing first; keep it the first import.',
+        'Add your own spans with @opentelemetry/api; the README has a "Tracing (OpenTelemetry)" section.',
+      );
+      break;
     case 'auth':
       steps.push(
         'Copy JWT_SECRET, JWT_ACCESS_TTL_SECONDS and JWT_REFRESH_TTL_DAYS from .env.example into your own .env, ' +

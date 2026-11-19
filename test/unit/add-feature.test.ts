@@ -73,6 +73,7 @@ describe('planAdd', () => {
       'auth',
       'queue',
       'mail',
+      'otel',
     ]);
   });
 
@@ -351,6 +352,166 @@ describe('planAdd', () => {
     });
   });
 
+  describe('otel', () => {
+    const bases: ReadonlyArray<readonly [string, Overrides]> = [
+      ['defaults', {}],
+      ['jwt + redis + queue + mail', { auth: 'jwt', redis: true, queue: true, mail: true }],
+      ['no swagger, pnpm, no docker', { swagger: false, packageManager: 'pnpm', docker: false }],
+      ['yarn, everything else off', {
+        packageManager: 'yarn',
+        swagger: false,
+        docker: false,
+        ci: false,
+        testing: false,
+        ai: 'none',
+      }],
+    ];
+
+    for (const [label, base] of bases) {
+      it(`gives the same project as creating with otel (${label})`, async () => {
+        const added = await makeProject(base);
+        await add(added, 'otel');
+
+        const created = await makeProject({ ...base, otel: true });
+
+        const expected = await readTree(created);
+        const actual = await readTree(added);
+        expect([...actual.keys()].sort()).toEqual([...expected.keys()].sort());
+        for (const [file, text] of expected) {
+          expect(actual.get(file), file).toBe(text);
+        }
+      });
+    }
+
+    it('works without Redis: no Redis files and no ioredis instrumentation appear', async () => {
+      const root = await makeProject({});
+      await add(root, 'otel');
+
+      expect(await readdir(path.join(root, 'src/infrastructure'))).not.toContain('redis');
+      expect(await read(root, 'src/infrastructure/telemetry/telemetry-sdk.ts')).not.toContain(
+        'IORedis',
+      );
+      expect(
+        (JSON.parse(await read(root, 'package.json')) as {
+          dependencies: Record<string, string>;
+        }).dependencies['@opentelemetry/instrumentation-ioredis'],
+      ).toBeUndefined();
+    });
+
+    it('instruments ioredis when the project already has Redis', async () => {
+      const root = await makeProject({ redis: true });
+      await add(root, 'otel');
+
+      expect(await read(root, 'src/infrastructure/telemetry/telemetry-sdk.ts')).toContain(
+        'IORedisInstrumentation',
+      );
+      expect(
+        (JSON.parse(await read(root, 'package.json')) as {
+          dependencies: Record<string, string>;
+        }).dependencies['@opentelemetry/instrumentation-ioredis'],
+      ).toBe('0.73.0');
+    });
+
+    it('makes the tracing import the first line of main.ts, before Nest is loaded', async () => {
+      const root = await makeProject({});
+      await add(root, 'otel');
+
+      const main = await read(root, 'src/main.ts');
+      expect(main.split('\n')[0]).toBe("import './infrastructure/telemetry/tracing';");
+      expect(main.indexOf('tracing')).toBeLessThan(main.indexOf('@nestjs/core'));
+    });
+
+    it('registers TelemetryModule in InfrastructureModule and adds the packages', async () => {
+      const root = await makeProject({});
+      await add(root, 'otel');
+
+      const infrastructure = await read(root, 'src/infrastructure/infrastructure.module.ts');
+      expect(infrastructure).toContain(
+        "import { TelemetryModule } from './telemetry/telemetry.module';",
+      );
+      expect(infrastructure).toContain('TelemetryModule,');
+
+      const pkg = JSON.parse(await read(root, 'package.json')) as {
+        dependencies: Record<string, string>;
+      };
+      expect(pkg.dependencies['@opentelemetry/sdk-node']).toBe('0.301.2');
+      expect(pkg.dependencies['@prisma/instrumentation']).toBe('6.19.3');
+    });
+
+    it('adds the OTEL_ variables to .env.example and the jaeger service to docker-compose', async () => {
+      const root = await makeProject({});
+      await add(root, 'otel');
+
+      expect(await read(root, '.env.example')).toContain('OTEL_SERVICE_NAME=');
+      expect(await read(root, 'docker-compose.yml')).toContain('jaeger:');
+    });
+
+    it('records otel in ironveil.json', async () => {
+      const root = await makeProject({});
+      await add(root, 'otel');
+
+      expect((await readManifest(root)).features.otel).toBe(true);
+    });
+
+    it('works on a project made before the manifest had an otel entry', async () => {
+      const root = await makeProject({});
+      const manifest = JSON.parse(await read(root, 'ironveil.json')) as {
+        features: Record<string, unknown>;
+      };
+      delete manifest.features.otel;
+      await write(root, 'ironveil.json', `${JSON.stringify(manifest, null, 2)}\n`);
+
+      await add(root, 'otel');
+
+      expect((await readManifest(root)).features.otel).toBe(true);
+    });
+
+    it('keeps the user\'s own edits to main.ts', async () => {
+      const root = await makeProject({});
+      const main = await read(root, 'src/main.ts');
+      await write(
+        root,
+        'src/main.ts',
+        main.replace('await app.listen(port);', "console.log('starting');\n  await app.listen(port);"),
+      );
+
+      await add(root, 'otel');
+
+      const merged = await read(root, 'src/main.ts');
+      expect(merged).toContain("console.log('starting');");
+      expect(merged.split('\n')[0]).toBe("import './infrastructure/telemetry/tracing';");
+    });
+
+    it('keeps a generated resource in AppModule and a dependency the user added', async () => {
+      const root = await makeProject({});
+      const resource = await planResource({
+        root,
+        name: 'product',
+        fields: parseFields('name:string'),
+      });
+      await resource.changeSet.apply();
+      const pkg = JSON.parse(await read(root, 'package.json')) as {
+        dependencies: Record<string, string>;
+      };
+      pkg.dependencies['left-pad'] = '1.3.0';
+      await write(root, 'package.json', `${JSON.stringify(pkg, null, 2)}\n`);
+
+      await add(root, 'otel');
+
+      expect(await read(root, 'src/app.module.ts')).toContain('ProductsModule');
+      expect(JSON.parse(await read(root, 'package.json')).dependencies['left-pad']).toBe('1.3.0');
+    });
+
+    it('is a no-op the second time', async () => {
+      const root = await makeProject({ otel: true });
+
+      const plan = await planAdd({ root, feature: 'otel' });
+
+      expect(plan.alreadyEnabled).toBe(true);
+      expect(plan.changeSet.changes).toHaveLength(0);
+    });
+  });
+
   describe('what it plans', () => {
     it('writes nothing while planning', async () => {
       const root = await makeProject({ ci: false });
@@ -538,7 +699,7 @@ describe('planAdd', () => {
       const failure = planAdd({ root, feature: 'banana' });
 
       await expect(failure).rejects.toBeInstanceOf(AddError);
-      await expect(failure).rejects.toThrow(/Unknown feature "banana".*ci, ai, docker, testing, swagger, redis, auth, queue, mail/s);
+      await expect(failure).rejects.toThrow(/Unknown feature "banana".*ci, ai, docker, testing, swagger, redis, auth, queue, mail, otel/s);
     });
 
     it('rejects a mode for a feature that has none', async () => {

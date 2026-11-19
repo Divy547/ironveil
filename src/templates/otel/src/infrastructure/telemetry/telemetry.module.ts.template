@@ -1,0 +1,36 @@
+import {
+  Injectable,
+  Logger,
+  Module,
+  OnApplicationShutdown,
+  OnModuleInit,
+} from '@nestjs/common';
+import { getTelemetryOptions, shutdownTelemetry } from './telemetry-state';
+
+@Injectable()
+export class TelemetryService implements OnModuleInit, OnApplicationShutdown {
+  private readonly logger = new Logger(TelemetryService.name);
+
+  onModuleInit(): void {
+    const options = getTelemetryOptions();
+
+    if (options?.enabled) {
+      this.logger.log(
+        `Tracing enabled for "${options.serviceName}", exporting to ${options.endpoint}`,
+      );
+    } else {
+      this.logger.debug('Tracing is disabled');
+    }
+  }
+
+  async onApplicationShutdown(): Promise<void> {
+    // Flushes spans that are still buffered. Does nothing when tracing never
+    // started, as in tests, and never throws.
+    await shutdownTelemetry();
+  }
+}
+
+@Module({
+  providers: [TelemetryService],
+})
+export class TelemetryModule {}

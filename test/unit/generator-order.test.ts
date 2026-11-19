@@ -25,6 +25,7 @@ describe('generator ordering', () => {
       'redis',
       'queue',
       'mail',
+      'otel',
       'auth',
       'swagger',
       'testing',

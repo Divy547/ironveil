@@ -27,33 +27,39 @@ const VALID_SECRET =
   'a-valid-secret-that-is-at-least-32-chars';
 
 const COMBINATIONS = [
-  { name: 'default', redis: false, auth: 'none', mail: false },
-  { name: 'redis', redis: true, auth: 'none', mail: false },
-  { name: 'jwt', redis: false, auth: 'jwt', mail: false },
-  { name: 'redis + jwt', redis: true, auth: 'jwt', mail: false },
-  { name: 'mail', redis: false, auth: 'none', mail: true },
-  { name: 'redis + jwt + mail', redis: true, auth: 'jwt', mail: true },
+  { name: 'default', redis: false, auth: 'none', mail: false, otel: false },
+  { name: 'redis', redis: true, auth: 'none', mail: false, otel: false },
+  { name: 'jwt', redis: false, auth: 'jwt', mail: false, otel: false },
+  { name: 'redis + jwt', redis: true, auth: 'jwt', mail: false, otel: false },
+  { name: 'mail', redis: false, auth: 'none', mail: true, otel: false },
+  { name: 'redis + jwt + mail', redis: true, auth: 'jwt', mail: true, otel: false },
+  { name: 'otel', redis: false, auth: 'none', mail: false, otel: true },
+  { name: 'everything', redis: true, auth: 'jwt', mail: true, otel: true },
 ] as const;
 
 describe('generated environment validation', () => {
   let dir: string | undefined;
+  // Some tests generate more than one project; remove every directory.
+  const created: string[] = [];
 
   afterEach(async () => {
-    if (dir) {
-      await rm(dir, { recursive: true, force: true });
-      dir = undefined;
-    }
+    await Promise.all(
+      created.splice(0).map((created) => rm(created, { recursive: true, force: true })),
+    );
+    dir = undefined;
   });
 
   async function generate(
     redis: boolean,
     auth: 'none' | 'jwt',
     mail = false,
+    otel = false,
   ) {
     // Inside the repo so the generated file can resolve `zod`.
     dir = await mkdtemp(
       path.join(process.cwd(), 'test', '.tmp-env-'),
     );
+    created.push(dir);
 
     const fs = createFileSystem();
     const config = resolveConfig({
@@ -61,6 +67,7 @@ describe('generated environment validation', () => {
       redis,
       auth,
       mail,
+      otel,
     });
 
     await new ConfigGenerator().generate(
@@ -129,9 +136,9 @@ describe('generated environment validation', () => {
 
   describe.each(COMBINATIONS)(
     '$name',
-    ({ redis, auth, mail }) => {
+    ({ redis, auth, mail, otel }) => {
       it('accepts the shipped .env.example as-is', async () => {
-        const { envExample, validate } = await generate(redis, auth, mail);
+        const { envExample, validate } = await generate(redis, auth, mail, otel);
 
         expect(() =>
           validate(exampleValues(envExample)),
@@ -140,7 +147,7 @@ describe('generated environment validation', () => {
 
       it('keeps the schema and .env.example in sync', async () => {
         const { environmentSource, envExample } =
-          await generate(redis, auth, mail);
+          await generate(redis, auth, mail, otel);
 
         expect(
           Object.keys(exampleValues(envExample)).sort(),
@@ -286,6 +293,80 @@ describe('generated environment validation', () => {
       expect(
         validate({ ...exampleValues(envExample), MAIL_PORT: '465', MAIL_SECURE: 'true' }),
       ).toMatchObject({ MAIL_PORT: 465, MAIL_SECURE: 'true' });
+    });
+  });
+
+  describe('otel', () => {
+    const OTEL_KEYS = [
+      'OTEL_SDK_DISABLED',
+      'OTEL_SERVICE_NAME',
+      'OTEL_EXPORTER_OTLP_ENDPOINT',
+    ];
+    const baseEnv = { DATABASE_URL: 'postgresql://u:p@localhost:5432/db' };
+
+    it('has the OTEL variables in the schema and .env.example only when otel is enabled', async () => {
+      const withOtel = await generate(false, 'none', false, true);
+      const without = await generate(false, 'none', false, false);
+
+      for (const key of OTEL_KEYS) {
+        expect(schemaKeys(withOtel.environmentSource)).toContain(key);
+        expect(exampleValues(withOtel.envExample)).toHaveProperty(key);
+        expect(schemaKeys(without.environmentSource)).not.toContain(key);
+        expect(without.envExample).not.toContain(key);
+      }
+    });
+
+    it('needs none of them: tracing works with the defaults', async () => {
+      const { validate } = await generate(false, 'none', false, true);
+
+      expect(
+        validate(baseEnv),
+      ).toMatchObject({
+        OTEL_SDK_DISABLED: 'false',
+        OTEL_SERVICE_NAME: 'env-api',
+        OTEL_EXPORTER_OTLP_ENDPOINT: 'http://localhost:4318',
+      });
+    });
+
+    it('ships .env.example with the service named after the project, pointing at local OTLP', async () => {
+      const { envExample } = await generate(false, 'none', false, true);
+
+      expect(exampleValues(envExample)).toMatchObject({
+        OTEL_SDK_DISABLED: 'false',
+        OTEL_SERVICE_NAME: 'env-api',
+        OTEL_EXPORTER_OTLP_ENDPOINT: 'http://localhost:4318',
+      });
+    });
+
+    it('rejects an endpoint that is not http(s) and an OTEL_SDK_DISABLED that is not true or false', async () => {
+      const { validate } = await generate(false, 'none', false, true);
+
+      const bad = {
+        ...baseEnv,
+        OTEL_EXPORTER_OTLP_ENDPOINT: 'localhost:4318',
+        OTEL_SDK_DISABLED: 'yes',
+      };
+
+      // Both problems are reported at once (the order is the schema's).
+      expect(() => validate(bad)).toThrowError(/- OTEL_EXPORTER_OTLP_ENDPOINT must start with http:\/\/ or https:\/\//);
+      expect(() => validate(bad)).toThrowError(/- OTEL_SDK_DISABLED:/);
+    });
+
+    it('accepts https endpoints and a custom service name', async () => {
+      const { validate } = await generate(false, 'none', false, true);
+
+      expect(
+        validate({
+          ...baseEnv,
+          OTEL_EXPORTER_OTLP_ENDPOINT: 'https://collector.example.com:4318',
+          OTEL_SERVICE_NAME: 'billing',
+          OTEL_SDK_DISABLED: 'true',
+        }),
+      ).toMatchObject({
+        OTEL_EXPORTER_OTLP_ENDPOINT: 'https://collector.example.com:4318',
+        OTEL_SERVICE_NAME: 'billing',
+        OTEL_SDK_DISABLED: 'true',
+      });
     });
   });
 

@@ -132,6 +132,60 @@ export function createTemplateRenderer(): TemplateRenderer {
           ].join('\n')
         : '';
 
+      const otelModuleImport = config.otel
+        ? "import { TelemetryModule } from './telemetry/telemetry.module';"
+        : '';
+
+      const otelModule = config.otel ? 'TelemetryModule,' : '';
+
+      const otelEnvExample = config.otel
+        ? [
+            'OTEL_SDK_DISABLED=false',
+            `OTEL_SERVICE_NAME=${config.projectName}`,
+            'OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318',
+          ].join('\n')
+        : '';
+
+      // Read by the SDK itself before Nest starts, so these are validated here
+      // (fail fast on a typo) but never copied into `configuration.ts`.
+      const otelEnvSchema = config.otel
+        ? [
+            "OTEL_SDK_DISABLED: z.enum(['true', 'false']).default('false'),",
+            '',
+            `  OTEL_SERVICE_NAME: z.string().default('${config.projectName}'),`,
+            '',
+            '  OTEL_EXPORTER_OTLP_ENDPOINT: z',
+            '    .string()',
+            '    .trim()',
+            '    .regex(',
+            '      /^https?:\\/\\//,',
+            "      'OTEL_EXPORTER_OTLP_ENDPOINT must start with http:// or https://',",
+            '    )',
+            "    .default('http://localhost:4318'),",
+          ].join('\n')
+        : '';
+
+      // First line of main.ts, so the SDK starts before Nest and Express load.
+      // Ends with its own newline so a project without otel gets no blank line.
+      const tracingImport = config.otel
+        ? "import './infrastructure/telemetry/tracing';\n"
+        : '';
+
+      // Both sit at the end of a neighbouring line in telemetry-sdk.ts, so a
+      // project without Redis gets no blank line either.
+      const otelRedisImport =
+        config.otel && config.redis
+          ? "\nimport { IORedisInstrumentation } from '@opentelemetry/instrumentation-ioredis';"
+          : '';
+
+      // requireParentSpan is already the default of this instrumentation, but it
+      // is what keeps a BullMQ worker's Redis polling (no request around it) from
+      // becoming a stream of root spans, so it is spelled out and tested.
+      const otelRedisInstrumentation =
+        config.otel && config.redis
+          ? '\n      new IORedisInstrumentation({ requireParentSpan: true }),'
+          : '';
+
       const redisEnvExample =
         config.redis
           ? 'REDIS_URL="redis://localhost:6379"'
@@ -257,6 +311,12 @@ export function createTemplateRenderer(): TemplateRenderer {
         );
       }
 
+      if (config.otel) {
+        dockerApiEnvLines.push(
+          '      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"',
+        );
+      }
+
       if (config.auth === 'jwt') {
         dockerApiEnvLines.push(
           '      JWT_SECRET: "${JWT_SECRET}"',
@@ -340,6 +400,17 @@ export function createTemplateRenderer(): TemplateRenderer {
             `    ports:`,
             `      - "1025:1025"`,
             `      - "8025:8025"`,
+          ].join('\n')
+        : '';
+
+      // ── Docker: jaeger service (local trace viewer, OTLP over HTTP) ──
+      const dockerComposeJaegerService = config.otel
+        ? [
+            `  jaeger:`,
+            `    image: jaegertracing/jaeger:2.23.0`,
+            `    ports:`,
+            `      - "16686:16686"`,
+            `      - "4318:4318"`,
           ].join('\n')
         : '';
 
@@ -557,6 +628,12 @@ export function createTemplateRenderer(): TemplateRenderer {
         );
       }
 
+      if (config.otel) {
+        featureList.push(
+          '- **Tracing**: OpenTelemetry traces exported over OTLP, with the trace ID in every log line',
+        );
+      }
+
       if (config.docker) {
         featureList.push(
           '- **Docker**: Multi-stage Dockerfile and Docker Compose service orchestration',
@@ -613,13 +690,17 @@ export function createTemplateRenderer(): TemplateRenderer {
       if (config.mail) {
         infraServices.push('mailpit');
       }
+      if (config.otel) {
+        infraServices.push('jaeger');
+      }
       const infraServicesCmd = infraServices.join(' ');
 
-      // "PostgreSQL", "PostgreSQL & Redis" or "PostgreSQL, Redis & Mailpit".
+      // "PostgreSQL", "PostgreSQL & Redis" or "PostgreSQL, Redis, Mailpit & Jaeger".
       const infraServiceNames = [
         'PostgreSQL',
         ...(config.redis ? ['Redis'] : []),
         ...(config.mail ? ['Mailpit'] : []),
+        ...(config.otel ? ['Jaeger'] : []),
       ];
       const infraServicesLabel =
         infraServiceNames.length > 2
@@ -676,6 +757,14 @@ export function createTemplateRenderer(): TemplateRenderer {
           '| `MAIL_USER` | SMTP username. Leave empty for a server without login; set together with `MAIL_PASSWORD` | `` |',
           '| `MAIL_PASSWORD` | SMTP password | `` |',
           `| \`MAIL_FROM\` | Default sender address | \`${config.projectName} <no-reply@localhost>\` |`,
+        );
+      }
+
+      if (config.otel) {
+        envRows.push(
+          '| `OTEL_SDK_DISABLED` | `true` turns tracing off (it is always off when `NODE_ENV=test`) | `false` |',
+          `| \`OTEL_SERVICE_NAME\` | Service name shown in the trace viewer | \`${config.projectName}\` |`,
+          '| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP/HTTP endpoint that receives the spans | `http://localhost:4318` |',
         );
       }
 
@@ -897,6 +986,37 @@ export function createTemplateRenderer(): TemplateRenderer {
           ].join('\n')
         : '';
 
+      // ── README: OpenTelemetry ───────────────────────────────────
+      const readmeOtel = config.otel
+        ? [
+            '## Tracing (OpenTelemetry)\n',
+            `Requests are traced with [OpenTelemetry](https://opentelemetry.io/) and exported over OTLP/HTTP. HTTP, Express, NestJS, Prisma${config.redis ? ', Redis' : ''} and pino are instrumented, so every request becomes a trace and every log line written inside it carries \`trace_id\` and \`span_id\`.\n`,
+            '- Tracing starts in `src/infrastructure/telemetry/tracing.ts`, which must stay the first import of `src/main.ts`: instrumentation can only patch libraries that are loaded after it.',
+            '- Configure it with the standard variables: `OTEL_SERVICE_NAME` (defaults to the project name), `OTEL_EXPORTER_OTLP_ENDPOINT` (default `http://localhost:4318`) and `OTEL_SDK_DISABLED=true` to turn it off. It is always off when `NODE_ENV=test`.',
+            ...(config.docker
+              ? [
+                  '- In development, `docker compose up -d jaeger` starts [Jaeger](https://www.jaegertracing.io/); browse the traces at http://localhost:16686.',
+                ]
+              : [
+                  '- In development, run an OTLP collector or viewer such as [Jaeger](https://www.jaegertracing.io/) and point `OTEL_EXPORTER_OTLP_ENDPOINT` at it.',
+                ]),
+            '- Health probes (`/health*`) are not traced.',
+            '- Add your own spans with `@opentelemetry/api`:\n',
+            '```ts',
+            "import { trace } from '@opentelemetry/api';",
+            '',
+            "await trace.getTracer('billing').startActiveSpan('charge-card', async (span) => {",
+            '  try {',
+            '    // ...',
+            '  } finally {',
+            '    span.end();',
+            '  }',
+            '});',
+            '```\n',
+            '- OpenTelemetry needs Node.js 22.15 or newer.\n',
+          ].join('\n')
+        : '';
+
       // ── README: Docker ──────────────────────────────────────────
       const dockerServicesList: string[] = [
         '- `api`: NestJS application container (exposed on port `3000`)',
@@ -915,6 +1035,12 @@ export function createTemplateRenderer(): TemplateRenderer {
       if (config.mail) {
         dockerServicesList.push(
           '- `mailpit`: local SMTP catcher (SMTP on host port `1025`, inbox UI on `8025`)',
+        );
+      }
+
+      if (config.otel) {
+        dockerServicesList.push(
+          '- `jaeger`: local trace viewer (UI on host port `16686`, OTLP/HTTP receiver on `4318`)',
         );
       }
 
@@ -1090,6 +1216,34 @@ export function createTemplateRenderer(): TemplateRenderer {
           mailModule,
         )
         .replace(
+          /\{\{\s*otelModuleImport\s*\}\}/g,
+          otelModuleImport,
+        )
+        .replace(
+          /\{\{\s*otelModule\s*\}\}/g,
+          otelModule,
+        )
+        .replace(
+          /\{\{\s*otelEnvExample\s*\}\}/g,
+          otelEnvExample,
+        )
+        .replace(
+          /\{\{\s*otelEnvSchema\s*\}\}/g,
+          otelEnvSchema,
+        )
+        .replace(
+          /\{\{\s*tracingImport\s*\}\}/g,
+          tracingImport,
+        )
+        .replace(
+          /\{\{\s*otelRedisImport\s*\}\}/g,
+          otelRedisImport,
+        )
+        .replace(
+          /\{\{\s*otelRedisInstrumentation\s*\}\}/g,
+          otelRedisInstrumentation,
+        )
+        .replace(
           /\{\{\s*mailEnvExample\s*\}\}/g,
           mailEnvExample,
         )
@@ -1108,6 +1262,10 @@ export function createTemplateRenderer(): TemplateRenderer {
         .replace(
           /\{\{\s*dockerComposeMailService\s*\}\}/g,
           dockerComposeMailService,
+        )
+        .replace(
+          /\{\{\s*dockerComposeJaegerService\s*\}\}/g,
+          dockerComposeJaegerService,
         )
         .replace(
           /\{\{\s*redisEnvExample\s*\}\}/g,
@@ -1272,6 +1430,10 @@ export function createTemplateRenderer(): TemplateRenderer {
         .replace(
           /\{\{\s*readmeMail\s*\}\}/g,
           readmeMail,
+        )
+        .replace(
+          /\{\{\s*readmeOtel\s*\}\}/g,
+          readmeOtel,
         )
         .replace(
           /\{\{\s*readmeDocker\s*\}\}/g,

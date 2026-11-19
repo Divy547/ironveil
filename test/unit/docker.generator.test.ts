@@ -280,6 +280,53 @@ describe('DockerGenerator', () => {
     expect(compose).not.toContain('MAIL_');
   });
 
+  // ── 10c. Jaeger service: conditional on otel ─────────────────────────────
+
+  it('includes a Jaeger trace viewer and points the api at its OTLP port when otel is enabled', async () => {
+    const { fs, context } = await createContext({ otel: true });
+
+    await new DockerGenerator().generate(context);
+
+    const compose = await fs.readFile(
+      path.join(temporaryDirectory, 'docker-compose.yml'),
+    );
+
+    expect(compose).toContain('  jaeger:');
+    expect(compose).toContain('jaegertracing/jaeger:2.23.0');
+    expect(compose).toContain('"16686:16686"');
+    expect(compose).toContain('"4318:4318"');
+    expect(compose).toContain('OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"');
+  });
+
+  it('has no jaeger service or OTEL_ variables when otel is disabled', async () => {
+    const { fs, context } = await createContext({ otel: false });
+
+    await new DockerGenerator().generate(context);
+
+    const compose = await fs.readFile(
+      path.join(temporaryDirectory, 'docker-compose.yml'),
+    );
+
+    expect(compose).not.toContain('jaeger');
+    expect(compose).not.toContain('OTEL_');
+  });
+
+  it('does not make the api wait for Jaeger: tracing is optional for the app to run', async () => {
+    const { fs, context } = await createContext({ otel: true });
+
+    await new DockerGenerator().generate(context);
+
+    const compose = await fs.readFile(
+      path.join(temporaryDirectory, 'docker-compose.yml'),
+    );
+    const apiSection = compose.slice(compose.indexOf('  api:'), compose.indexOf('  jaeger:'));
+
+    // The api names the host in OTEL_EXPORTER_OTLP_ENDPOINT, which is fine; it
+    // just must not be a depends_on entry.
+    expect(apiSection).toContain('OTEL_EXPORTER_OTLP_ENDPOINT');
+    expect(apiSection).not.toMatch(/depends_on:[\s\S]*\n {6}jaeger:/);
+  });
+
   // ── 11. DATABASE_URL uses postgres hostname ───────────────────────────────
 
   it('sets DATABASE_URL to postgres service hostname, not localhost', async () => {

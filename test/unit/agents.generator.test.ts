@@ -247,6 +247,64 @@ describe('buildAgentsMd', () => {
       expect(result).not.toContain('mailpit');
     });
 
+    it('includes tracing guidance only with --otel', () => {
+      const withOtel = render({ otel: true });
+      expect(withOtel).toContain('## Tracing (OpenTelemetry)');
+      expect(withOtel).toContain('src/infrastructure/telemetry/');
+      expect(withOtel).toContain('OTEL_SERVICE_NAME');
+      expect(withOtel).toContain('OTEL_EXPORTER_OTLP_ENDPOINT');
+      expect(withOtel).toContain('OTEL_SDK_DISABLED');
+      expect(withOtel).toContain('startActiveSpan');
+      expect(withOtel).toContain('@opentelemetry/api');
+      expect(withOtel).toContain('trace_id');
+      expect(withOtel).toContain('22.15');
+      expect(withOtel).toContain('http://localhost:16686');
+      expect(withOtel).toContain('docker compose up -d postgres jaeger');
+
+      const withoutOtel = render({});
+      expect(withoutOtel).not.toContain('## Tracing');
+      expect(withoutOtel).not.toContain('OpenTelemetry');
+      expect(withoutOtel).not.toContain('OTEL_');
+      expect(withoutOtel).not.toContain('jaeger');
+    });
+
+    it('tells agents to keep tracing.ts as the first import of main.ts', () => {
+      const result = render({ otel: true });
+
+      expect(result).toMatch(/first import of `src\/main\.ts`/);
+      expect(result).toContain('tracing.ts');
+    });
+
+    it('says tracing is off in tests and that the SDK must not be started from a spec', () => {
+      const result = render({ otel: true });
+
+      expect(result).toMatch(/NODE_ENV=test/);
+      expect(result).toMatch(/never start the SDK/i);
+    });
+
+    it('leaves the Jaeger viewer out when there is no Docker', () => {
+      const result = render({ otel: true, docker: false });
+
+      expect(result).toContain('## Tracing (OpenTelemetry)');
+      expect(result).not.toContain('16686');
+      expect(result).not.toContain('jaeger');
+    });
+
+    it('lists the telemetry folder in the architecture tree', () => {
+      const lines = render({ otel: true }).split('\n');
+      const telemetry = lines.findIndex((line) =>
+        /telemetry\/\s+# OpenTelemetry tracing/.test(line),
+      );
+
+      expect(telemetry).toBeGreaterThan(-1);
+    });
+
+    it('puts every enabled docker service on one command, in a fixed order', () => {
+      expect(render({ redis: true, mail: true, otel: true })).toContain(
+        'docker compose up -d postgres redis mailpit jaeger',
+      );
+    });
+
     it('suggests sending from a queue processor only when the queue exists', () => {
       expect(render({ mail: true, redis: true, queue: true })).toMatch(/from a `@Processor`/);
       expect(render({ mail: true })).not.toContain('@Processor');

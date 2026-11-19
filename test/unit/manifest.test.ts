@@ -46,6 +46,7 @@ describe('buildManifest', () => {
         redis: true,
         queue: false,
         mail: false,
+        otel: false,
         auth: 'jwt',
         swagger: true,
         docker: true,
@@ -72,6 +73,7 @@ describe('buildManifest', () => {
       redis: false,
       queue: false,
       mail: false,
+      otel: false,
       auth: 'none',
       swagger: false,
       docker: false,
@@ -120,6 +122,8 @@ describe('round trip', () => {
     { redis: true },
     { redis: true, queue: true },
     { mail: true },
+    { otel: true },
+    { auth: 'jwt', redis: true, queue: true, mail: true, otel: true },
     { auth: 'jwt', redis: true, queue: true, mail: true },
     { auth: 'jwt', redis: true, packageManager: 'yarn' },
     {
@@ -351,6 +355,32 @@ describe('setFeatureInManifest', () => {
     const result = setFeatureInManifest(oldText, 'queue', true);
 
     expect(parseManifest(result).features.queue).toBe(true);
+  });
+});
+
+describe('a manifest written before otel existed', () => {
+  const old = () => {
+    const raw = JSON.parse(
+      serializeManifest(buildManifest(config({ redis: true, mail: true }), '0.3.0')),
+    ) as { features: Record<string, unknown> };
+    delete raw.features.otel;
+    return JSON.stringify(raw);
+  };
+
+  it('still parses, with otel off', () => {
+    expect(parseManifest(old()).features.otel).toBe(false);
+  });
+
+  it('gives back a config with otel off', () => {
+    expect(manifestToConfig(parseManifest(old())).otel).toBe(false);
+  });
+
+  it('can have otel switched on, without needing Redis', () => {
+    expect(parseManifest(setFeatureInManifest(old(), 'otel', true)).features.otel).toBe(true);
+  });
+
+  it('records otel in a new manifest', () => {
+    expect(buildManifest(config({ otel: true }), '0.3.0').features.otel).toBe(true);
   });
 });
 

@@ -1,0 +1,50 @@
+import type { TelemetryOptions } from './telemetry-options';
+
+/**
+ * What the SDK bootstrap started, kept apart from it so that Nest code can
+ * ask "is tracing on?" and flush spans on shutdown without importing the
+ * SDK itself (a spec that compiles AppModule must not load it).
+ */
+
+type Shutdown = () => Promise<void>;
+
+let recorded: { options: TelemetryOptions; shutdown?: Shutdown } | undefined;
+
+export function recordTelemetry(
+  options: TelemetryOptions,
+  shutdown?: Shutdown,
+): void {
+  recorded = { options, shutdown };
+}
+
+export function getTelemetryOptions(): TelemetryOptions | undefined {
+  return recorded?.options;
+}
+
+/**
+ * Flushes the spans still buffered and stops the SDK. It never rejects and
+ * never waits long: an unreachable collector must not be able to break or
+ * delay application shutdown. Does nothing when tracing never started.
+ */
+export async function shutdownTelemetry(timeoutMs = 5_000): Promise<void> {
+  if (!recorded?.shutdown) {
+    return;
+  }
+
+  const { shutdown } = recorded;
+  recorded = { options: recorded.options };
+
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, timeoutMs);
+    timer.unref();
+  });
+
+  try {
+    await Promise.race([shutdown(), timeout]);
+  } catch {
+    // Spans that could not be exported are lost; the app is stopping anyway.
+  } finally {
+    clearTimeout(timer);
+  }
+}

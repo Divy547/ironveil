@@ -5,6 +5,7 @@ const CREATE_OPTION_NAMES = [
   'redis',
   'queue',
   'mail',
+  'otel',
   'auth',
   'ai',
   'swagger',

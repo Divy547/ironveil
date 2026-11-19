@@ -21,6 +21,7 @@ export interface IronveilConfig {
   readonly redis: boolean;
   readonly queue: boolean;
   readonly mail: boolean;
+  readonly otel: boolean;
   readonly auth: Auth;
   readonly swagger: boolean;
   readonly docker: boolean;

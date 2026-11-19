@@ -99,11 +99,16 @@ export async function assertBootsAndShutsDownCleanly(
   options: {
     redis: boolean;
     exercise?: (server: TestServer) => Promise<void>;
+    /** Variables for the booted server only, e.g. `NODE_ENV`. */
+    serverEnv?: Record<string, string>;
+    /** Runs on the result of the clean shutdown, e.g. to inspect the logs. */
+    afterShutdown?: (result: ShutdownResult) => void;
   },
 ): Promise<void> {
   const server = await startTestServer(
     project.root,
     project.baseUrl,
+    options.serverEnv,
   );
 
   try {
@@ -114,5 +119,7 @@ export async function assertBootsAndShutsDownCleanly(
     throw error;
   }
 
-  assertCleanShutdown(await server.shutdown());
+  const result = await server.shutdown();
+  assertCleanShutdown(result);
+  options.afterShutdown?.(result);
 }

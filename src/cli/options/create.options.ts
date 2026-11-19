@@ -5,6 +5,7 @@ export interface CreateCommandOptions {
   readonly redis?: boolean;
   readonly queue?: boolean;
   readonly mail?: boolean;
+  readonly otel?: boolean;
   readonly auth?: Auth;
   readonly ai?: Ai;
   readonly swagger?: boolean;

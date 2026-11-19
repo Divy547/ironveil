@@ -171,6 +171,31 @@ describe('ironveil add', () => {
     expect(printed(log)).not.toContain('mailpit');
   });
 
+  it('explains the otel next steps after adding it: install, the OTEL variables and the viewer', async () => {
+    await makeProject({});
+
+    await run('otel');
+
+    const output = printed(log);
+    expect(output).toContain('Added otel.');
+    expect(output).toContain('npm install');
+    expect(output).toMatch(/OTEL_SERVICE_NAME.*OTEL_EXPORTER_OTLP_ENDPOINT.*\.env/s);
+    expect(output).toContain('docker compose up -d jaeger');
+    expect(output).toContain('http://localhost:16686');
+    expect(output).toContain('22.15');
+    expect(await exists('src/infrastructure/telemetry/telemetry-sdk.ts')).toBe(true);
+  });
+
+  it('does not suggest a jaeger container when the project has no docker setup', async () => {
+    await makeProject({ docker: false });
+
+    await run('otel');
+
+    expect(printed(log)).not.toContain('docker compose');
+    expect(printed(log)).not.toContain('jaeger');
+    expect(printed(log)).not.toContain('16686');
+  });
+
   it('points at the Swagger UI after adding swagger', async () => {
     await makeProject({ swagger: false });
 

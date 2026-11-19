@@ -1,0 +1,60 @@
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
+import { ExpressInstrumentation } from '@opentelemetry/instrumentation-express';
+import { NestInstrumentation } from '@opentelemetry/instrumentation-nestjs-core';
+import { PinoInstrumentation } from '@opentelemetry/instrumentation-pino';{{otelRedisImport}}
+import { PrismaInstrumentation } from '@prisma/instrumentation';
+import {
+  isIgnoredRequestPath,
+  resolveTelemetryOptions,
+  type TelemetryOptions,
+} from './telemetry-options';
+import { getTelemetryOptions, recordTelemetry } from './telemetry-state';
+
+const DEFAULT_SERVICE_NAME = '{{projectName}}';
+
+/**
+ * Starts the OpenTelemetry SDK once. It must run before the libraries it
+ * patches (http, express, pino, ...) are loaded, which is why `main.ts`
+ * imports `./infrastructure/telemetry/tracing` first. Keep this file free of
+ * imports from Nest, Express, pino or Prisma Client for the same reason.
+ */
+export function startTelemetry(env = process.env): TelemetryOptions {
+  const existing = getTelemetryOptions();
+
+  if (existing) {
+    return existing;
+  }
+
+  const options = resolveTelemetryOptions(env, DEFAULT_SERVICE_NAME);
+
+  if (!options.enabled) {
+    recordTelemetry(options);
+
+    return options;
+  }
+
+  const sdk = new NodeSDK({
+    serviceName: options.serviceName,
+    // No arguments: the exporter reads OTEL_EXPORTER_OTLP_ENDPOINT,
+    // OTEL_EXPORTER_OTLP_HEADERS and the other standard variables itself.
+    traceExporter: new OTLPTraceExporter(),
+    instrumentations: [
+      new HttpInstrumentation({
+        ignoreIncomingRequestHook: (request) =>
+          isIgnoredRequestPath(request.url),
+      }),
+      new ExpressInstrumentation(),
+      new NestInstrumentation(),
+      // Adds trace_id and span_id to every log line written inside a span.
+      new PinoInstrumentation(),
+      new PrismaInstrumentation(),{{otelRedisInstrumentation}}
+    ],
+  });
+
+  sdk.start();
+  recordTelemetry(options, () => sdk.shutdown());
+
+  return options;
+}

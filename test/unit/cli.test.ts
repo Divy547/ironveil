@@ -51,6 +51,7 @@ describe('Ironveil CLI', () => {
     expect(optionNames).toContain('--redis');
     expect(optionNames).toContain('--queue');
     expect(optionNames).toContain('--mail');
+    expect(optionNames).toContain('--otel');
     expect(optionNames).toContain('--auth');
     expect(optionNames).toContain('--ai');
     expect(optionNames).toContain('--no-swagger');
@@ -234,6 +235,42 @@ describe('Ironveil CLI', () => {
       ).toBe(false);
       const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
       expect(output).toContain('• Email (SMTP via nodemailer)');
+    } finally {
+      cwdSpy.mockRestore();
+      logSpy.mockRestore();
+    }
+  });
+
+  it('creates a project with OpenTelemetry tracing when --otel is given, without needing Redis', async () => {
+    temporaryDirectory = await mkdtemp(
+      path.join(os.tmpdir(), 'ironveil-cli-otel-'),
+    );
+
+    const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(temporaryDirectory);
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    try {
+      await createCli().parseAsync([
+        'node',
+        'ironveil',
+        'create',
+        'otel-app',
+        '--otel',
+      ]);
+
+      const fs = createFileSystem();
+      const projectPath = path.join(temporaryDirectory, 'otel-app');
+
+      expect(
+        await fs.exists(
+          path.join(projectPath, 'src/infrastructure/telemetry/telemetry-sdk.ts'),
+        ),
+      ).toBe(true);
+      expect(
+        await fs.exists(path.join(projectPath, 'src/infrastructure/redis')),
+      ).toBe(false);
+      const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+      expect(output).toContain('• OpenTelemetry tracing (OTLP)');
     } finally {
       cwdSpy.mockRestore();
       logSpy.mockRestore();

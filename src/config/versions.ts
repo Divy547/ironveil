@@ -29,6 +29,24 @@ export const IRONVEIL_VERSIONS = {
     mail: {
       nodemailer: '10.6.0',
     },
+    // OpenTelemetry. The 0.x packages (SDK, OTLP exporter, HTTP
+    // instrumentation) are one release line and must move together; the
+    // other instrumentations version independently but all peer on the same
+    // `@opentelemetry/api`. `@prisma/instrumentation` must match Prisma.
+    otel: {
+      '@opentelemetry/api': '1.10.0',
+      '@opentelemetry/sdk-node': '0.301.2',
+      '@opentelemetry/exporter-trace-otlp-http': '0.301.2',
+      '@opentelemetry/instrumentation-http': '0.301.2',
+      '@opentelemetry/instrumentation-express': '0.73.0',
+      '@opentelemetry/instrumentation-nestjs-core': '0.72.1',
+      '@opentelemetry/instrumentation-pino': '0.71.0',
+      '@prisma/instrumentation': '6.19.3',
+    },
+    // Only installed when both otel and Redis are enabled.
+    otelRedis: {
+      '@opentelemetry/instrumentation-ioredis': '0.73.0',
+    },
     prisma: {
       '@prisma/client': '6.19.3',
     },

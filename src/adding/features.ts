@@ -12,6 +12,7 @@ export const ADDABLE_FEATURES = [
   'auth',
   'queue',
   'mail',
+  'otel',
 ] as const;
 
 export type AddableFeature = (typeof ADDABLE_FEATURES)[number];

@@ -17,6 +17,7 @@ describe('Ironveil configuration', () => {
       redis: false,
       queue: false,
       mail: false,
+      otel: false,
       auth: 'none',
       swagger: true,
       docker: true,
@@ -71,6 +72,20 @@ describe('Ironveil configuration', () => {
       resolveConfig({ projectName: 'bonfire-api', mail: true, redis: true }).mail,
     ).toBe(true);
     expect(resolveConfig({ projectName: 'bonfire-api' }).mail).toBe(false);
+  });
+
+  it('accepts otel with or without Redis or auth, since tracing needs neither', () => {
+    expect(resolveConfig({ projectName: 'bonfire-api', otel: true }).otel).toBe(true);
+    expect(
+      resolveConfig({ projectName: 'bonfire-api', otel: true, redis: true, auth: 'jwt' }).otel,
+    ).toBe(true);
+    expect(resolveConfig({ projectName: 'bonfire-api' }).otel).toBe(false);
+  });
+
+  it('rejects an otel value that is not a boolean', () => {
+    expect(() =>
+      resolveConfig({ projectName: 'bonfire-api', otel: 'yes' as unknown as boolean }),
+    ).toThrow(ConfigError);
   });
 
   it('rejects an empty project name', () => {

@@ -59,7 +59,61 @@ describe('IRONVEIL_VERSIONS centralized version registry', () => {
     });
   });
 
+  describe('otel', () => {
+    it('pins the SDK, the OTLP exporter and the instrumentations exactly', () => {
+      expect(IRONVEIL_VERSIONS.dependencies.otel).toEqual({
+        '@opentelemetry/api': '1.10.0',
+        '@opentelemetry/sdk-node': '0.301.2',
+        '@opentelemetry/exporter-trace-otlp-http': '0.301.2',
+        '@opentelemetry/instrumentation-http': '0.301.2',
+        '@opentelemetry/instrumentation-express': '0.73.0',
+        '@opentelemetry/instrumentation-nestjs-core': '0.72.1',
+        '@opentelemetry/instrumentation-pino': '0.71.0',
+        '@prisma/instrumentation': '6.19.3',
+      });
+    });
+
+    it('keeps the ioredis instrumentation in its own group, used only with Redis', () => {
+      expect(IRONVEIL_VERSIONS.dependencies.otelRedis).toEqual({
+        '@opentelemetry/instrumentation-ioredis': '0.73.0',
+      });
+      expect(IRONVEIL_VERSIONS.dependencies.otel).not.toHaveProperty(
+        '@opentelemetry/instrumentation-ioredis',
+      );
+    });
+
+    it('adds no devDependencies', () => {
+      expect(IRONVEIL_VERSIONS.devDependencies).not.toHaveProperty('otel');
+    });
+
+    it('pins every package exactly, with no ranges', () => {
+      for (const group of [
+        IRONVEIL_VERSIONS.dependencies.otel,
+        IRONVEIL_VERSIONS.dependencies.otelRedis,
+      ]) {
+        for (const [name, version] of Object.entries(group)) {
+          expect(version, name).toMatch(/^\d+\.\d+\.\d+$/);
+        }
+      }
+    });
+  });
+
   describe('coupled-version invariants', () => {
+    it('enforces @prisma/instrumentation and Prisma Client exact version coupling', () => {
+      expect(IRONVEIL_VERSIONS.dependencies.otel['@prisma/instrumentation']).toBe(
+        IRONVEIL_VERSIONS.dependencies.prisma['@prisma/client'],
+      );
+    });
+
+    it('keeps the experimental OpenTelemetry packages on one release line', () => {
+      const otel = IRONVEIL_VERSIONS.dependencies.otel;
+
+      expect(otel['@opentelemetry/exporter-trace-otlp-http']).toBe(
+        otel['@opentelemetry/sdk-node'],
+      );
+      expect(otel['@opentelemetry/instrumentation-http']).toBe(otel['@opentelemetry/sdk-node']);
+    });
+
     it('enforces Prisma Client and Prisma CLI exact version coupling', () => {
       const clientVersion = IRONVEIL_VERSIONS.dependencies.prisma['@prisma/client'];
       const cliVersion = IRONVEIL_VERSIONS.devDependencies.prisma.prisma;
