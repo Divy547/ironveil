@@ -179,6 +179,25 @@ How your own changes are treated: a file you never touched is replaced; a file y
 
 **`add auth` and your database.** It never edits `prisma/migrations/0001_init` (it has probably run already): the `Role` enum, the `role` column on `User` (existing users become `USER`) and the `RefreshToken` table go into a **new** `prisma/migrations/<timestamp>_add_auth/migration.sql`, and `schema.prisma` gets the same changes. Before it writes anything it checks that `schema.prisma` has a `model User` without a `role` field, that no `Role` or `RefreshToken` exists yet, and that your migrations create the `User` table; otherwise it stops and lists what is wrong. Then run `db:generate`, `db:migrate` (`prisma migrate dev` also confirms the schema and migrations agree), copy the three `JWT_*` variables into your `.env` and set a `JWT_SECRET` of at least 32 characters. The global guard protects **every** route, so resources generated earlier now require a token: `add auth` updates their controller and e2e spec (the spec now signs in and checks the 401), and records the `user` policy for each in `ironveil.json`. A spec you changed in the same place is left as it is, with a note. Nobody is an admin yet: promote one with SQL (`UPDATE "User" SET role = 'ADMIN' WHERE email = '...'`).
 
+### `ironveil doctor [--strict]`
+
+Checks a project against its `ironveil.json` and changes nothing. Run it from the project root or any folder inside it.
+
+```bash
+ironveil doctor
+ironveil doctor --strict      # exit with an error code on warnings too (for CI)
+```
+
+| Check | Reports |
+| --- | --- |
+| `env` | Required variables (`DATABASE_URL`, plus `REDIS_URL`, `MAIL_HOST`, `MAIL_FROM`, `JWT_SECRET` for those features) that are missing or empty in your `.env`; a `JWT_SECRET` under 32 characters; variables the enabled features use that `.env.example` no longer lists. With no `.env` it only notes that the values were not checked (they may come from Docker, CI or a host). |
+| `modules` | A `*.module.ts` that no other module's `imports` array lists, so Nest never loads it; a missing `app.module.ts`; a resource recorded in `ironveil.json` whose module folder is gone. |
+| `files` | Source files an enabled feature owns (`src/**` and `prisma/schema.prisma`) that no longer exist. Specs, tests and docs are ignored. |
+| `dependencies` | A package an enabled feature needs that is missing from `package.json` (an **error**: the project will not build), and a version that differs from the one Ironveil pins (a warning; fine if you upgraded on purpose). Packages you added yourself are never reported. |
+| `version` | A note when the project was created by an older Ironveil; a warning when it was created by a newer one than you are running. |
+
+Only errors set a non-zero exit code, unless `--strict` is given.
+
 ---
 
 ## Generated Features
@@ -351,7 +370,7 @@ Ironveil contains a comprehensive test suite covering unit behavior, template re
 # Run TypeScript typecheck
 pnpm run typecheck
 
-# Run unit tests (75 test files, 1181 tests)
+# Run unit tests (78 test files, 1230 tests)
 pnpm test
 
 # Run build
